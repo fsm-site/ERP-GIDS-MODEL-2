@@ -3726,11 +3726,15 @@ function chooseRole(role){
 
   if(role === "owner"){
 
+    session.isOwner = true;
+    session.isAdmin = true;
+    session.isDeveloper = false;
+    session.staffUnlocked = true;
     session.pendingView = null;
 
     updateNavForRole("owner");
 
-    switchView("owner-login");
+    switchView("owner-dashboard");
 
     return;
 
