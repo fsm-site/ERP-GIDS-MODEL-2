@@ -216,6 +216,10 @@
     width:100%; padding:10px 12px; border:1px solid var(--line-strong); border-radius:8px; font-size:13.5px; font-family:'Inter'; color:var(--text); background:rgba(255,255,255,.54); box-shadow:inset 0 1px 3px rgba(43,84,124,.06);
   }
   .field input:focus, .field select:focus{ outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-pale); }
+  .pw-field{ position:relative; }
+  .pw-field input{ padding-right:38px; }
+  .pw-eye{ position:absolute; right:4px; top:50%; transform:translateY(-50%); background:transparent; border:0; cursor:pointer; font-size:16px; line-height:1; padding:6px; color:var(--muted,#6d849d); }
+  .pw-eye:hover{ color:var(--text,#14213d); }
   .branch-option{ display:flex; align-items:center; gap:14px; min-height:42px; cursor:pointer; color:#f3f7ff; font-size:15px; font-weight:700; line-height:1.2; letter-spacing:0.1px; }
   .branch-option input{ width:20px; height:20px; accent-color:#8b5cf6; cursor:pointer; flex-shrink:0; margin:0; }
   .branch-option span{ display:inline-block; transform:translateY(-1px); }
@@ -1096,9 +1100,11 @@
             </div>
             <div class="field">
               <label>Password</label>
-              <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
+              <div class="pw-field">
+                <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
+                <button type="button" class="pw-eye" data-toggle-password="login-pass" aria-label="Show password">👁</button>
+              </div>
             </div>
-            <label class="remember-choice"><input type="checkbox" data-toggle-password="login-pass"> Show Password</label>
             <label class="remember-choice"><input type="checkbox" id="remember-admin" checked> Remember me on this device</label>
             <div class="login-error" id="login-error"></div>
             <button class="pill-btn primary login-submit" id="admin-login-btn" style="width:100%; padding:11px;" onclick="attemptLogin()">Log in</button>
@@ -1120,9 +1126,11 @@
             </div>
             <div class="field">
               <label>Password</label>
-              <input type="password" id="developer-pass" placeholder="Developer password" autocomplete="current-password">
+              <div class="pw-field">
+                <input type="password" id="developer-pass" placeholder="Developer password" autocomplete="current-password">
+                <button type="button" class="pw-eye" data-toggle-password="developer-pass" aria-label="Show password">👁</button>
+              </div>
             </div>
-            <label class="remember-choice"><input type="checkbox" data-toggle-password="developer-pass"> Show Password</label>
             <label class="remember-choice"><input type="checkbox" id="remember-developer" checked> Remember me on this device</label>
             <div class="login-error" id="developer-error"></div>
             <button class="pill-btn primary login-submit" id="developer-login-btn" style="width:100%;padding:11px;" onclick="attemptDeveloperLogin()">Log in</button>
@@ -1145,9 +1153,11 @@
       </div>
       <div class="field">
         <label>Password</label>
-        <input type="password" id="staff-pass" placeholder="Enter staff password" autocomplete="current-password">
+        <div class="pw-field">
+          <input type="password" id="staff-pass" placeholder="Enter staff password" autocomplete="current-password">
+          <button type="button" class="pw-eye" data-toggle-password="staff-pass" aria-label="Show password">👁</button>
+        </div>
       </div>
-      <label class="remember-choice"><input type="checkbox" data-toggle-password="staff-pass"> Show Password</label>
       <label class="remember-choice">
         <input type="checkbox" id="remember-staff" checked> Remember me on this device
       </label>
@@ -1222,25 +1232,29 @@
 
       <div class="field">
         <label>Password</label>
-        <input
-          type="password"
-          id="owner-register-pass"
-          placeholder="Create a password"
-          autocomplete="new-password"
-        >
+        <div class="pw-field">
+          <input
+            type="password"
+            id="owner-register-pass"
+            placeholder="Create a password"
+            autocomplete="new-password"
+          >
+          <button type="button" class="pw-eye" data-toggle-password="owner-register-pass" aria-label="Show password">👁</button>
+        </div>
       </div>
-      <label class="remember-choice"><input type="checkbox" data-toggle-password="owner-register-pass"> Show Password</label>
 
       <div class="field">
         <label>Confirm Password</label>
-        <input
-          type="password"
-          id="owner-register-confirm"
-          placeholder="Confirm password"
-          autocomplete="new-password"
-        >
+        <div class="pw-field">
+          <input
+            type="password"
+            id="owner-register-confirm"
+            placeholder="Confirm password"
+            autocomplete="new-password"
+          >
+          <button type="button" class="pw-eye" data-toggle-password="owner-register-confirm" aria-label="Show password">👁</button>
+        </div>
       </div>
-      <label class="remember-choice"><input type="checkbox" data-toggle-password="owner-register-confirm"> Show Password</label>
 
       <div class="login-error" id="owner-register-error"></div>
 
@@ -2013,13 +2027,15 @@ function saveRememberedSession(role){
   try{ localStorage.setItem(SESSION_KEY, role); }catch(e){ console.warn("Could not remember session on this device.", e); }
 }
 function bindPasswordToggles(){
-  document.querySelectorAll("[data-toggle-password]").forEach((toggle) => {
-    const targetId = toggle.dataset.togglePassword;
-    const input = document.getElementById(targetId);
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle-password]");
+    if(!btn) return;
+    const input = document.getElementById(btn.dataset.togglePassword);
     if(!input) return;
-    toggle.addEventListener("change", () => {
-      input.type = toggle.checked ? "text" : "password";
-    });
+    const showing = input.type === "text";
+    input.type = showing ? "password" : "text";
+    btn.textContent = showing ? "👁" : "🙈";
+    btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
   });
 }
 function clearRememberedSession(){
@@ -5028,7 +5044,7 @@ function openAdminAccountModal(username=""){
   openOverlay(`<h3>${editing ? "Edit admin profile" : "Add admin profile"}</h3><div class="sub">Set the owner-managed admin name, username, password, and assigned branch access.</div>
     <div class="field"><label>Name</label><input id="admin-account-name" value="${editing ? escapeHTML(editing.name || editing.username || "") : ""}" autocomplete="off" placeholder="e.g. Jaja"></div>
     <div class="field"><label>Username</label><input id="admin-account-username" value="${editing ? escapeHTML(editing.username || "") : ""}" autocomplete="off" placeholder="e.g. adminjaja"></div>
-    <div class="field"><label>Password</label><input id="admin-account-password" type="password" value="${editing ? escapeHTML(editing.password || "") : ""}" autocomplete="new-password" placeholder="Create password"></div>
+    <div class="field"><label>Password</label><div class="pw-field"><input id="admin-account-password" type="password" value="${editing ? escapeHTML(editing.password || "") : ""}" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="admin-account-password" aria-label="Show password">👁</button></div></div>
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
     <div class="login-error" id="admin-account-error"></div>
     <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveAdminAccount('${editing ? escapeHTML(editing.username) : ""}')">Save profile</button></div>`);
@@ -5136,7 +5152,7 @@ function openStaffAccountModal(editId="", technician=""){
     <div class="field"><label>Technician</label><select id="staff-account-tech">${options}</select></div>
     <div class="field"><label>Name</label><input id="staff-account-name" value="${editing ? escapeHTML(editing.name || editing.technician || "") : ""}" autocomplete="off" placeholder="e.g. Tristan"></div>
     <div class="field"><label>Username</label><input id="staff-account-username" value="${editing ? escapeHTML(editing.username || "") : ""}" autocomplete="off" placeholder="e.g. stafftristan"></div>
-    <div class="field"><label>Password</label><input id="staff-account-password" type="password" value="${editing ? escapeHTML(editing.password || "") : ""}" autocomplete="new-password" placeholder="Create password"></div>
+    <div class="field"><label>Password</label><div class="pw-field"><input id="staff-account-password" type="password" value="${editing ? escapeHTML(editing.password || "") : ""}" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="staff-account-password" aria-label="Show password">👁</button></div></div>
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
     <div class="login-error" id="staff-account-error"></div>
     <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveStaffAccount('${editId}')">Save access</button></div>
