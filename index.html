@@ -2029,11 +2029,13 @@ function clearBrowserSession(){
   try{ sessionStorage.removeItem(BROWSER_SESSION_KEY); }catch(e){ console.warn("Could not clear browser session.", e); }
 }
 function currentUserName(){
-  return session.isAdmin
-    ? (session.adminUsername || firebase.auth().currentUser?.email || "Admin")
-    : session.isDeveloper
-      ? (firebase.auth().currentUser?.email || "Developer")
-      : (session.staffUsername || firebase.auth().currentUser?.email || session.staffTechnician || "Staff");
+  return session.isOwner
+    ? (session.adminUsername || firebase.auth().currentUser?.email || "Owner")
+    : session.isAdmin
+      ? (session.adminUsername || firebase.auth().currentUser?.email || "Admin")
+      : session.isDeveloper
+        ? (firebase.auth().currentUser?.email || "Developer")
+        : (session.staffUsername || firebase.auth().currentUser?.email || session.staffTechnician || "Staff");
 }
 function saveBrowserSession(view){
   try{ sessionStorage.setItem(BROWSER_SESSION_KEY, JSON.stringify({view})); }catch(e){}
