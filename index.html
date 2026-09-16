@@ -869,7 +869,7 @@
       <span class="label" id="admin-nav-label">ADMIN</span>
     </div>
 
-    <div class="rail-foot">REPAIR · SERVICE · ACCESSORIES<br>San Antonio · Upcoming Branch<br><br><strong>GIDS AYPHONE TECH</strong><div class="copyright">© 2026 GIDS AYPHONE TECH<br>All rights reserved.</div></div>
+    <div class="rail-foot">REPAIR · SERVICE · ACCESSORIES<br><span id="rail-branch-line">San Antonio · Active Branch</span><br><br><strong>GIDS AYPHONE TECH</strong><div class="copyright">© 2026 GIDS AYPHONE TECH<br>All rights reserved.</div></div>
   </div>
 
   <!-- ============ MAIN ============ -->
@@ -1775,7 +1775,8 @@ function currentUserAllowedBranches(){
 function applySubscriptionBranches(){
   const ids = Array.isArray(subscription?.activeBranchIds) ? subscription.activeBranchIds : [];
   const names = BRANCHES.filter(name => ids.includes(branchIdForName(name)));
-  ENTITLED_BRANCHES = names.length ? names : [...ACTIVE_BRANCHES];
+  const merged = new Set([...ACTIVE_BRANCHES, ...names]);
+  ENTITLED_BRANCHES = BRANCHES.filter(name => merged.has(name));
 }
 const TECHS = [];
 const SERVICE_TYPES = ["Labor","Parts & Accessories"];
@@ -4036,8 +4037,17 @@ function bindBranchSelector(who){
   if(!el) return;
   el.addEventListener("change", ()=>{
     if(who==="employee") ui.branch = el.value; else ui.adminBranch = el.value;
+    updateRailBranchFooter();
     renderAll();
   });
+}
+function updateRailBranchFooter(){
+  const el = document.getElementById("rail-branch-line");
+  if(!el) return;
+  const branch = (session.isOwner || session.isAdmin) ? ui.adminBranch : ui.branch;
+  if(!branch) return;
+  const statusLabel = isBranchActive(branch) ? "Active Branch" : "Not Yet Active";
+  el.textContent = `${branch} · ${statusLabel}`;
 }
 
 /* ======================= LOGIN ======================= */
@@ -4725,6 +4735,7 @@ async function saveStaffRepairStatus(id){
   if(ok) closeOverlay();
 }
 function renderAll(){
+  updateRailBranchFooter();
   if(session.isDeveloper){
     renderStaffAccess();
     renderAdminAccess();
