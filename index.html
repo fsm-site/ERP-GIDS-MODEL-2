@@ -1152,12 +1152,43 @@
       <div class="logo-badge"></div>
 
       <h2>OWNER LOGIN</h2>
-      <p class="hint">Owner access is not set up yet. This will be enabled once Firebase is configured.</p>
+      <p class="hint">Sign in or create your business owner account</p>
 
-      <input type="hidden" id="owner-user">
-      <input type="hidden" id="owner-pass">
-      <input type="hidden" id="remember-owner">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="owner-user" placeholder="Enter owner email" autocomplete="username">
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="pw-field">
+          <input type="password" id="owner-pass" placeholder="Enter password" autocomplete="current-password">
+          <button type="button" class="pw-eye" data-toggle-password="owner-pass" aria-label="Show password">👁</button>
+        </div>
+      </div>
+
+      <label class="remember-choice">
+        <input type="checkbox" id="remember-owner" checked>
+        Remember me on this device
+      </label>
+
       <div class="login-error" id="owner-error"></div>
+
+      <button
+        class="pill-btn primary login-submit"
+        id="owner-login-btn"
+        style="width:100%; padding:11px;"
+        onclick="attemptOwnerLogin()">
+        Log in
+      </button>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="margin-top:10px;width:100%;"
+        onclick="showOwnerRegister()">
+        Create Owner Account
+      </button>
 
       <button
         class="pill-btn ghost"
@@ -3714,15 +3745,11 @@ function chooseRole(role){
 
   if(role === "owner"){
 
-    session.isOwner = true;
-    session.isAdmin = true;
-    session.isDeveloper = false;
-    session.staffUnlocked = true;
     session.pendingView = null;
 
     updateNavForRole("owner");
 
-    switchView("owner-dashboard");
+    switchView("owner-login");
 
     return;
 
@@ -7503,3 +7530,4 @@ function showToast(msg){
 }
 </script>
 </body>
+</html>
