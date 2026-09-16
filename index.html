@@ -6370,6 +6370,11 @@ function openTxnModal(isAdmin=!!session.isAdmin, editId=null){
   // Dashboard Add Job is shared by Admin and Staff. Infer the active role so
   // an Admin opening Add Job from the main dashboard uses Admin cloud writes.
   isAdmin = !!(isAdmin || session.isAdmin);
+  const branchForCheck = isAdmin ? ui.adminBranch : ui.branch;
+  if(!editId && !isBranchActive(branchForCheck)){
+    showToast("Not Yet Active. Contact your Site Administrator");
+    return;
+  }
   const editing = editId ? state.transactions.find(t=>t.id===editId) : null;
   const branchForForm = isAdmin ? ui.adminBranch : ui.branch;
   const branchOptions = isAdmin ? BRANCHES.map(b=>`<option value="${b}" ${ (editing?editing.branch:branchForForm)===b?"selected":""}>${b}</option>`).join("") : "";
