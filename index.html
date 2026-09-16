@@ -1113,31 +1113,7 @@
         </div>
       </div>
 
-      <!-- ================= DEVELOPER LOGIN ================= -->
-      <div class="view" id="view-developer-login">
-        <div class="login-wrap">
-          <div class="login-card">
-            <div class="logo-badge"></div>
-            <h2>DEVELOPER ACCESS</h2>
-            <p class="hint">Security controls only · no business data</p>
-            <div class="field">
-              <label>Email</label>
-              <input type="email" id="developer-user" placeholder="Developer email" autocomplete="username">
-            </div>
-            <div class="field">
-              <label>Password</label>
-              <div class="pw-field">
-                <input type="password" id="developer-pass" placeholder="Developer password" autocomplete="current-password">
-                <button type="button" class="pw-eye" data-toggle-password="developer-pass" aria-label="Show password">👁</button>
-              </div>
-            </div>
-            <label class="remember-choice"><input type="checkbox" id="remember-developer" checked> Remember me on this device</label>
-            <div class="login-error" id="developer-error"></div>
-            <button class="pill-btn primary login-submit" id="developer-login-btn" style="width:100%;padding:11px;" onclick="attemptDeveloperLogin()">Log in</button>
-            <button class="pill-btn ghost" type="button" style="margin-top:10px;width:100%;" onclick="switchView('role-select')">Back to login access</button>
-          </div>
-        </div>
-      </div>
+      <!-- ================= DEVELOPER LOGIN REMOVED: only Owner, Admin, Staff can sign in ================= -->
 
       <!-- ================= STAFF ACCESS GATE ================= -->
 <div class="view" id="view-staff-gate">
@@ -2142,11 +2118,6 @@ async function restoreAuthenticatedSession(){
       session.staffUsername = staffAccount.username || user.email;
       session.staffTechnician = staffAccount.technician || "";
       return "staff";
-    }
-
-    if(role === "developer"){
-      session.isDeveloper = true;
-      return "developer";
     }
 
     if(role === "owner"){
@@ -3545,8 +3516,6 @@ async function init(){
   document.getElementById("staff-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
   document.getElementById("staff-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
   document.getElementById("login-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptLogin(); });
-  document.getElementById("developer-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptDeveloperLogin(); });
-  document.getElementById("developer-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptDeveloperLogin(); });
   document.getElementById("owner-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
   document.getElementById("owner-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
   document.getElementById("owner-register-confirm").addEventListener("keydown", e=>{ if(e.key==="Enter") createOwnerAccount(); });
@@ -3556,7 +3525,7 @@ async function init(){
   enforceClientRole();
 
   const finishInit = () => {
-    const activeRole = restoredRole || (session.isAdmin ? "admin" : session.isDeveloper ? "developer" : session.staffUnlocked ? "staff" : null);
+    const activeRole = restoredRole || (session.isAdmin ? "admin" : session.staffUnlocked ? "staff" : null);
     const titleEl = document.getElementById("topbar-title");
     const subEl = document.getElementById("topbar-sub");
     const rightEl = document.getElementById("topbar-right");
@@ -3576,7 +3545,7 @@ async function init(){
 
     if(activeRole && activeRole !== "developer" && !subscriptionIsActive()){ applySubscriptionAccess(); return; }
     updateNavForRole(activeRole);
-    const allowedView = activeRole === "admin" ? (restoredView || "admin") : activeRole === "developer" ? "security-access" : activeRole === "staff" ? (restoredView || "employee") : "role-select";
+    const allowedView = activeRole === "admin" ? (restoredView || "admin") : activeRole === "staff" ? (restoredView || "employee") : "role-select";
     switchView(allowedView);
     applyThemeToggleUI(document.documentElement.getAttribute("data-theme")==="dark" ? "dark" : "light");
     if(restoredRole) setInterval(async ()=>{ await loadSubscription(); applySubscriptionAccess(); }, 60000);
@@ -3774,18 +3743,6 @@ function chooseRole(role){
 
   }
 
-  if(role === "developer"){
-
-    session.pendingView = null;
-
-    updateNavForRole("developer");
-
-    switchView("developer-login");
-
-    return;
-
-  }
-
   session.isOwner = false;
   session.isAdmin = false;
   session.isDeveloper = false;
@@ -3803,10 +3760,6 @@ function openLoginChoices(){
   if(choices) choices.style.display = "grid";
 }
 
-function openDeveloperAccess(){
-  switchView("developer-login");
-}
-
 function hardRefreshApp(){
   window.location.reload();
 }
@@ -3820,7 +3773,7 @@ document.addEventListener("click", event=>{
 });
 
 function ensureSharedTopbarActions(key, rightEl){
-  if(!rightEl || ["role-select", "admin-login", "staff-gate", "developer-login"].includes(key)) return;
+  if(!rightEl || ["role-select", "admin-login", "staff-gate"].includes(key)) return;
   if(!document.getElementById("refresh-app-btn")){
     rightEl.insertAdjacentHTML("afterbegin", `<button class="pill-btn ghost" id="refresh-app-btn" type="button" onclick="hardRefreshApp()" title="Reload the app and re-sync your data">Refresh</button>`);
   }
@@ -3834,7 +3787,7 @@ function ensureSharedTopbarActions(key, rightEl){
 
 function switchView(key){
   const shell = document.querySelector(".shell");
-  const loginView = ["role-select", "admin", "admin-login", "staff-gate", "developer-login", "owner-login", "owner-register"].includes(key) && !session.isAdmin && !session.isDeveloper && !session.isOwner && !session.staffUnlocked;
+  const loginView = ["role-select", "admin", "admin-login", "staff-gate", "owner-login", "owner-register"].includes(key) && !session.isAdmin && !session.isDeveloper && !session.isOwner && !session.staffUnlocked;
   if(shell) shell.classList.toggle("login-mode", loginView);
   document.body.classList.toggle("login-mode", loginView);
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -4017,11 +3970,6 @@ function switchView(key){
     document.getElementById("view-owner-register").classList.add("active");
     titleEl.innerHTML = `CREATE <span class="hi">OWNER</span>`;
     subEl.innerHTML = "Create the business owner account";
-    rightEl.innerHTML = "";
-  } else if(key==="developer-login"){
-    document.getElementById("view-developer-login").classList.add("active");
-    titleEl.innerHTML = `DEVELOPER <span class="hi">ACCESS</span>`;
-    subEl.innerHTML = "Security controls only · business data excluded";
     rightEl.innerHTML = "";
   } else if(key==="security-access"){
     if(!hasSecurityAccess()){
@@ -4312,12 +4260,8 @@ async function attemptLogin(){
     }
 
     if(role === "developer"){
-      session.isDeveloper = true;
-      session.isAdmin = false;
-      await loadSecurityCollections();
-      updateNavForRole("developer");
-      switchView("security-access");
-      showToast("Developer security portal");
+      await firebase.auth().signOut();
+      err.textContent = "This email is not assigned Admin access.";
       return;
     }
 
@@ -4407,38 +4351,6 @@ async function attemptLogin(){
     err.textContent = describeFirebaseAuthError(error, "admin");
   }finally{
     setLoginLoading("admin-login-btn", null);
-  }
-}
-async function attemptDeveloperLogin(){
-  ensureStateReady();
-  const email = document.getElementById("developer-user").value.trim();
-  const password = document.getElementById("developer-pass").value;
-  const error = document.getElementById("developer-error");
-  error.textContent = "";
-  if(!email || !password){ error.textContent = "Please enter your developer email and password."; return; }
-  setLoginLoading("developer-login-btn", "Signing in...");
-  try{
-    const remember = document.getElementById("remember-developer").checked;
-    await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
-    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-    const roleDetails = await getFirebaseRoleDetails(userCredential.user);
-    if(roleDetails.role !== "developer"){
-      await firebase.auth().signOut();
-      error.textContent = "This Firebase account is not assigned Developer access.";
-      return;
-    }
-    session.isAdmin = false;
-    session.staffUnlocked = false;
-    session.isDeveloper = true;
-    await loadSecurityCollections();
-    updateNavForRole("developer");
-    switchView("security-access");
-    showToast("Developer security portal");
-  }catch(loginError){
-    console.error("Firebase developer login error:", loginError);
-    error.textContent = describeFirebaseAuthError(loginError, "developer");
-  }finally{
-    setLoginLoading("developer-login-btn", null);
   }
 }
 async function attemptStaffLogin(){
@@ -7591,4 +7503,3 @@ function showToast(msg){
 }
 </script>
 </body>
-</html>
