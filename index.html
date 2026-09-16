@@ -40,17 +40,14 @@ body{margin:0;min-height:100vh;font-family:Inter,sans-serif;color:#eef7ff;backgr
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-// TODO: REPLACE with the NEW Firebase project config once created.
-// This exact same config must also be pasted into index.html (the main ERP)
-// so both apps read/write the same data.
 const firebaseConfig={
-  apiKey:"AIzaSyDMGBzYJUQAXiK4ls7c_pBCie4eUJzk2tY",
-  authDomain:"fakeclienta.firebaseapp.com",
-  projectId:"fakeclienta",
-  storageBucket:"fakeclienta.firebasestorage.app",
-  messagingSenderId:"358905329822",
-  appId:"1:358905329822:web:e91ae1c39be6acb051e38f",
-  measurementId:"G-VSBGW5JV35"
+  apiKey:"AIzaSyAJC9PfhLmSvIrUdy4MPj_IRhodJQCjHBo",
+  authDomain:"gids-erp.firebaseapp.com",
+  projectId:"gids-erp",
+  storageBucket:"gids-erp.firebasestorage.app",
+  messagingSenderId:"515037466934",
+  appId:"1:515037466934:web:04f5a96156d56167a76397",
+  measurementId:"G-RJSHWHQ2CY"
 };
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
