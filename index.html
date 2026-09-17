@@ -3269,6 +3269,7 @@ let realtimeUnsubs = [];
 function stopRealtimeSync(){
   realtimeUnsubs.forEach(unsub=>{ try{ unsub(); }catch(e){} });
   realtimeUnsubs = [];
+  if(ownerRequestsUnsub){ try{ ownerRequestsUnsub(); }catch(e){} ownerRequestsUnsub = null; }
 }
 function replaceCurrentBranchRecords(records, key){
   const branchId = currentBranchId();
@@ -4047,16 +4048,33 @@ async function loadOwnerAccessCollections(){
   if(!user || !session.isOwner) return;
   ensureStateReady();
   try{
-    const [staffSnap, adminSnap] = await Promise.all([
+    const [staffSnap, adminSnap, requestsSnap] = await Promise.all([
       db.collection("staffAccounts").get(),
-      db.collection("adminAccounts").get()
+      db.collection("adminAccounts").get(),
+      db.collection("ownerRequests").get()
     ]);
     state.staffAccounts = staffSnap.docs.map(doc=>({id:doc.id,...doc.data()}));
     state.adminAccounts = normalizeAdminAccounts(adminSnap.docs.map(doc=>({id:doc.id,...doc.data()})));
+    state.ownerRequests = requestsSnap.docs.map(doc=>({id:doc.id,...doc.data()}));
     writeLocal();
+    startOwnerRequestsSync();
   }catch(e){
     console.error("Could not load Owner access collections:", e);
   }
+}
+let ownerRequestsUnsub = null;
+function startOwnerRequestsSync(){
+  if(ownerRequestsUnsub) return;
+  try{
+    ownerRequestsUnsub = db.collection("ownerRequests").onSnapshot(
+      snap=>{
+        state.ownerRequests = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
+        writeLocal();
+        renderOwnerRequests();
+      },
+      err=>console.error("Realtime ownerRequests sync failed:", err)
+    );
+  }catch(e){ console.error("Could not start owner requests sync:", e); }
 }
 async function loadSecurityCollections(){
   const user = firebase.auth().currentUser;
@@ -5755,54 +5773,91 @@ function renderOwnerRequests(){
   }
 }
 
-function approveOwnerRequest(id){
+async function approveOwnerRequest(id){
   const request = (state.ownerRequests || []).find(item => item.id === id);
   if(!request || request.status !== "pending") return;
   const branch = request.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH;
-  if(request.type === "job-delete"){
-    const target = state.transactions.find(entry => entry.id === request.entityId);
-    if(target){
-      state.transactions = state.transactions.filter(entry => entry.id !== request.entityId);
-      markDeleted("transactions", request.entityId);
-    }
-  } else if(request.type === "inventory-delete"){
-    const target = state.inventory.find(entry => entry.id === request.entityId);
-    if(target){
-      state.inventory = state.inventory.filter(entry => entry.id !== request.entityId);
-      markDeleted("inventory", request.entityId);
-    }
-  } else if(request.type === "tech-name-request"){
-    const technicianName = String(request.payload?.technician || "").trim();
-    const email = String(request.payload?.email || "").trim().toLowerCase();
-    if(technicianName && email){
-      const existing = (state.staffAccounts || []).find(account => (account.email || "").trim().toLowerCase() === email);
-      if(existing){
-        existing.technician = technicianName;
-        existing.branchId = existing.branchId || branch;
-      } else {
-        const newAccount = {id: uid(), email, technician: technicianName, status: "active", firebaseUid: "", branchId: branch};
-        state.staffAccounts = [...(state.staffAccounts || []), newAccount];
+  try{
+    if(request.type === "job-delete"){
+      const target = state.transactions.find(entry => entry.id === request.entityId);
+      if(target){
+        if(target.itemUsed) adjustInventoryUsage(target.itemUsed, null, Number(target.quantity||1), 0);
+        state.transactions = state.transactions.filter(entry => entry.id !== request.entityId);
+        markDeleted("transactions", request.entityId);
+        const batch = db.batch();
+        batch.delete(db.collection("jobs").doc(request.entityId));
+        batch.delete(db.collection("salesPrivate").doc(request.entityId));
+        const statusToken = target.statusToken ? String(target.statusToken) : "";
+        if(statusToken) batch.delete(db.collection("repairStatusPublic").doc(statusToken));
+        await withTimeout(batch.commit(), 10000);
+        await syncAppMeta();
       }
-      if(!TECHS.includes(technicianName)) TECHS.push(technicianName);
-      state.technicians = [...TECHS];
-      writeLocal();
+    } else if(request.type === "job-revision"){
+      const target = state.transactions.find(entry => entry.id === request.entityId);
+      const changes = request.payload?.changes;
+      if(target && changes){
+        Object.assign(target, changes);
+        await syncAdminJobTransaction(target, [changes.itemUsed].filter(Boolean));
+      }
+    } else if(request.type === "inventory-delete"){
+      const target = state.inventory.find(entry => entry.id === request.entityId);
+      if(target){
+        state.inventory = state.inventory.filter(entry => entry.id !== request.entityId);
+        markDeleted("inventory", request.entityId);
+        await syncInventoryChange(target, true);
+      }
+    } else if(request.type === "inventory-revision"){
+      const target = state.inventory.find(entry => entry.id === request.entityId);
+      const changes = request.payload?.changes;
+      if(target && changes){
+        Object.assign(target, changes);
+        await syncInventoryChange(target, false);
+      }
+    } else if(request.type === "tech-name-request"){
+      const technicianName = String(request.payload?.technician || "").trim();
+      const email = String(request.payload?.email || "").trim().toLowerCase();
+      if(technicianName && email){
+        const existing = (state.staffAccounts || []).find(account => (account.email || "").trim().toLowerCase() === email);
+        if(existing){
+          existing.technician = technicianName;
+          existing.branchId = existing.branchId || branch;
+          await db.collection("staffAccounts").doc(existing.id).set({technician:technicianName, branchId:existing.branchId}, {merge:true});
+        } else {
+          const newAccount = {id: uid(), email, technician: technicianName, status: "active", firebaseUid: "", branchId: branch};
+          state.staffAccounts = [...(state.staffAccounts || []), newAccount];
+          await db.collection("staffAccounts").doc(newAccount.id).set(newAccount, {merge:true});
+        }
+        if(!TECHS.includes(technicianName)) TECHS.push(technicianName);
+        state.technicians = [...TECHS];
+        await syncTechnicianDirectory().catch(e=>console.error("Could not sync technician directory:", e));
+      }
     }
+
+    request.status = "approved";
+    request.resolvedAt = Date.now();
+    request.resolvedBy = currentUserName() || "Owner";
+    await db.collection("ownerRequests").doc(id).set({status:"approved", resolvedAt: firebase.firestore.FieldValue.serverTimestamp(), resolvedBy: request.resolvedBy}, {merge:true});
+    writeLocal();
+    renderAll();
+    renderOwnerRequests();
+    showToast(`${request.title || "Request"} approved for ${branch}`);
+  }catch(e){
+    console.error("Could not approve request:", e);
+    showToast("Could not complete this approval. Please try again.");
   }
-  request.status = "approved";
-  request.resolvedAt = Date.now();
-  request.resolvedBy = currentUserName() || "Owner";
-  writeLocal();
-  renderAll();
-  renderOwnerRequests();
-  showToast(`${request.title || "Request"} approved for ${branch}`);
 }
 
-function denyOwnerRequest(id){
+async function denyOwnerRequest(id){
   const request = (state.ownerRequests || []).find(item => item.id === id);
   if(!request || request.status !== "pending") return;
   request.status = "denied";
   request.resolvedAt = Date.now();
   request.resolvedBy = currentUserName() || "Owner";
+  try{
+    await db.collection("ownerRequests").doc(id).set({status:"denied", resolvedAt: firebase.firestore.FieldValue.serverTimestamp(), resolvedBy: request.resolvedBy}, {merge:true});
+  }catch(e){
+    console.error("Could not update denied request in the cloud:", e);
+  }
   writeLocal();
   renderOwnerRequests();
   showToast(`${request.title || "Request"} denied`);
