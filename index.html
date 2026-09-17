@@ -1077,8 +1077,7 @@
             <h2>LOGIN ACCESS</h2>
             <p class="hint">Choose Your Assigned Access Level</p>
             <div class="role-choice" id="login-role-choice">
-  <button class="pill-btn primary" type="button" onclick="chooseRole('owner')">Owner</button>
-  <button class="pill-btn ghost" type="button" onclick="chooseRole('admin')">Admin</button>
+  <button class="pill-btn primary" type="button" onclick="chooseRole('admin')">Admin</button>
   <button class="pill-btn ghost" type="button" onclick="chooseRole('staff')">Staff</button>
 
 </div>
@@ -1146,291 +1145,12 @@
 
 
 <!-- ================= OWNER LOGIN ================= -->
-<div class="view" id="view-owner-login">
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="logo-badge"></div>
 
-      <h2>OWNER LOGIN</h2>
-      <p class="hint">Sign in or create your business owner account</p>
-
-      <div class="field">
-        <label>Email</label>
-        <input type="email" id="owner-user" placeholder="Enter owner email" autocomplete="username">
-      </div>
-
-      <div class="field">
-        <label>Password</label>
-        <div class="pw-field">
-          <input type="password" id="owner-pass" placeholder="Enter password" autocomplete="current-password">
-          <button type="button" class="pw-eye" data-toggle-password="owner-pass" aria-label="Show password">👁</button>
-        </div>
-      </div>
-
-      <label class="remember-choice">
-        <input type="checkbox" id="remember-owner" checked>
-        Remember me on this device
-      </label>
-
-      <div class="login-error" id="owner-error"></div>
-
-      <button
-        class="pill-btn primary login-submit"
-        id="owner-login-btn"
-        style="width:100%; padding:11px;"
-        onclick="attemptOwnerLogin()">
-        Log in
-      </button>
-
-      <div class="or-divider" style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted,#6d849d);">or</div>
-
-      <button
-        class="pill-btn ghost"
-        type="button"
-        style="width:100%;"
-        onclick="continueWithGoogleOwner()">
-        Continue with Gmail
-      </button>
-
-      <button
-        class="pill-btn ghost"
-        type="button"
-        style="margin-top:10px;width:100%;"
-        onclick="showOwnerRegister()">
-        Create Owner Account
-      </button>
-
-      <button
-        class="pill-btn ghost"
-        type="button"
-        style="margin-top:10px;width:100%;"
-        onclick="switchView('role-select')">
-        Back to login access
-      </button>
-    </div>
-  </div>
-</div>
 <!-- ================= OWNER REGISTER ================= -->
-<div class="view" id="view-owner-register">
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="logo-badge"></div>
 
-      <h2>CREATE OWNER ACCOUNT</h2>
-      <p class="hint">Create the main account for this business</p>
-
-      <div class="field">
-        <label>Business Name</label>
-        <input
-          type="text"
-          id="owner-business-name"
-          placeholder="Enter business name"
-        >
-      </div>
-
-      <div class="field">
-        <label>Owner Name</label>
-        <input
-          type="text"
-          id="owner-name"
-          placeholder="Enter owner name"
-        >
-      </div>
-
-      <div class="field">
-        <label>Email</label>
-        <input
-          type="email"
-          id="owner-register-email"
-          placeholder="Enter owner email"
-          autocomplete="email"
-        >
-      </div>
-
-      <div class="field">
-        <label>Password</label>
-        <div class="pw-field">
-          <input
-            type="password"
-            id="owner-register-pass"
-            placeholder="Create a password"
-            autocomplete="new-password"
-          >
-          <button type="button" class="pw-eye" data-toggle-password="owner-register-pass" aria-label="Show password">👁</button>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Confirm Password</label>
-        <div class="pw-field">
-          <input
-            type="password"
-            id="owner-register-confirm"
-            placeholder="Confirm password"
-            autocomplete="new-password"
-          >
-          <button type="button" class="pw-eye" data-toggle-password="owner-register-confirm" aria-label="Show password">👁</button>
-        </div>
-      </div>
-
-      <div class="login-error" id="owner-register-error"></div>
-
-      <button
-        class="pill-btn primary login-submit"
-        id="owner-register-btn"
-        style="width:100%; padding:11px;"
-        onclick="createOwnerAccount()">
-        Create Owner Account
-      </button>
-
-      <div class="or-divider" style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted,#6d849d);">or</div>
-
-      <button
-        class="pill-btn ghost"
-        type="button"
-        style="width:100%;"
-        onclick="continueWithGoogleOwner()">
-        Continue with Gmail
-      </button>
-
-      <button
-        class="pill-btn ghost"
-        type="button"
-        style="margin-top:10px;width:100%;"
-        onclick="switchView('owner-login')">
-        Back to Owner Login
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- ================= OWNER DASHBOARD ================= -->
-<div class="view" id="view-owner-dashboard">
-  <div class="subtabs">
-    <div class="subtab active" data-owner-sub="overview">OVERVIEW</div>
-    <div class="subtab" data-owner-sub="access">ACCESS</div>
-    <div class="subtab" data-owner-sub="requests">REQUESTS</div>
-    <div class="subtab" data-owner-sub="tech-requests">TECH REQUESTS</div>
-    <div class="subtab" data-owner-sub="branches">BRANCHES</div>
-  </div>
 
-  <div id="owner-sub-overview">
-    <div class="stat-row">
-      <div class="stat-card">
-        <div class="stat-label">Business clients today</div>
-        <div class="stat-value" id="owner-stat-clients">0</div>
-        <div class="stat-sub">Across the active business branch</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Business sales today</div>
-        <div class="stat-value blue" id="owner-stat-sales">₱0</div>
-        <div class="stat-sub">Revenue from the active branch</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Open access</div>
-        <div class="stat-value" id="owner-stat-access">2</div>
-        <div class="stat-sub">Current active user roles</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <h3>Owner dashboard</h3>
-          <div class="desc">Business-level summary for the active branch</div>
-        </div>
-        <button class="pill-btn primary" onclick="switchView('admin')">Open admin dashboard</button>
-      </div>
-      <div style="padding:20px;">
-        <div class="muted-box" id="owner-dashboard-summary">
-          Review branch operations, financial activity, and access control from the business owner view.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="owner-sub-access" style="display:none;">
-    <div class="panel" style="margin:16px;">
-      <div class="panel-head">
-        <div>
-          <h3>Owner access controls</h3>
-          <div class="desc">Set and remove staff/admin credentials for each branch-managed role.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel" style="margin:16px;">
-      <div class="panel-head">
-        <div><h3>Staff access</h3><div class="desc">Owner-managed Username and Password for staff accounts.</div></div>
-        <button class="pill-btn primary" onclick="openStaffAccountModal()">+ Add staff</button>
-      </div>
-      <table>
-        <thead><tr><th>Username</th><th>Password</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
-        <tbody id="owner-staff-access-body"></tbody>
-      </table>
-    </div>
-
-    <div class="panel" style="margin:16px;">
-      <div class="panel-head">
-        <div><h3>Admin access</h3><div class="desc">Owner-managed Name, Username, and Password for admin accounts.</div></div>
-        <button class="pill-btn primary" onclick="openAdminAccountModal()">+ Add admin</button>
-      </div>
-      <table>
-        <thead><tr><th>Name</th><th>Username</th><th>Password</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
-        <tbody id="owner-admin-access-body"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div id="owner-sub-requests" style="display:none;">
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <h3>Approval requests</h3>
-          <div class="desc">Pending admin actions awaiting owner approval or denial</div>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>Type</th><th>Title</th><th>Target</th><th>Branch</th><th>Details</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
-        <tbody id="owner-requests-body"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div id="owner-sub-tech-requests" style="display:none;">
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <h3>Technician assignment requests</h3>
-          <div class="desc">Owner-only approval for technician names and usernames requested by admin</div>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>Request</th><th>Assigned name</th><th>Firebase email</th><th>Branch</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
-        <tbody id="owner-tech-requests-body"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div id="owner-sub-branches" style="display:none;">
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <h3>Branch status</h3>
-          <div class="desc">Current branch activation and business rollout</div>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>Branch</th><th>Status</th><th>Notes</th></tr></thead>
-        <tbody>
-          <tr><td>San Antonio</td><td><span class="tag good">Active</span></td><td>Primary business branch in operation.</td></tr>
-          <tr><td>Bataan</td><td><span class="tag low">Not Yet Active</span></td><td>Waiting for activation.</td></tr>
-          <tr><td>Angeles</td><td><span class="tag low">Not Yet Active</span></td><td>Reserved for future rollout.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
 <!-- ================= ADMIN PANEL ================= -->
 <div class="view" id="view-admin-panel">
@@ -2169,14 +1889,6 @@ async function restoreAuthenticatedSession(){
       session.staffUsername = staffAccount.username || user.email;
       session.staffTechnician = staffAccount.technician || "";
       return "staff";
-    }
-
-    if(role === "owner"){
-      session.isOwner = true;
-      session.isAdmin = true;
-      session.staffUnlocked = true;
-      session.adminUsername = (firebase.auth().currentUser?.displayName || firebase.auth().currentUser?.email || "Owner").trim() || "Owner";
-      return "admin";
     }
 
     if(role === "admin"){
@@ -3567,9 +3279,6 @@ async function init(){
   document.getElementById("staff-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
   document.getElementById("staff-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
   document.getElementById("login-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptLogin(); });
-  document.getElementById("owner-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
-  document.getElementById("owner-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
-  document.getElementById("owner-register-confirm").addEventListener("keydown", e=>{ if(e.key==="Enter") createOwnerAccount(); });
   bindPasswordToggles();
   session.pendingView = null;
   // Firebase Authentication, not localStorage/sessionStorage, determines the role.
@@ -3762,18 +3471,6 @@ function updateNavForRole(role){
 }
 
 function chooseRole(role){
-
-  if(role === "owner"){
-
-    session.pendingView = null;
-
-    updateNavForRole("owner");
-
-    switchView("owner-login");
-
-    return;
-
-  }
 
   if(role === "admin"){
     session.isOwner = false;
@@ -3973,21 +3670,6 @@ function switchView(key){
     titleEl.innerHTML = `STAFF <span class="hi">ACCESS</span>`;
     subEl.innerHTML = "Sign in to open the staff dashboard";
     rightEl.innerHTML = "";
-  } else if(key==="owner-dashboard"){
-    if(!session.isOwner){
-      switchView("role-select");
-      return;
-    }
-    document.getElementById("view-owner-dashboard").classList.add("active");
-    titleEl.innerHTML = `Hi, <span class="hi">${escapeHTML(currentUserName())}!</span>`;
-    subEl.innerHTML = "Owner overview · business access and branch health";
-    rightEl.innerHTML = branchSelectorHTML("ui.adminBranch") +
-      `<div class="badge-role"><span class="dot"></span><span>Owner</span></div>` +
-      `<button class="pill-btn ghost" onclick="switchView('security-access')">Security and Access</button>` +
-      `<button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()">Change Password</button>` +
-      `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
-      `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
-    bindBranchSelector("admin");
   } else if(key==="admin"){
     if(session.staffUnlocked && !session.isAdmin){
       switchView("employee");
@@ -4009,16 +3691,6 @@ function switchView(key){
       subEl.innerHTML = "Sign in to manage jobs and inventory";
       rightEl.innerHTML = "";
     }
-  } else if(key==="owner-login"){
-    document.getElementById("view-owner-login").classList.add("active");
-    titleEl.innerHTML = `OWNER <span class="hi">ACCESS</span>`;
-    subEl.innerHTML = "Business owner sign-in";
-    rightEl.innerHTML = "";
-  } else if(key==="owner-register"){
-    document.getElementById("view-owner-register").classList.add("active");
-    titleEl.innerHTML = `CREATE <span class="hi">OWNER</span>`;
-    subEl.innerHTML = "Create the business owner account";
-    rightEl.innerHTML = "";
   } else if(key==="security-access"){
     if(!hasSecurityAccess()){
       switchView(session.staffUnlocked ? "employee" : "role-select");
@@ -4130,268 +3802,12 @@ function describeFirebaseAuthError(error, label){
   if(error?.message) return `${label[0].toUpperCase()+label.slice(1)} login stopped: ${error.message}`;
   return `${label[0].toUpperCase()+label.slice(1)} login failed (${code || "unknown-auth-error"}).`;
 }
-function showOwnerRegister(){
 
-  ensureStateReady();
 
-  document.getElementById("owner-business-name").value = "";
-  document.getElementById("owner-name").value = "";
-  document.getElementById("owner-register-email").value = "";
-  document.getElementById("owner-register-email").disabled = false;
-  document.getElementById("owner-register-pass").value = "";
-  document.getElementById("owner-register-confirm").value = "";
-  document.getElementById("owner-register-pass").closest(".field").style.display = "";
-  document.getElementById("owner-register-confirm").closest(".field").style.display = "";
 
-  const registerBtn = document.getElementById("owner-register-btn");
-  registerBtn.textContent = "Create Owner Account";
-  registerBtn.setAttribute("onclick", "createOwnerAccount()");
 
-  document.getElementById("owner-register-error").textContent = "";
 
-  switchView("owner-register");
-}
-async function createOwnerAccount(){
-  ensureStateReady();
-  const businessName = document.getElementById("owner-business-name").value.trim();
-  const ownerName = document.getElementById("owner-name").value.trim();
-  const email = document.getElementById("owner-register-email").value.trim();
-  const password = document.getElementById("owner-register-pass").value;
-  const confirmPass = document.getElementById("owner-register-confirm").value;
-  const err = document.getElementById("owner-register-error");
-  err.textContent = "";
 
-  if(!businessName || !ownerName || !email || !password || !confirmPass){
-    err.textContent = "Please complete all owner account fields.";
-    return;
-  }
-  if(password.length < 6){
-    err.textContent = "Password must be at least 6 characters.";
-    return;
-  }
-  if(password !== confirmPass){
-    err.textContent = "Passwords do not match.";
-    return;
-  }
-
-  const button = document.getElementById("owner-register-btn");
-  if(button){
-    button.disabled = true;
-    button.classList.add("is-loading");
-    button.innerHTML = `<span class="login-spinner" aria-hidden="true"></span>Creating...`;
-  }
-
-  try{
-    const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-    const user = userCredential.user;
-
-    await withTimeout(db.collection("userRoles").doc(user.uid).set({ role: "owner" }, { merge: true }), 10000);
-
-    const ownerProfile = {
-      uid: user.uid,
-      email: user.email,
-      businessName,
-      ownerName,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      status: "active"
-    };
-
-    await withTimeout(db.collection("ownerProfiles").doc(user.uid).set(ownerProfile, { merge: true }), 10000);
-
-    const roleDetails = await getFirebaseRoleDetails(user);
-    if(roleDetails.role !== "owner"){
-      await firebase.auth().currentUser?.delete().catch(()=>{});
-      throw new Error("Owner role was not saved to Firebase after account creation.");
-    }
-
-    err.textContent = "";
-    document.getElementById("owner-register-email").value = "";
-    document.getElementById("owner-register-pass").value = "";
-    document.getElementById("owner-register-confirm").value = "";
-    switchView("owner-login");
-    document.getElementById("owner-user").value = email;
-    document.getElementById("owner-pass").value = "";
-    showToast("Owner account created. You can sign in now.");
-  }catch(error){
-    console.error("Owner registration failed:", error);
-    err.textContent = error?.code === "auth/email-already-in-use"
-      ? "This owner email is already registered."
-      : describeFirebaseAuthError(error, "owner");
-  }finally{
-    if(button){
-      button.disabled = false;
-      button.classList.remove("is-loading");
-      button.textContent = "Create Owner Account";
-    }
-  }
-}
-async function continueWithGoogleOwner(){
-  ensureStateReady();
-  const loginErr = document.getElementById("owner-error");
-  const registerErr = document.getElementById("owner-register-error");
-  if(loginErr) loginErr.textContent = "";
-  if(registerErr) registerErr.textContent = "";
-
-  try{
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const result = await firebase.auth().signInWithPopup(provider);
-    const user = result.user;
-    const roleDetails = await getFirebaseRoleDetails(user);
-    const role = roleDetails.role;
-
-    if(role === "owner"){
-      session.isOwner = true;
-      session.isAdmin = true;
-      session.staffUnlocked = true;
-      session.adminUsername = (user.displayName || user.email || "Owner").trim() || "Owner";
-
-      await loadSubscription();
-      if(!subscriptionIsActive()){
-        applySubscriptionAccess();
-        showToast("Subscription expired. Please contact the administrator to renew access.");
-        return;
-      }
-
-      saveRememberedSession("owner");
-      switchView("owner-dashboard");
-      showToast("Welcome, owner");
-      return;
-    }
-
-    if(role === "admin" || role === "staff"){
-      await firebase.auth().signOut();
-      const msg = `This Google account is already assigned as ${role === "admin" ? "Admin" : "Staff"}. Please use the ${role === "admin" ? "Admin" : "Staff"} login instead.`;
-      if(loginErr) loginErr.textContent = msg; else showToast(msg);
-      return;
-    }
-
-    // No owner role yet on this Google account: finish setting up the business.
-    switchView("owner-register");
-    document.getElementById("owner-business-name").value = "";
-    document.getElementById("owner-name").value = user.displayName || "";
-    document.getElementById("owner-register-email").value = user.email || "";
-    document.getElementById("owner-register-email").disabled = true;
-    document.getElementById("owner-register-pass").closest(".field").style.display = "none";
-    document.getElementById("owner-register-confirm").closest(".field").style.display = "none";
-    const registerBtn = document.getElementById("owner-register-btn");
-    registerBtn.textContent = "Finish creating account";
-    registerBtn.setAttribute("onclick", "createOwnerAccountViaGoogle()");
-    showToast("Signed in with Google — finish setting up your business");
-  }catch(error){
-    if(error?.code === "auth/popup-closed-by-user") return;
-    console.error("Google owner sign-in error:", error);
-    const msg = describeFirebaseAuthError(error, "owner");
-    if(loginErr) loginErr.textContent = msg; else if(registerErr) registerErr.textContent = msg;
-  }
-}
-async function createOwnerAccountViaGoogle(){
-  ensureStateReady();
-  const businessName = document.getElementById("owner-business-name").value.trim();
-  const ownerName = document.getElementById("owner-name").value.trim();
-  const err = document.getElementById("owner-register-error");
-  err.textContent = "";
-
-  const user = firebase.auth().currentUser;
-  if(!user){
-    err.textContent = "Google sign-in expired. Please tap Continue with Gmail again.";
-    return;
-  }
-  if(!businessName || !ownerName){
-    err.textContent = "Please complete the business name and owner name.";
-    return;
-  }
-
-  const button = document.getElementById("owner-register-btn");
-  if(button){ button.disabled = true; button.textContent = "Creating..."; }
-
-  try{
-    await withTimeout(db.collection("userRoles").doc(user.uid).set({ role: "owner" }, { merge: true }), 10000);
-
-    const ownerProfile = {
-      uid: user.uid,
-      email: user.email,
-      businessName,
-      ownerName,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      status: "active"
-    };
-    await withTimeout(db.collection("ownerProfiles").doc(user.uid).set(ownerProfile, { merge: true }), 10000);
-
-    session.isOwner = true;
-    session.isAdmin = true;
-    session.staffUnlocked = true;
-    session.adminUsername = ownerName || user.displayName || user.email || "Owner";
-
-    await loadSubscription();
-    saveRememberedSession("owner");
-    switchView("owner-dashboard");
-    showToast("Owner account created with Google");
-  }catch(error){
-    console.error("Owner Google registration failed:", error);
-    err.textContent = describeFirebaseAuthError(error, "owner");
-  }finally{
-    if(button){
-      button.disabled = false;
-      button.textContent = "Finish creating account";
-    }
-  }
-}
-async function attemptOwnerLogin(){
-  ensureStateReady();
-  const email = document.getElementById("owner-user").value.trim();
-  const password = document.getElementById("owner-pass").value;
-  const err = document.getElementById("owner-error");
-  err.textContent = "";
-
-  if(!email || !password){
-    err.textContent = "Please enter your owner email and password.";
-    return;
-  }
-
-  setLoginLoading("owner-login-btn", "Signing in...");
-
-  try{
-    const remember = document.getElementById("remember-owner").checked;
-    await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
-    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-    const user = userCredential.user;
-    const roleDetails = await getFirebaseRoleDetails(user);
-    const role = roleDetails.role;
-
-    if(role !== "owner"){
-      await firebase.auth().signOut();
-      err.textContent = role === "admin"
-        ? "This email is assigned as Admin. Please use Admin Login."
-        : describeFirebaseRoleFailure(roleDetails, "Owner");
-      return;
-    }
-
-    session.isOwner = true;
-    session.isAdmin = true;
-    session.staffUnlocked = true;
-    session.adminUsername = (user.displayName || user.email || "Owner").trim() || "Owner";
-
-    await loadSubscription();
-    if(!subscriptionIsActive()){
-      applySubscriptionAccess();
-      err.textContent = "Subscription expired. Please contact the administrator to renew access.";
-      return;
-    }
-
-    if(document.getElementById("remember-owner").checked) saveRememberedSession("owner");
-
-    err.textContent = "";
-    document.getElementById("owner-user").value = "";
-    document.getElementById("owner-pass").value = "";
-    switchView("owner-dashboard");
-    showToast("Welcome, owner");
-  }catch(error){
-    console.error("Firebase owner login error:", error);
-    err.textContent = describeFirebaseAuthError(error, "owner");
-  }finally{
-    setLoginLoading("owner-login-btn", null);
-  }
-}
 async function attemptLogin(){
   ensureStateReady();
   const email = document.getElementById("login-user").value.trim();
@@ -4813,11 +4229,6 @@ function renderAll(){
   renderRepairStatus();
   renderTechSales("employee-tech-sales-body", ui.branch);
   renderLaborSummary("public-labor-body", null);
-  if(session.isOwner){
-    renderOwnerDashboard();
-    renderOwnerRequests();
-    renderOwnerAccessControls();
-  }
   if(session.isAdmin){
     renderAdminOverview();
     renderAdminInventory();
@@ -4945,30 +4356,7 @@ function renderAdminAccess(){
   }).join("") : `<tr class="empty-row"><td colspan="6">No admin accounts available.</td></tr>`;
 }
 
-function renderOwnerAccessControls(){
-  const staffBody = document.getElementById("owner-staff-access-body");
-  const adminBody = document.getElementById("owner-admin-access-body");
-  if(!staffBody || !adminBody) return;
 
-  const staffAccounts = Array.isArray(state.staffAccounts) ? state.staffAccounts : [];
-  staffBody.innerHTML = staffAccounts.length ? staffAccounts.map(account => {
-    const status = String(account.status || "active").toLowerCase();
-    const username = account.username || "—";
-    const passwordMask = account.password ? "••••••" : "—";
-    return `<tr><td>${escapeHTML(username)}</td><td>${escapeHTML(passwordMask)}</td><td><span class="tag ${status === "revoked" ? "low" : "good"}">${status === "revoked" ? "Revoked" : "Active"}</span></td><td style="text-align:right"><button class="pill-btn small ghost" onclick="openStaffAccountModal('${account.id}')">Edit</button> ${accessActionOptions(account,"staff")}</td></tr>`;
-  }).join("") : `<tr class="empty-row"><td colspan="4">No staff access assigned.</td></tr>`;
-
-  state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
-  const adminAccounts = state.adminAccounts || [];
-  adminBody.innerHTML = adminAccounts.length ? adminAccounts.map(account => {
-    const status = String(account.status || "active").toLowerCase();
-    const name = account.name || account.username || "—";
-    const username = account.username || "—";
-    const passwordMask = account.password ? "••••••" : "—";
-    const branches = accountAllowedBranches(account).join(", ") || "—";
-    return `<tr><td>${escapeHTML(name)}</td><td>${escapeHTML(username)}</td><td>${escapeHTML(passwordMask)}</td><td>${escapeHTML(branches)}</td><td><span class="tag ${status === "revoked" ? "low" : "good"}">${status === "revoked" ? "Revoked" : "Active"}</span></td><td style="text-align:right"><button class="pill-btn small ghost" onclick="openAdminAccountModal('${account.username}')">Edit</button> ${accessActionOptions(account,"admin")}</td></tr>`;
-  }).join("") : `<tr class="empty-row"><td colspan="6">No admin accounts available.</td></tr>`;
-}
 
 function renderDeveloperRoles(){
   const panel = document.getElementById("developer-roles-panel");
@@ -5794,96 +5182,11 @@ function requestOwnerAction({type, title, details, branch, entityId, entityName,
   return request;
 }
 
-function renderOwnerRequests(){
-  const body = document.getElementById("owner-requests-body");
-  const techBody = document.getElementById("owner-tech-requests-body");
-  if(!body) return;
-  const requests = (state.ownerRequests || []).filter(Boolean);
-  const general = requests.filter(req => req.type !== "tech-name-request");
-  const techRequests = requests.filter(req => req.type === "tech-name-request");
 
-  body.innerHTML = general.length ? general.map(req => `
-    <tr>
-      <td>${escapeHTML(req.type || "Request")}</td>
-      <td>${escapeHTML(req.title || "Permission request")}</td>
-      <td>${escapeHTML(req.entityName || req.entityId || "—")}</td>
-      <td>${escapeHTML(req.branch || "—")}</td>
-      <td>${escapeHTML(req.details || "No details provided")}</td>
-      <td>${req.status === "pending" ? '<span class="tag low">Pending</span>' : req.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>'}</td>
-      <td style="text-align:right; white-space:nowrap;">
-        ${req.status === "pending" ? `<button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : '<span class="stat-sub">Closed</span>'}
-      </td>
-    </tr>
-  `).join("") : `<tr class="empty-row"><td colspan="7">No approval requests yet.</td></tr>`;
 
-  if(techBody){
-    techBody.innerHTML = techRequests.length ? techRequests.map(req => `
-      <tr>
-        <td>${escapeHTML(req.title || "Technician request")}</td>
-        <td>${escapeHTML(req.payload?.technician || "—")}</td>
-        <td>${escapeHTML(req.payload?.email || req.requestedBy || "—")}</td>
-        <td>${escapeHTML(req.branch || "—")}</td>
-        <td>${req.status === "pending" ? '<span class="tag low">Pending</span>' : req.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>'}</td>
-        <td style="text-align:right; white-space:nowrap;">
-          ${req.status === "pending" ? `<button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : '<span class="stat-sub">Closed</span>'}
-        </td>
-      </tr>
-    `).join("") : `<tr class="empty-row"><td colspan="6">No technician assignment requests.</td></tr>`;
-  }
-}
 
-function approveOwnerRequest(id){
-  const request = (state.ownerRequests || []).find(item => item.id === id);
-  if(!request || request.status !== "pending") return;
-  const branch = request.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH;
-  if(request.type === "job-delete"){
-    const target = state.transactions.find(entry => entry.id === request.entityId);
-    if(target){
-      state.transactions = state.transactions.filter(entry => entry.id !== request.entityId);
-      markDeleted("transactions", request.entityId);
-    }
-  } else if(request.type === "inventory-delete"){
-    const target = state.inventory.find(entry => entry.id === request.entityId);
-    if(target){
-      state.inventory = state.inventory.filter(entry => entry.id !== request.entityId);
-      markDeleted("inventory", request.entityId);
-    }
-  } else if(request.type === "tech-name-request"){
-    const technicianName = String(request.payload?.technician || "").trim();
-    const email = String(request.payload?.email || "").trim().toLowerCase();
-    if(technicianName && email){
-      const existing = (state.staffAccounts || []).find(account => (account.email || "").trim().toLowerCase() === email);
-      if(existing){
-        existing.technician = technicianName;
-        existing.branchId = existing.branchId || branch;
-      } else {
-        const newAccount = {id: uid(), email, technician: technicianName, status: "active", firebaseUid: "", branchId: branch};
-        state.staffAccounts = [...(state.staffAccounts || []), newAccount];
-      }
-      if(!TECHS.includes(technicianName)) TECHS.push(technicianName);
-      state.technicians = [...TECHS];
-      writeLocal();
-    }
-  }
-  request.status = "approved";
-  request.resolvedAt = Date.now();
-  request.resolvedBy = currentUserName() || "Owner";
-  writeLocal();
-  renderAll();
-  renderOwnerRequests();
-  showToast(`${request.title || "Request"} approved for ${branch}`);
-}
 
-function denyOwnerRequest(id){
-  const request = (state.ownerRequests || []).find(item => item.id === id);
-  if(!request || request.status !== "pending") return;
-  request.status = "denied";
-  request.resolvedAt = Date.now();
-  request.resolvedBy = currentUserName() || "Owner";
-  writeLocal();
-  renderOwnerRequests();
-  showToast(`${request.title || "Request"} denied`);
-}
+
 
 function renderEmployeeDashboard(){
   const today = todayStr();
@@ -5946,48 +5249,7 @@ function cogsForTransactions(txns){
   }, 0);
 }
 
-function renderOwnerDashboard(){
-  const selectedBranch = ui.adminBranch || DEFAULT_BRANCH;
-  const overview = document.getElementById("owner-sub-overview");
-  const clientSummary = document.getElementById("owner-stat-clients");
-  const salesSummary = document.getElementById("owner-stat-sales");
-  const accessSummary = document.getElementById("owner-stat-access");
-  const summary = document.getElementById("owner-dashboard-summary");
 
-  if(!isBranchActive(selectedBranch)){
-    if(overview){
-      overview.innerHTML = `
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h3>Owner dashboard</h3>
-              <div class="desc">Business-level summary for the selected branch</div>
-            </div>
-          </div>
-          <div style="padding:24px;">
-            <div style="padding:22px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">
-              Not Yet Active. Contact your Site Administrator
-            </div>
-          </div>
-        </div>
-      `;
-    }
-    if(clientSummary) clientSummary.textContent = "—";
-    if(salesSummary) salesSummary.textContent = "—";
-    if(accessSummary) accessSummary.textContent = "—";
-    if(summary) summary.textContent = "Not Yet Active. Contact your Site Administrator";
-    return;
-  }
-
-  const totalClients = state.transactions.filter(t => t.branch === selectedBranch && t.date === todayStr()).length;
-  const sales = state.transactions.filter(t => t.branch === selectedBranch && t.date === todayStr()).reduce((s, t) => s + collectedAmount(t), 0);
-  if(clientSummary) clientSummary.textContent = totalClients;
-  if(salesSummary) salesSummary.textContent = peso(sales);
-  if(accessSummary) accessSummary.textContent = String((state.adminAccounts || []).filter(a => String(a.status || "active").toLowerCase() !== "revoked").length + (state.staffAccounts || []).filter(a => String(a.status || "active").toLowerCase() !== "revoked").length);
-  if(summary){
-    summary.textContent = `Owner view for ${selectedBranch}: ${totalClients} client${totalClients === 1 ? "" : "s"} logged today with ${peso(sales)} in sales across the active business branch.`;
-  }
-}
 
 function renderAdminOverview(){
   document.getElementById("admin-branch-label").textContent = ui.adminBranch;
