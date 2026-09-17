@@ -3504,28 +3504,14 @@ function updateNavForRole(role){
 function chooseRole(role){
 
   if(role === "admin"){
-    session.isOwner = false;
-    session.isAdmin = true;
-    session.isDeveloper = false;
-    session.staffUnlocked = true;
     session.pendingView = null;
-
     updateNavForRole("admin");
-
     switchView("admin");
-
     return;
-
   }
 
-  session.isOwner = false;
-  session.isAdmin = false;
-  session.isDeveloper = false;
-  session.staffUnlocked = true;
   session.pendingView = "employee";
-
   updateNavForRole("staff");
-
   switchView("employee");
 
 }
