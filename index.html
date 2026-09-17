@@ -3581,6 +3581,8 @@ function switchView(key){
   }
 
   if(key==="role-select"){
+    if(session.isAdmin){ switchView("admin"); return; }
+    if(session.staffUnlocked){ switchView("employee"); return; }
     document.getElementById("view-role-select").classList.add("active");
     titleEl.innerHTML = `GIDS AYPHONE TECH`;
     subEl.innerHTML = "Secure access portal";
@@ -3683,6 +3685,8 @@ function switchView(key){
     // local Staff/Admin cache cannot remain visible after deletion.
     loadAttendanceFromCollection().then(()=>renderAttendance()).catch(()=>{});
   } else if(key==="staff-gate"){
+    if(session.isAdmin){ switchView("admin"); return; }
+    if(session.staffUnlocked){ switchView("employee"); return; }
     session.pendingView = "employee";
     document.getElementById("view-staff-gate").classList.add("active");
     titleEl.innerHTML = `STAFF <span class="hi">ACCESS</span>`;
