@@ -3905,14 +3905,14 @@ async function attemptLogin(){
 
     // Match the signed-in Firebase email to the Admin Access profile so the
     // greeting shows the admin's display name, not the Firebase email.
-    // Read the authoritative Admin Access record after the role is established.
+    // Query by email only — an admin's own assigned branch determines their
+    // session, not whatever branch happened to be selected before login.
     const adminEmail = (user.email || "").trim().toLowerCase();
     let adminSnap;
     try{
       adminSnap = await withTimeout(
         db.collection("adminAccounts")
           .where("email","==",adminEmail)
-          .where("branchId","==",currentBranchId())
           .get(),
         10000
       );
@@ -3930,6 +3930,8 @@ async function attemptLogin(){
       err.textContent = "This Firebase email is not currently active in Admin Access.";
       return;
     }
+    const adminBranches = accountAllowedBranches(adminAccount);
+    if(adminBranches.length) ui.adminBranch = adminBranches[0];
     state.adminAccounts = normalizeAdminAccounts([...(state.adminAccounts || []).filter(a=>a.id!==adminAccount.id), adminAccount]);
     const adminName = adminAccount.username || state.admin?.username || user.email || "Admin";
 
@@ -4021,13 +4023,13 @@ async function attemptStaffLogin(){
       return;
     }
 
-    // Staff Access is also cloud-authoritative; query the exact Firebase email
-    // instead of depending on a stale/local access-directory snapshot.
+    // Staff Access is also cloud-authoritative; query by email only — the
+    // account's own assigned branch determines their session, not whatever
+    // branch happened to be selected in the UI before login.
     const staffEmail = (user.email || "").trim().toLowerCase();
     const staffSnap = await withTimeout(
       db.collection("staffAccounts")
         .where("email","==",staffEmail)
-        .where("branchId","==",currentBranchId())
         .get(),
       10000
     );
@@ -4042,6 +4044,14 @@ async function attemptStaffLogin(){
       err.textContent = "This staff email has not been assigned in the app yet.";
       return;
     }
+    if(String(account.status || "active").toLowerCase() === "revoked"){
+      await firebase.auth().signOut();
+      err.textContent = "This staff account has been suspended. Contact your owner or admin.";
+      return;
+    }
+
+    const staffBranches = accountAllowedBranches(account);
+    if(staffBranches.length) ui.branch = staffBranches[0];
 
     // Establish Staff session state before loading Staff-authorized collections.
     session.staffUnlocked = true;
