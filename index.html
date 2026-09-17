@@ -116,7 +116,7 @@
 
     <div class="field">
       <label>Expires On</label>
-      <input type="date" id="f-expires">
+      <input type="datetime-local" id="f-expires">
     </div>
 
     <div class="field">
@@ -212,11 +212,12 @@
     return Array.from(document.querySelectorAll("#branch-checks input:checked")).map(el => el.value);
   }
 
-  function toDateInputValue(value){
+  function toDateTimeInputValue(value){
     if(!value) return "";
     const d = value.toDate ? value.toDate() : new Date(value);
     if(Number.isNaN(d.getTime())) return "";
-    return d.toISOString().slice(0,10);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   let currentStartsAt = null;
@@ -244,7 +245,7 @@
       document.getElementById("last-updated-text").textContent = formatDateTime(data.updatedAt);
       document.getElementById("f-status").value = status === "active" ? "active" : "suspended";
       document.getElementById("f-plan").value = data.plan || "";
-      document.getElementById("f-expires").value = toDateInputValue(data.expiresAt);
+      document.getElementById("f-expires").value = toDateTimeInputValue(data.expiresAt);
       renderBranchChecks(Array.isArray(data.activeBranchIds) ? data.activeBranchIds : []);
     }catch(error){
       console.error(error);
@@ -270,7 +271,7 @@
       return;
     }
 
-    const expiresDate = new Date(expiresStr + "T23:59:59");
+    const expiresDate = new Date(expiresStr);
 
     const btn = document.getElementById("save-btn");
     btn.disabled = true;
