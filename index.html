@@ -4656,38 +4656,6 @@ async function logout(){
   }
 }
 
-function openChangePasswordModal(){
-  const user = firebase.auth().currentUser;
-  if(!session.isAdmin || !user || !user.email){
-    showToast("Please sign in as an admin first");
-    return;
-  }
-  openOverlay(`
-    <h3>Reset admin password</h3>
-    <div class="sub">Firebase manages the admin password. We will send a password-reset email to <b>${escapeHTML(user.email)}</b>.</div>
-    <div class="login-error" id="pw-error"></div>
-    <div class="modal-actions">
-      <button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button>
-      <button class="pill-btn primary" onclick="sendAdminPasswordReset()">Send reset email</button>
-    </div>
-  `);
-}
-async function sendAdminPasswordReset(){
-  const user = firebase.auth().currentUser;
-  const err = document.getElementById("pw-error");
-  if(!user || !user.email){
-    if(err) err.textContent = "No Firebase admin account is signed in.";
-    return;
-  }
-  try{
-    await firebase.auth().sendPasswordResetEmail(user.email);
-    closeOverlay();
-    showToast("Password reset email sent");
-  }catch(error){
-    console.error("Password reset failed:", error);
-    if(err) err.textContent = "Could not send the password reset email. Please try again.";
-  }
-}
 function openAddTechnicianModal(){
   if(!session.isDeveloper) return;
   openOverlay(`
@@ -7008,41 +6976,131 @@ async function deleteTxn(id){
 /* ======================= CALCULATOR ======================= */
 let calc = { display:"0", prev:null, op:null, resetNext:false };
 function openChangePasswordModal(){
-  openOverlay(`
-    <h3>Change Password</h3>
-    <div class="sub">Updates your Firebase login password immediately.</div>
+  const user = firebase.auth().currentUser;
+  const hasPassword = !!(user && user.providerData.some(p => p.providerId === "password"));
 
-    <div class="field">
-      <label>Current Password</label>
-      <div class="pw-field">
-        <input type="password" id="cp-current" placeholder="Enter current password" autocomplete="current-password">
-        <button type="button" class="pw-eye" data-toggle-password="cp-current" aria-label="Show password">👁</button>
+  if(hasPassword){
+    openOverlay(`
+      <h3>Change Password</h3>
+      <div class="sub">Updates your Firebase login password immediately.</div>
+
+      <div class="field">
+        <label>Current Password</label>
+        <div class="pw-field">
+          <input type="password" id="cp-current" placeholder="Enter current password" autocomplete="current-password">
+          <button type="button" class="pw-eye" data-toggle-password="cp-current" aria-label="Show password">👁</button>
+        </div>
       </div>
-    </div>
 
-    <div class="field">
-      <label>New Password</label>
-      <div class="pw-field">
-        <input type="password" id="cp-new" placeholder="Enter new password" autocomplete="new-password">
-        <button type="button" class="pw-eye" data-toggle-password="cp-new" aria-label="Show password">👁</button>
+      <div class="field">
+        <label>New Password</label>
+        <div class="pw-field">
+          <input type="password" id="cp-new" placeholder="Enter new password" autocomplete="new-password">
+          <button type="button" class="pw-eye" data-toggle-password="cp-new" aria-label="Show password">👁</button>
+        </div>
       </div>
-    </div>
 
-    <div class="field">
-      <label>Confirm New Password</label>
-      <div class="pw-field">
-        <input type="password" id="cp-confirm" placeholder="Re-enter new password" autocomplete="new-password">
-        <button type="button" class="pw-eye" data-toggle-password="cp-confirm" aria-label="Show password">👁</button>
+      <div class="field">
+        <label>Confirm New Password</label>
+        <div class="pw-field">
+          <input type="password" id="cp-confirm" placeholder="Re-enter new password" autocomplete="new-password">
+          <button type="button" class="pw-eye" data-toggle-password="cp-confirm" aria-label="Show password">👁</button>
+        </div>
       </div>
-    </div>
 
-    <div class="login-error" id="cp-error"></div>
+      <div class="login-error" id="cp-error"></div>
 
-    <div class="modal-actions">
-      <button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button>
-      <button class="pill-btn primary" id="cp-save-btn" onclick="submitChangePassword()">Save new password</button>
-    </div>
-  `);
+      <div class="modal-actions">
+        <button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button>
+        <button class="pill-btn primary" id="cp-save-btn" onclick="submitChangePassword()">Save new password</button>
+      </div>
+    `);
+  }else{
+    openOverlay(`
+      <h3>Set a Password</h3>
+      <div class="sub">You currently sign in with Google only. Set a password so you can also sign in with your email and password.</div>
+
+      <div class="field">
+        <label>New Password</label>
+        <div class="pw-field">
+          <input type="password" id="cp-new" placeholder="Enter new password" autocomplete="new-password">
+          <button type="button" class="pw-eye" data-toggle-password="cp-new" aria-label="Show password">👁</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Confirm New Password</label>
+        <div class="pw-field">
+          <input type="password" id="cp-confirm" placeholder="Re-enter new password" autocomplete="new-password">
+          <button type="button" class="pw-eye" data-toggle-password="cp-confirm" aria-label="Show password">👁</button>
+        </div>
+      </div>
+
+      <div class="login-error" id="cp-error"></div>
+
+      <div class="modal-actions">
+        <button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button>
+        <button class="pill-btn primary" id="cp-save-btn" onclick="submitSetPassword()">Set password</button>
+      </div>
+    `);
+  }
+}
+async function submitSetPassword(){
+  const err = document.getElementById("cp-error");
+  const btn = document.getElementById("cp-save-btn");
+  err.textContent = "";
+
+  const next = document.getElementById("cp-new").value;
+  const confirmVal = document.getElementById("cp-confirm").value;
+
+  if(!next || !confirmVal){
+    err.textContent = "Please fill in both fields.";
+    return;
+  }
+  if(next.length < 6){
+    err.textContent = "Password must be at least 6 characters.";
+    return;
+  }
+  if(next !== confirmVal){
+    err.textContent = "Password and confirmation do not match.";
+    return;
+  }
+
+  const user = firebase.auth().currentUser;
+  if(!user || !user.email){
+    err.textContent = "No signed-in Firebase account found. Please log out and back in.";
+    return;
+  }
+
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try{
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, next);
+    try{
+      await user.linkWithCredential(credential);
+    }catch(linkError){
+      if(linkError.code === "auth/requires-recent-login"){
+        // Google sessions occasionally go stale for this sensitive action; re-confirm with Google, then retry the link.
+        await user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+        await user.linkWithCredential(credential);
+      }else{
+        throw linkError;
+      }
+    }
+    closeOverlay();
+    showToast("Password set. You can now log in with either Google or your email and password.");
+  }catch(error){
+    console.error("Set password error:", error);
+    if(error.code === "auth/provider-already-linked" || error.code === "auth/email-already-in-use"){
+      err.textContent = "This account already has a password set. Use Change Password instead.";
+    }else{
+      err.textContent = describeFirebaseAuthError(error, "account");
+    }
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
 }
 async function submitChangePassword(){
   const err = document.getElementById("cp-error");
