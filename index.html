@@ -5752,7 +5752,8 @@ function renderOwnerRequests(){
       <td>${escapeHTML(req.details || "No details provided")}</td>
       <td>${req.status === "pending" ? '<span class="tag low">Pending</span>' : req.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>'}</td>
       <td style="text-align:right; white-space:nowrap;">
-        ${req.status === "pending" ? `<button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : '<span class="stat-sub">Closed</span>'}
+        <button class="pill-btn small ghost" onclick="viewOwnerRequest('${req.id}')">View</button>
+        ${req.status === "pending" ? ` <button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : ''}
       </td>
     </tr>
   `).join("") : `<tr class="empty-row"><td colspan="7">No approval requests yet.</td></tr>`;
@@ -5766,11 +5767,73 @@ function renderOwnerRequests(){
         <td>${escapeHTML(req.branch || "—")}</td>
         <td>${req.status === "pending" ? '<span class="tag low">Pending</span>' : req.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>'}</td>
         <td style="text-align:right; white-space:nowrap;">
-          ${req.status === "pending" ? `<button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : '<span class="stat-sub">Closed</span>'}
+          <button class="pill-btn small ghost" onclick="viewOwnerRequest('${req.id}')">View</button>
+          ${req.status === "pending" ? ` <button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : ''}
         </td>
       </tr>
     `).join("") : `<tr class="empty-row"><td colspan="6">No technician assignment requests.</td></tr>`;
   }
+}
+
+function requestTimestampText(value){
+  if(!value) return "—";
+  const d = value.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(d?.getTime?.()) ? "—" : formatSiteDateTime(d);
+}
+
+function fieldLabel(key){
+  const labels = {
+    tech:"Technician", serviceType:"Service type", customerName:"Customer name",
+    customerPhone:"Customer phone", appointmentAt:"Appointment", jobStatus:"Job status",
+    invoiceStatus:"Invoice status", description:"Description", quantity:"Quantity",
+    amount:"Amount", fee:"Total fee", date:"Date", paymentMode:"Payment mode",
+    cashAmount:"Cash amount", eWalletAmount:"E-Wallet amount", clientTip:"Client tip",
+    branch:"Branch", itemUsed:"Item used", laborName:"Labor name", phoneBrand:"Phone brand",
+    phoneModel:"Phone model", amountPaid:"Amount paid", balance:"Balance",
+    itemName:"Item name", sku:"SKU", supplier:"Supplier", cost:"Cost", price:"Price",
+    used:"Used", reorderLevel:"Reorder level", location:"Location"
+  };
+  return labels[key] || key;
+}
+
+function viewOwnerRequest(id){
+  const request = (state.ownerRequests || []).find(item => item.id === id);
+  if(!request) return;
+  const statusBadge = request.status === "pending" ? '<span class="tag low">Pending</span>' : request.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>';
+  const changes = request.payload?.changes;
+  let changesHtml = "";
+  if(changes && typeof changes === "object"){
+    const rows = Object.entries(changes)
+      .filter(([,v]) => v !== undefined && v !== "" && !(Array.isArray(v) && !v.length))
+      .map(([k,v]) => `<tr><td style="font-weight:600;">${escapeHTML(fieldLabel(k))}</td><td>${escapeHTML(Array.isArray(v) ? v.map(item=>`${item.serviceType||""} (₱${item.amount||0})`).join(", ") : String(v))}</td></tr>`)
+      .join("");
+    changesHtml = `<div class="sub" style="margin-top:16px;font-weight:600;">Proposed changes</div>
+      <table style="width:100%;margin-top:8px;"><tbody>${rows || '<tr><td colspan="2">No field changes captured.</td></tr>'}</tbody></table>`;
+  } else if(request.type === "tech-name-request"){
+    changesHtml = `<div class="sub" style="margin-top:16px;font-weight:600;">Requested technician</div>
+      <table style="width:100%;margin-top:8px;"><tbody>
+        <tr><td style="font-weight:600;">Name</td><td>${escapeHTML(request.payload?.technician || "—")}</td></tr>
+        <tr><td style="font-weight:600;">Email</td><td>${escapeHTML(request.payload?.email || "—")}</td></tr>
+      </tbody></table>`;
+  }
+  openOverlay(`
+    <h3>${escapeHTML(request.title || "Request details")}</h3>
+    <div class="sub">${escapeHTML(request.details || "No details provided")}</div>
+    <table style="width:100%;margin-top:14px;"><tbody>
+      <tr><td style="font-weight:600;">Type</td><td>${escapeHTML(request.type || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Target</td><td>${escapeHTML(request.entityName || request.entityId || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Branch</td><td>${escapeHTML(request.branch || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Requested by</td><td>${escapeHTML(request.requestedBy || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Requested at</td><td>${requestTimestampText(request.requestedAt)}</td></tr>
+      <tr><td style="font-weight:600;">Status</td><td>${statusBadge}</td></tr>
+      ${request.status !== "pending" ? `<tr><td style="font-weight:600;">Resolved by</td><td>${escapeHTML(request.resolvedBy || "—")}</td></tr><tr><td style="font-weight:600;">Resolved at</td><td>${requestTimestampText(request.resolvedAt)}</td></tr>` : ""}
+    </tbody></table>
+    ${changesHtml}
+    <div class="modal-actions" style="margin-top:16px;">
+      ${request.status === "pending" ? `<button class="pill-btn primary" onclick="approveOwnerRequest('${request.id}'); closeOverlay();">Approve</button> <button class="pill-btn ghost" onclick="denyOwnerRequest('${request.id}'); closeOverlay();">Deny</button>` : ""}
+      <button class="pill-btn ghost" onclick="closeOverlay()">Close</button>
+    </div>
+  `);
 }
 
 async function approveOwnerRequest(id){
