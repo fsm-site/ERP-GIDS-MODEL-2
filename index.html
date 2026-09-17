@@ -4190,14 +4190,14 @@ function openRemoveTechnicianModal(){
   `);
 }
 
-function submitTechNameRequest(){
+async function submitTechNameRequest(){
   if(!session.isAdmin) return;
   const techName = document.getElementById("tech-request-name")?.value.trim();
   const email = document.getElementById("tech-request-email")?.value.trim().toLowerCase();
   const error = document.getElementById("tech-request-error");
   if(!techName || !email){ if(error) error.textContent = "Enter the technician name and Firebase email."; return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ if(error) error.textContent = "Enter a valid Firebase email."; return; }
-  requestOwnerAction({
+  await requestOwnerAction({
     type: "tech-name-request",
     title: "Technician access request",
     details: `${techName} requested for ${ui.adminBranch || DEFAULT_BRANCH}.`,
@@ -4611,7 +4611,6 @@ async function saveAdminAccount(oldUsername){
       writeLocal();
       closeOverlay();
       renderAdminAccess();
-      renderOwnerAccessControls();
       showToast("Admin account created");
     }catch(err){
       console.error("Could not create admin account:", err);
@@ -4637,7 +4636,6 @@ async function saveAdminAccount(oldUsername){
     state.admin = {uid:firebase.auth().currentUser?.uid || "", email:firebase.auth().currentUser?.email || "", username:session.adminUsername || username};
     closeOverlay();
     renderAdminAccess();
-    renderOwnerAccessControls();
     showToast("Admin access updated");
   }catch(e){
     console.error("Could not save admin access:", e);
@@ -4664,7 +4662,6 @@ async function revokeAdminAccount(username){
     account.status = "revoked";
     writeLocal();
     renderAdminAccess();
-    renderOwnerAccessControls();
     showToast("Admin access suspended");
   }catch(e){
     console.error("Could not suspend admin access:", e);
@@ -4682,7 +4679,6 @@ async function restoreAdminAccount(username){
     account.status = "active";
     writeLocal();
     renderAdminAccess();
-    renderOwnerAccessControls();
     showToast("Admin access restored");
   }catch(e){
     console.error("Could not restore admin access:", e);
@@ -4757,7 +4753,6 @@ async function saveStaffAccount(id){
       writeLocal();
       renderAll();
       renderStaffAccess();
-      renderOwnerAccessControls();
       closeOverlay();
       showToast("Staff access assigned");
     }catch(err){
@@ -4789,7 +4784,6 @@ async function saveStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
-    renderOwnerAccessControls();
     closeOverlay();
     showToast("Staff access updated");
   }catch(e){
@@ -4816,7 +4810,6 @@ async function revokeStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
-    renderOwnerAccessControls();
     showToast(`${technician || "Staff"} access suspended`);
   }catch(e){
     console.error("Could not suspend staff access:", e);
@@ -4838,7 +4831,6 @@ async function restoreStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
-    renderOwnerAccessControls();
     showToast(`${account.technician || "Staff"} access restored`);
   }catch(e){
     console.error("Could not restore staff access:", e);
@@ -4861,7 +4853,7 @@ async function deleteAdminAccount(username){
   try{
     await cloudFunctions.httpsCallable("deleteStaffOrAdminAccount")({ role:"admin", uid:uidToUse, username });
     state.adminAccounts = state.adminAccounts.filter(item=>item.username!==username);
-    writeLocal(); renderAdminAccess(); renderOwnerAccessControls(); showToast("Admin access deleted");
+    writeLocal(); renderAdminAccess(); showToast("Admin access deleted");
   }catch(e){ console.error("Could not delete admin access:",e); showToast(e?.message || "Could not delete Admin access"); }
 }
 
@@ -4880,7 +4872,7 @@ async function deleteStaffAccount(id){
       if(!Array.isArray(state.removedTechnicians)) state.removedTechnicians = [];
       if(!state.removedTechnicians.includes(account.technician)) state.removedTechnicians.push(account.technician);
     }
-    writeLocal(); renderAll(); renderStaffAccess(); renderOwnerAccessControls(); showToast("Staff access deleted");
+    writeLocal(); renderAll(); renderStaffAccess(); showToast("Staff access deleted");
   }catch(e){ console.error("Could not delete staff access:",e); showToast(e?.message || "Could not delete Staff access"); }
 }
 
@@ -5335,10 +5327,9 @@ function saveCommissionRate(tech, value){
   showToast(`${tech}'s commission updated`);
 }
 
-function requestOwnerAction({type, title, details, branch, entityId, entityName, payload}){
+async function requestOwnerAction({type, title, details, branch, entityId, entityName, payload}){
   if(!session.isAdmin && !session.isOwner) return null;
   const request = {
-    id: uid(),
     type,
     title,
     details,
@@ -5347,13 +5338,20 @@ function requestOwnerAction({type, title, details, branch, entityId, entityName,
     entityName: entityName || "",
     payload: payload || {},
     requestedBy: currentUserName() || "Admin",
-    requestedAt: Date.now(),
+    requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
     status: "pending"
   };
-  state.ownerRequests = [request, ...(state.ownerRequests || [])];
-  writeLocal();
-  renderOwnerRequests();
-  return request;
+  try{
+    const ref = await db.collection("ownerRequests").add(request);
+    const localCopy = { ...request, id: ref.id, requestedAt: Date.now() };
+    state.ownerRequests = [localCopy, ...(state.ownerRequests || [])];
+    writeLocal();
+    return localCopy;
+  }catch(e){
+    console.error("Could not submit owner approval request:", e);
+    showToast("Could not send this request to the owner. Please try again.");
+    return null;
+  }
 }
 
 
@@ -6161,24 +6159,7 @@ async function saveTxn(id, isAdmin){
   // Never let a shared dashboard button accidentally downgrade an Admin save
   // into the Staff-only cloud path. The authenticated role is authoritative.
   isAdmin = !!(isAdmin || session.isAdmin);
-  if(isAdmin && !session.isOwner && id){
-    const existing = state.transactions.find(item => item.id === id);
-    if(existing){
-      const confirmed = confirm("Request owner approval before revising this job?");
-      if(!confirmed) return;
-      requestOwnerAction({
-        type: "job-revision",
-        title: "Job revision request",
-        details: `Revise ${existing.serviceNo || existing.customerName || "job"} for ${existing.customerName || "customer"} in ${existing.branch || ui.adminBranch || DEFAULT_BRANCH}.`,
-        branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH,
-        entityId: id,
-        entityName: existing.customerName || existing.serviceNo || "Job",
-        payload: { branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH }
-      });
-      showToast("Owner approval requested for this job revision");
-      return;
-    }
-  }
+  const needsOwnerApproval = isAdmin && !session.isOwner && !!id;
   const tech = document.getElementById("f-tech").value.trim();
   const serviceType = document.getElementById("f-service").value.trim();
   const customerName = document.getElementById("f-customer").value.trim();
@@ -6252,6 +6233,27 @@ async function saveTxn(id, isAdmin){
       const avail = Number(item.quantity) - Number(item.used||0);
       const availableForJob = avail + (previousItem===itemUsed ? previousQty : 0);
       if(quantity > availableForJob){ showToast(`${item.itemName} has only ${availableForJob} available`); return; }
+    }
+  }
+
+  if(needsOwnerApproval){
+    const existing = state.transactions.find(item => item.id === id);
+    if(existing){
+      const confirmed = confirm("Request owner approval before revising this job?");
+      if(!confirmed) return;
+      const proposedChanges = {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip};
+      await requestOwnerAction({
+        type: "job-revision",
+        title: "Job revision request",
+        details: `Revise ${existing.serviceNo || existing.customerName || "job"} for ${existing.customerName || "customer"} in ${existing.branch || ui.adminBranch || DEFAULT_BRANCH}.`,
+        branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH,
+        entityId: id,
+        entityName: existing.customerName || existing.serviceNo || "Job",
+        payload: { branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH, changes: proposedChanges }
+      });
+      closeOverlay();
+      showToast("Owner approval requested for this job revision");
+      return;
     }
   }
 
@@ -6371,7 +6373,7 @@ async function deleteTxn(id){
   if(session.isAdmin && !session.isOwner){
     const confirmed = confirm("Send this deletion request to the owner for approval?");
     if(!confirmed) return;
-    requestOwnerAction({
+    await requestOwnerAction({
       type: "job-delete",
       title: "Job deletion request",
       details: `Delete job ${t.serviceNo || t.id} for ${t.customerName || "customer"} from ${t.branch || ui.adminBranch}.`,
@@ -6934,14 +6936,15 @@ async function saveInv(id){
     if(existing){
       const confirmed = confirm("Request owner approval to revise this inventory item?");
       if(!confirmed) return;
-      requestOwnerAction({
+      const proposedChanges = {itemName, sku, supplier, quantity, cost, price, used, reorderLevel, location};
+      await requestOwnerAction({
         type: "inventory-revision",
         title: "Inventory revision request",
         details: `Update ${existing.itemName || "inventory item"} in ${ui.adminBranch || DEFAULT_BRANCH}.`,
         branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH,
         entityId: id,
         entityName: existing.itemName || "Inventory item",
-        payload: { branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH }
+        payload: { branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH, changes: proposedChanges }
       });
       showToast("Owner approval requested for this inventory revision");
       return;
@@ -6976,7 +6979,7 @@ async function deleteInv(id){
   if(session.isAdmin && !session.isOwner){
     const confirmed = confirm("Send this inventory deletion request to the owner for approval?");
     if(!confirmed) return;
-    requestOwnerAction({
+    await requestOwnerAction({
       type: "inventory-delete",
       title: "Inventory deletion request",
       details: `Delete ${item.itemName || "inventory item"} from ${ui.adminBranch || DEFAULT_BRANCH}.`,
