@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Subscription Manager — Developer Access Only</title>
+<title>Subscription Manager — Developer Only</title>
 <style>
   :root{
     --bg:#0b1220; --card:#141d33; --line:#28324a; --text:#eaf0ff; --muted:#8ea0c8;
@@ -93,6 +93,10 @@
     <div class="row">
       <span style="font-size:13px;color:var(--muted);">Current status</span>
       <span class="status-pill" id="current-status-pill">—</span>
+    </div>
+    <div class="row" style="margin-top:-8px;">
+      <span style="font-size:12px;color:var(--muted);">Last updated</span>
+      <span style="font-size:12px;color:var(--muted);" id="last-updated-text">—</span>
     </div>
 
     <div class="divider"></div>
@@ -215,18 +219,29 @@
     return d.toISOString().slice(0,10);
   }
 
+  let currentStartsAt = null;
+
+  function formatDateTime(value){
+    if(!value) return "—";
+    const d = value.toDate ? value.toDate() : new Date(value);
+    if(Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString();
+  }
+
   async function loadSubscription(){
     const loadingNote = document.getElementById("loading-note");
     loadingNote.style.display = "block";
     try{
       const snap = await subRef.get();
       const data = snap.exists ? snap.data() : { status:"suspended", plan:"", expiresAt:null, activeBranchIds:[] };
+      currentStartsAt = data.startsAt || null;
 
       const pill = document.getElementById("current-status-pill");
       const status = data.status || "unknown";
       pill.textContent = status;
       pill.className = "status-pill " + (status === "active" ? "status-active" : status === "suspended" ? "status-suspended" : "status-unknown");
 
+      document.getElementById("last-updated-text").textContent = formatDateTime(data.updatedAt);
       document.getElementById("f-status").value = status === "active" ? "active" : "suspended";
       document.getElementById("f-plan").value = data.plan || "";
       document.getElementById("f-expires").value = toDateInputValue(data.expiresAt);
@@ -261,14 +276,18 @@
     btn.disabled = true;
     btn.textContent = "Saving...";
     try{
-      await subRef.set({
+      const payload = {
         status,
         plan: plan || "unspecified",
-        startsAt: firebase.firestore.FieldValue.serverTimestamp(),
         expiresAt: firebase.firestore.Timestamp.fromDate(expiresDate),
         maxBranches: activeBranchIds.length,
-        activeBranchIds
-      }, { merge: true });
+        activeBranchIds,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if(!currentStartsAt){
+        payload.startsAt = firebase.firestore.FieldValue.serverTimestamp();
+      }
+      await subRef.set(payload, { merge: true });
 
       success.textContent = "Saved.";
       await loadSubscription();
