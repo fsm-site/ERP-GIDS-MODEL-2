@@ -3524,6 +3524,7 @@ async function init(){
     if(subscriptionIsActive()){
       if(restoredRole === "admin") {
         await loadAdminCollections();
+        if(session.isOwner) await loadOwnerAccessCollections();
         // Admin is authoritative from appMeta/dedicated collections. Publish
         // the current technician list for Staff after the Admin state is loaded.
         await syncTechnicianDirectory();
@@ -3771,7 +3772,7 @@ document.addEventListener("click", event=>{
 });
 
 function ensureSharedTopbarActions(key, rightEl){
-  if(!rightEl || ["role-select", "admin-login", "staff-gate"].includes(key)) return;
+  if(!rightEl || ["role-select", "admin-login", "staff-gate", "owner-login", "owner-register"].includes(key)) return;
   if(!document.getElementById("refresh-app-btn")){
     rightEl.insertAdjacentHTML("afterbegin", `<button class="pill-btn ghost" id="refresh-app-btn" type="button" onclick="hardRefreshApp()" title="Reload the app and re-sync your data">Refresh</button>`);
   }
@@ -3818,6 +3819,7 @@ function switchView(key){
   }
 
   if(key==="role-select"){
+    if(session.isOwner){ switchView("owner-dashboard"); return; }
     document.getElementById("view-role-select").classList.add("active");
     titleEl.innerHTML = `GIDS AYPHONE TECH`;
     subEl.innerHTML = "Secure access portal";
@@ -3947,11 +3949,13 @@ function switchView(key){
       switchView("role-select");
     }
   } else if(key==="owner-login"){
+    if(session.isOwner){ switchView("owner-dashboard"); return; }
     document.getElementById("view-owner-login").classList.add("active");
     titleEl.innerHTML = `OWNER <span class="hi">ACCESS</span>`;
     subEl.innerHTML = "Business owner sign-in";
     rightEl.innerHTML = "";
   } else if(key==="owner-register"){
+    if(session.isOwner){ switchView("owner-dashboard"); return; }
     document.getElementById("view-owner-register").classList.add("active");
     titleEl.innerHTML = `CREATE <span class="hi">OWNER</span>`;
     subEl.innerHTML = "Create the business owner account";
@@ -4021,6 +4025,22 @@ async function loadCloudStateAfterLogin(){
   }catch(e){
     console.error("Could not load Firebase state after login:", e);
     return false;
+  }
+}
+async function loadOwnerAccessCollections(){
+  const user = firebase.auth().currentUser;
+  if(!user || !session.isOwner) return;
+  ensureStateReady();
+  try{
+    const [staffSnap, adminSnap] = await Promise.all([
+      db.collection("staffAccounts").get(),
+      db.collection("adminAccounts").get()
+    ]);
+    state.staffAccounts = staffSnap.docs.map(doc=>({id:doc.id,...doc.data()}));
+    state.adminAccounts = normalizeAdminAccounts(adminSnap.docs.map(doc=>({id:doc.id,...doc.data()})));
+    writeLocal();
+  }catch(e){
+    console.error("Could not load Owner access collections:", e);
   }
 }
 async function loadSecurityCollections(){
@@ -4214,6 +4234,7 @@ async function continueWithGoogleOwner(){
       }
 
       saveRememberedSession("owner");
+      await loadOwnerAccessCollections();
       switchView("owner-dashboard");
       showToast("Welcome, owner");
       return;
@@ -4355,6 +4376,8 @@ async function attemptOwnerLogin(){
     }
 
     if(document.getElementById("remember-owner").checked) saveRememberedSession("owner");
+
+    await loadOwnerAccessCollections();
 
     err.textContent = "";
     document.getElementById("owner-user").value = "";
