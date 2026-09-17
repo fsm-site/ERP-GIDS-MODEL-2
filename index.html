@@ -1182,6 +1182,16 @@
         Log in
       </button>
 
+      <div class="or-divider" style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted,#6d849d);">or</div>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="width:100%;"
+        onclick="continueWithGoogleOwner()">
+        Continue with Gmail
+      </button>
+
       <button
         class="pill-btn ghost"
         type="button"
@@ -1271,6 +1281,16 @@
         style="width:100%; padding:11px;"
         onclick="createOwnerAccount()">
         Create Owner Account
+      </button>
+
+      <div class="or-divider" style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted,#6d849d);">or</div>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="width:100%;"
+        onclick="continueWithGoogleOwner()">
+        Continue with Gmail
       </button>
 
       <button
@@ -4117,8 +4137,15 @@ function showOwnerRegister(){
   document.getElementById("owner-business-name").value = "";
   document.getElementById("owner-name").value = "";
   document.getElementById("owner-register-email").value = "";
+  document.getElementById("owner-register-email").disabled = false;
   document.getElementById("owner-register-pass").value = "";
   document.getElementById("owner-register-confirm").value = "";
+  document.getElementById("owner-register-pass").closest(".field").style.display = "";
+  document.getElementById("owner-register-confirm").closest(".field").style.display = "";
+
+  const registerBtn = document.getElementById("owner-register-btn");
+  registerBtn.textContent = "Create Owner Account";
+  registerBtn.setAttribute("onclick", "createOwnerAccount()");
 
   document.getElementById("owner-register-error").textContent = "";
 
@@ -4195,6 +4222,117 @@ async function createOwnerAccount(){
       button.disabled = false;
       button.classList.remove("is-loading");
       button.textContent = "Create Owner Account";
+    }
+  }
+}
+async function continueWithGoogleOwner(){
+  ensureStateReady();
+  const loginErr = document.getElementById("owner-error");
+  const registerErr = document.getElementById("owner-register-error");
+  if(loginErr) loginErr.textContent = "";
+  if(registerErr) registerErr.textContent = "";
+
+  try{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result = await firebase.auth().signInWithPopup(provider);
+    const user = result.user;
+    const roleDetails = await getFirebaseRoleDetails(user);
+    const role = roleDetails.role;
+
+    if(role === "owner"){
+      session.isOwner = true;
+      session.isAdmin = true;
+      session.staffUnlocked = true;
+      session.adminUsername = (user.displayName || user.email || "Owner").trim() || "Owner";
+
+      await loadSubscription();
+      if(!subscriptionIsActive()){
+        applySubscriptionAccess();
+        showToast("Subscription expired. Please contact the administrator to renew access.");
+        return;
+      }
+
+      saveRememberedSession("owner");
+      switchView("owner-dashboard");
+      showToast("Welcome, owner");
+      return;
+    }
+
+    if(role === "admin" || role === "staff"){
+      await firebase.auth().signOut();
+      const msg = `This Google account is already assigned as ${role === "admin" ? "Admin" : "Staff"}. Please use the ${role === "admin" ? "Admin" : "Staff"} login instead.`;
+      if(loginErr) loginErr.textContent = msg; else showToast(msg);
+      return;
+    }
+
+    // No owner role yet on this Google account: finish setting up the business.
+    switchView("owner-register");
+    document.getElementById("owner-business-name").value = "";
+    document.getElementById("owner-name").value = user.displayName || "";
+    document.getElementById("owner-register-email").value = user.email || "";
+    document.getElementById("owner-register-email").disabled = true;
+    document.getElementById("owner-register-pass").closest(".field").style.display = "none";
+    document.getElementById("owner-register-confirm").closest(".field").style.display = "none";
+    const registerBtn = document.getElementById("owner-register-btn");
+    registerBtn.textContent = "Finish creating account";
+    registerBtn.setAttribute("onclick", "createOwnerAccountViaGoogle()");
+    showToast("Signed in with Google — finish setting up your business");
+  }catch(error){
+    if(error?.code === "auth/popup-closed-by-user") return;
+    console.error("Google owner sign-in error:", error);
+    const msg = describeFirebaseAuthError(error, "owner");
+    if(loginErr) loginErr.textContent = msg; else if(registerErr) registerErr.textContent = msg;
+  }
+}
+async function createOwnerAccountViaGoogle(){
+  ensureStateReady();
+  const businessName = document.getElementById("owner-business-name").value.trim();
+  const ownerName = document.getElementById("owner-name").value.trim();
+  const err = document.getElementById("owner-register-error");
+  err.textContent = "";
+
+  const user = firebase.auth().currentUser;
+  if(!user){
+    err.textContent = "Google sign-in expired. Please tap Continue with Gmail again.";
+    return;
+  }
+  if(!businessName || !ownerName){
+    err.textContent = "Please complete the business name and owner name.";
+    return;
+  }
+
+  const button = document.getElementById("owner-register-btn");
+  if(button){ button.disabled = true; button.textContent = "Creating..."; }
+
+  try{
+    await withTimeout(db.collection("userRoles").doc(user.uid).set({ role: "owner" }, { merge: true }), 10000);
+
+    const ownerProfile = {
+      uid: user.uid,
+      email: user.email,
+      businessName,
+      ownerName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: "active"
+    };
+    await withTimeout(db.collection("ownerProfiles").doc(user.uid).set(ownerProfile, { merge: true }), 10000);
+
+    session.isOwner = true;
+    session.isAdmin = true;
+    session.staffUnlocked = true;
+    session.adminUsername = ownerName || user.displayName || user.email || "Owner";
+
+    await loadSubscription();
+    saveRememberedSession("owner");
+    switchView("owner-dashboard");
+    showToast("Owner account created with Google");
+  }catch(error){
+    console.error("Owner Google registration failed:", error);
+    err.textContent = describeFirebaseAuthError(error, "owner");
+  }finally{
+    if(button){
+      button.disabled = false;
+      button.textContent = "Finish creating account";
     }
   }
 }
