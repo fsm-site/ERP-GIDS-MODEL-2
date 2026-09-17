@@ -4693,8 +4693,6 @@ async function restoreAdminAccount(username){
 function openStaffAccountModal(editId="", technician=""){
   if(!hasSecurityAccess()) return;
   const editing = editId ? state.staffAccounts.find(item=>item.id===editId) : null;
-  const selectedTech = editing ? editing.technician : technician;
-  const options = TECHS.map(tech=>`<option value="${escapeHTML(tech)}" ${tech===selectedTech ? "selected" : ""}>${escapeHTML(tech)}</option>`).join("");
   const checkedBranches = editing ? normalizeAssignedBranches(editing.branchIds || editing.branchId || editing.branch || []) : [DEFAULT_BRANCH];
   const branchCheckboxes = BRANCHES.map(branch => {
     const checked = checkedBranches.includes(branch) ? "checked" : "";
@@ -4705,9 +4703,8 @@ function openStaffAccountModal(editId="", technician=""){
   }).join("");
   openOverlay(`
     <h3>${editing ? "Edit staff access" : "Assign staff access"}</h3>
-    <div class="sub">${editing ? "Update name, username, or branch access. Email and password can't be changed here — use Reset Password to let them set a new one." : "Creates a real Firebase sign-in for this staff member."}</div>
-    <div class="field"><label>Technician</label><select id="staff-account-tech">${options}</select></div>
-    <div class="field"><label>Name</label><input id="staff-account-name" value="${editing ? escapeHTML(editing.name || editing.technician || "") : ""}" autocomplete="off" placeholder="e.g. Tristan"></div>
+    <div class="sub">${editing ? "Update name, username, or branch access. Email and password can't be changed here — use Reset Password to let them set a new one." : "Creates a real Firebase sign-in for this staff member. Their name is what shows up in the technician list on Add Job."}</div>
+    <div class="field"><label>Name</label><input id="staff-account-name" value="${editing ? escapeHTML(editing.name || editing.technician || technician || "") : escapeHTML(technician || "")}" autocomplete="off" placeholder="e.g. Tristan"></div>
     <div class="field"><label>Username</label><input id="staff-account-username" value="${editing ? escapeHTML(editing.username || "") : ""}" autocomplete="off" placeholder="e.g. stafftristan"></div>
     <div class="field"><label>Email${editing ? "" : " (for Firebase sign-in & password reset)"}</label><input id="staff-account-email" type="email" value="${editing ? escapeHTML(editing.email || "") : ""}" autocomplete="off" placeholder="e.g. tristan@gidsayphonetech.com" ${editing ? "disabled" : ""}></div>
     ${editing ? "" : `<div class="field"><label>Password</label><div class="pw-field"><input id="staff-account-password" type="password" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="staff-account-password" aria-label="Show password">👁</button></div></div>`}
@@ -4719,8 +4716,8 @@ function openStaffAccountModal(editId="", technician=""){
 
 async function saveStaffAccount(id){
   if(!hasSecurityAccess()) return;
-  const technician = document.getElementById("staff-account-tech").value;
   const name = document.getElementById("staff-account-name").value.trim();
+  const technician = name;
   const username = document.getElementById("staff-account-username").value.trim();
   const email = document.getElementById("staff-account-email").value.trim().toLowerCase();
   const selectedBranches = [...document.querySelectorAll('[data-branch-checkbox="staff"]')].filter(el => el.checked).map(el => el.value);
@@ -4728,13 +4725,13 @@ async function saveStaffAccount(id){
   const branchIds = selectedBranches.filter(Boolean);
   error.textContent = "";
 
-  if(!technician || !name || !username || !email){ error.textContent = "Technician, name, username, and email are required."; return; }
+  if(!name || !username || !email){ error.textContent = "Name, username, and email are required."; return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ error.textContent = "Enter a valid email address."; return; }
   if(!branchIds.length){ error.textContent = "Select at least one branch for this staff."; return; }
   const duplicateUsername = state.staffAccounts.some(item=>item.id!==id && String(item.username || "").trim().toLowerCase()===username.toLowerCase());
   const duplicateTech = state.staffAccounts.some(item=>item.id!==id && item.technician===technician);
   if(duplicateUsername){ error.textContent = "That username is already assigned."; return; }
-  if(duplicateTech){ error.textContent = "That technician already has an account."; return; }
+  if(duplicateTech){ error.textContent = "Someone with that exact name already has a staff account."; return; }
 
   const btn = document.getElementById("staff-account-save-btn");
 
@@ -4752,7 +4749,13 @@ async function saveStaffAccount(id){
       const uid = result.data.uid;
       const account = {id:uid, firebaseUid:uid, technician, name, username, email, status:"active", branchId:branchIds[0], branchIds};
       state.staffAccounts.push(account);
+      if(!TECHS.includes(technician)){
+        TECHS.push(technician);
+        state.technicians = [...TECHS];
+        await syncTechnicianDirectory().catch(e=>console.error("Could not sync technician directory:", e));
+      }
       writeLocal();
+      renderAll();
       renderStaffAccess();
       renderOwnerAccessControls();
       closeOverlay();
@@ -4770,13 +4773,21 @@ async function saveStaffAccount(id){
   const account = state.staffAccounts.find(item=>item.id===id);
   if(!account){ error.textContent = "Staff account not found."; return; }
   const previousUsername = account.username || "";
+  const previousTechnician = account.technician || "";
   Object.assign(account, {technician, name, username, branchIds, branchId: branchIds[0] || account.branchId || currentBranchId()});
 
   try{
     const ref = db.collection("staffAccounts").doc(account.id);
     await withTimeout(ref.set({technician, name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
     await syncLoginDirectoryEntry(previousUsername, username, email);
+    if(previousTechnician !== technician){
+      if(previousTechnician) TECHS.splice(0, TECHS.length, ...TECHS.filter(t=>t!==previousTechnician));
+      if(!TECHS.includes(technician)) TECHS.push(technician);
+      state.technicians = [...TECHS];
+      await syncTechnicianDirectory().catch(e=>console.error("Could not sync technician directory:", e));
+    }
     writeLocal();
+    renderAll();
     renderStaffAccess();
     renderOwnerAccessControls();
     closeOverlay();
