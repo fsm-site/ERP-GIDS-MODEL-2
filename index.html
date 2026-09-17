@@ -3362,16 +3362,31 @@ function startRealtimeSync(){
       writeLocal();
       renderAll();
     });
-    watch("staffAccounts", records=>{
-      state.staffAccounts = records;
-      writeLocal();
-      renderAll();
-    });
-    watch("adminAccounts", records=>{
-      state.adminAccounts = normalizeAdminAccounts(records);
-      writeLocal();
-      renderAll();
-    });
+    if(session.isOwner){
+      try{
+        const unsubStaff = db.collection("staffAccounts").onSnapshot(
+          snap=>{ state.staffAccounts = snap.docs.map(doc=>({id:doc.id,...doc.data()})); writeLocal(); renderAll(); },
+          err=>console.error("Realtime staffAccounts (owner) sync failed:", err)
+        );
+        realtimeUnsubs.push(unsubStaff);
+        const unsubAdmin = db.collection("adminAccounts").onSnapshot(
+          snap=>{ state.adminAccounts = normalizeAdminAccounts(snap.docs.map(doc=>({id:doc.id,...doc.data()}))); writeLocal(); renderAll(); },
+          err=>console.error("Realtime adminAccounts (owner) sync failed:", err)
+        );
+        realtimeUnsubs.push(unsubAdmin);
+      }catch(e){ console.error("Could not start owner account sync:", e); }
+    }else{
+      watch("staffAccounts", records=>{
+        state.staffAccounts = records;
+        writeLocal();
+        renderAll();
+      });
+      watch("adminAccounts", records=>{
+        state.adminAccounts = normalizeAdminAccounts(records);
+        writeLocal();
+        renderAll();
+      });
+    }
     watch("suppliers", records=>{
       state.suppliers = records;
       writeLocal();
