@@ -1078,8 +1078,6 @@
             <p class="hint">Choose Your Assigned Access Level</p>
             <div class="role-choice" id="login-role-choice">
   <button class="pill-btn primary" type="button" onclick="chooseRole('owner')">Owner</button>
-  <button class="pill-btn ghost" type="button" onclick="chooseRole('admin')">Admin</button>
-  <button class="pill-btn ghost" type="button" onclick="chooseRole('staff')">Staff</button>
 
 </div>
           </div>
@@ -1087,62 +1085,12 @@
       </div>
 
       <!-- ================= ADMIN LOGIN ================= -->
-      <div class="view" id="view-admin-login">
-        <div class="login-wrap">
-          <div class="login-card">
-            <div class="logo-badge">
-              </div>
-            <h2>ADMIN LOGIN</h2>
-            <p class="hint">Manage jobs, inventory and branch sales</p>
-            <div class="field">
-              <label>Email</label>
-              <input type="email" id="login-user" placeholder="Enter admin email" autocomplete="username">
-            </div>
-            <div class="field">
-              <label>Password</label>
-              <div class="pw-field">
-                <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
-                <button type="button" class="pw-eye" data-toggle-password="login-pass" aria-label="Show password">👁</button>
-              </div>
-            </div>
-            <label class="remember-choice"><input type="checkbox" id="remember-admin" checked> Remember me on this device</label>
-            <div class="login-error" id="login-error"></div>
-            <button class="pill-btn primary login-submit" id="admin-login-btn" style="width:100%; padding:11px;" onclick="attemptLogin()">Log in</button>
-            <button class="pill-btn ghost" type="button" style="margin-top:10px;width:100%;" onclick="switchView('role-select')">Back to login access</button>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- ================= DEVELOPER LOGIN REMOVED: only Owner, Admin, Staff can sign in ================= -->
 
       <!-- ================= STAFF ACCESS GATE ================= -->
-<div class="view" id="view-staff-gate">
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="logo-badge">
-      </div>
-      <h2>STAFF ACCESS</h2>
-      <p class="hint">Enter the staff password to open the dashboard</p>
-      <div class="field">
-        <label>Email</label>
-        <input type="email" id="staff-user" placeholder="Enter staff email" autocomplete="username">
-      </div>
-      <div class="field">
-        <label>Password</label>
-        <div class="pw-field">
-          <input type="password" id="staff-pass" placeholder="Enter staff password" autocomplete="current-password">
-          <button type="button" class="pw-eye" data-toggle-password="staff-pass" aria-label="Show password">👁</button>
-        </div>
-      </div>
-      <label class="remember-choice">
-        <input type="checkbox" id="remember-staff" checked> Remember me on this device
-      </label>
-      <div class="login-error" id="staff-error"></div>
-      <button class="pill-btn primary login-submit" id="staff-login-btn" style="width:100%; padding:11px;" onclick="attemptStaffLogin()">Unlock</button>
-      <button class="pill-btn ghost" type="button" style="margin-top:10px;width:100%;" onclick="switchView('role-select')">Back to login access</button>
-    </div>
-  </div>
-</div>
+
 
 
 <!-- ================= OWNER LOGIN ================= -->
@@ -3564,9 +3512,6 @@ async function init(){
   const repBranch = document.getElementById("rep-branch");
   if(repBranch) repBranch.innerHTML = `<option value="__all__">All active branches</option>` + activeBranches().map(b=>`<option value="${escapeHTML(b)}">${escapeHTML(b)}</option>`).join("");
   bindNav();
-  document.getElementById("staff-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
-  document.getElementById("staff-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
-  document.getElementById("login-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptLogin(); });
   document.getElementById("owner-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
   document.getElementById("owner-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
   document.getElementById("owner-register-confirm").addEventListener("keydown", e=>{ if(e.key==="Enter") createOwnerAccount(); });
@@ -3775,31 +3720,6 @@ function chooseRole(role){
 
   }
 
-  if(role === "admin"){
-    session.isOwner = false;
-    session.isAdmin = true;
-    session.isDeveloper = false;
-    session.staffUnlocked = true;
-    session.pendingView = null;
-
-    updateNavForRole("admin");
-
-    switchView("admin");
-
-    return;
-
-  }
-
-  session.isOwner = false;
-  session.isAdmin = false;
-  session.isDeveloper = false;
-  session.staffUnlocked = true;
-  session.pendingView = "employee";
-
-  updateNavForRole("staff");
-
-  switchView("employee");
-
 }
 
 function openLoginChoices(){
@@ -3878,12 +3798,7 @@ function switchView(key){
   }
 
   if((key==="employee" || key==="inventory-public") && !session.staffUnlocked && !session.isAdmin){
-    session.pendingView = key;
-    document.getElementById("view-staff-gate").classList.add("active");
-    titleEl.innerHTML = `STAFF <span class="hi">ACCESS</span>`;
-    subEl.innerHTML = "Enter the staff password to continue";
-    rightEl.innerHTML = "";
-    renderAll();
+    switchView("owner-login");
     return;
   }
 
@@ -3967,12 +3882,6 @@ function switchView(key){
     // Firestore is authoritative, including an empty result, so a stale
     // local Staff/Admin cache cannot remain visible after deletion.
     loadAttendanceFromCollection().then(()=>renderAttendance()).catch(()=>{});
-  } else if(key==="staff-gate"){
-    session.pendingView = "employee";
-    document.getElementById("view-staff-gate").classList.add("active");
-    titleEl.innerHTML = `STAFF <span class="hi">ACCESS</span>`;
-    subEl.innerHTML = "Sign in to open the staff dashboard";
-    rightEl.innerHTML = "";
   } else if(key==="owner-dashboard"){
     if(!session.isOwner){
       switchView("role-select");
@@ -4004,10 +3913,7 @@ function switchView(key){
         `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
       bindBranchSelector("admin");
     } else {
-      document.getElementById("view-admin-login").classList.add("active");
-      titleEl.innerHTML = `ADMIN`;
-      subEl.innerHTML = "Sign in to manage jobs and inventory";
-      rightEl.innerHTML = "";
+      switchView("role-select");
     }
   } else if(key==="owner-login"){
     document.getElementById("view-owner-login").classList.add("active");
@@ -4151,6 +4057,16 @@ function showOwnerRegister(){
 
   switchView("owner-register");
 }
+async function ownerAccountExists(){
+  try{
+    const snap = await withTimeout(db.collection("userRoles").where("role","==","owner").limit(1).get(), 8000);
+    return !snap.empty;
+  }catch(e){
+    console.error("Could not check for an existing owner account:", e);
+    // Fail closed: if we can't verify, block registration rather than risk a second owner.
+    return true;
+  }
+}
 async function createOwnerAccount(){
   ensureStateReady();
   const businessName = document.getElementById("owner-business-name").value.trim();
@@ -4178,6 +4094,20 @@ async function createOwnerAccount(){
   if(button){
     button.disabled = true;
     button.classList.add("is-loading");
+    button.innerHTML = `<span class="login-spinner" aria-hidden="true"></span>Checking...`;
+  }
+
+  if(await ownerAccountExists()){
+    err.textContent = "An owner account already exists for this business. Please contact your developer for access.";
+    if(button){
+      button.disabled = false;
+      button.classList.remove("is-loading");
+      button.textContent = "Create Owner Account";
+    }
+    return;
+  }
+
+  if(button){
     button.innerHTML = `<span class="login-spinner" aria-hidden="true"></span>Creating...`;
   }
 
@@ -4265,7 +4195,14 @@ async function continueWithGoogleOwner(){
       return;
     }
 
-    // No owner role yet on this Google account: finish setting up the business.
+    // No owner role yet on this Google account: only proceed if no owner exists at all.
+    if(await ownerAccountExists()){
+      await firebase.auth().signOut();
+      const msg = "An owner account already exists for this business. Please contact your developer for access.";
+      if(loginErr) loginErr.textContent = msg; else showToast(msg);
+      return;
+    }
+
     switchView("owner-register");
     document.getElementById("owner-business-name").value = "";
     document.getElementById("owner-name").value = user.displayName || "";
@@ -4302,7 +4239,15 @@ async function createOwnerAccountViaGoogle(){
   }
 
   const button = document.getElementById("owner-register-btn");
-  if(button){ button.disabled = true; button.textContent = "Creating..."; }
+  if(button){ button.disabled = true; button.textContent = "Checking..."; }
+
+  if(await ownerAccountExists()){
+    err.textContent = "An owner account already exists for this business. Please contact your developer for access.";
+    if(button){ button.disabled = false; button.textContent = "Finish creating account"; }
+    return;
+  }
+
+  if(button){ button.textContent = "Creating..."; }
 
   try{
     await withTimeout(db.collection("userRoles").doc(user.uid).set({ role: "owner" }, { merge: true }), 10000);
@@ -4392,217 +4337,8 @@ async function attemptOwnerLogin(){
     setLoginLoading("owner-login-btn", null);
   }
 }
-async function attemptLogin(){
-  ensureStateReady();
-  const email = document.getElementById("login-user").value.trim();
-  const password = document.getElementById("login-pass").value;
-  const err = document.getElementById("login-error");
 
-  err.textContent = "";
 
-  if(!email || !password){
-    err.textContent = "Please enter your email and password.";
-    return;
-  }
-
-  setLoginLoading("admin-login-btn", "Signing in...");
-
-  try{
-    const remember = document.getElementById("remember-admin").checked;
-    await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
-    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-    const user = userCredential.user;
-
-    // Resolve the Firebase role BEFORE loading appMeta. appMeta is protected by
-    // role/subscription rules, so trying to read it before the role is known
-    // caused valid Admin/Staff users to be reported as having no role.
-    const roleDetails = await getFirebaseRoleDetails(user);
-    const role = roleDetails.role;
-
-    if(role === "staff"){
-      await firebase.auth().signOut();
-      err.textContent = "This email is assigned as Staff. Please use Staff Login.";
-      return;
-    }
-
-    if(role === "developer"){
-      await firebase.auth().signOut();
-      err.textContent = "This email is not assigned Admin access.";
-      return;
-    }
-
-    if(role !== "admin"){
-      await firebase.auth().signOut();
-      err.textContent = describeFirebaseRoleFailure(roleDetails, "Admin");
-      return;
-    }
-
-    // Establish the authenticated app role before any role-protected cloud reads.
-    session.isAdmin = true;
-    session.staffUnlocked = true;
-    await loadSubscription();
-    if(!subscriptionIsActive()){
-      applySubscriptionAccess();
-      err.textContent = "Subscription expired. Please contact the administrator to renew access.";
-      return;
-    }
-
-    // Match the signed-in Firebase email to the Admin Access profile so the
-    // greeting shows the admin's display name, not the Firebase email.
-    // Read the authoritative Admin Access record after the role is established.
-    const adminEmail = (user.email || "").trim().toLowerCase();
-    let adminSnap;
-    try{
-      adminSnap = await withTimeout(
-        db.collection("adminAccounts")
-          .where("email","==",adminEmail)
-          .where("branchId","==",currentBranchId())
-          .get(),
-        10000
-      );
-    }catch(accessError){
-      console.error("Could not read Admin Access during login:", accessError);
-      await firebase.auth().signOut();
-      err.textContent = accessError?.code === "permission-denied"
-        ? "Firebase role verified, but Firestore denied access to Admin Access. Check the deployed Firestore rules."
-        : `Firebase role verified, but Admin Access could not be read (${accessError?.code || "unknown error"}).`;
-      return;
-    }
-    const adminAccount = adminSnap.docs.length ? {id:adminSnap.docs[0].id, ...adminSnap.docs[0].data()} : null;
-    if(!adminAccount || String(adminAccount.status || "active").toLowerCase() === "revoked"){
-      await firebase.auth().signOut();
-      err.textContent = "This Firebase email is not currently active in Admin Access.";
-      return;
-    }
-    state.adminAccounts = normalizeAdminAccounts([...(state.adminAccounts || []).filter(a=>a.id!==adminAccount.id), adminAccount]);
-    const adminName = adminAccount.username || state.admin?.username || user.email || "Admin";
-
-    state.admin = {
-      uid: user.uid,
-      email: user.email,
-      username: adminName
-    };
-
-    session.adminUsername = adminName;
-    session.isAdmin = true;
-    session.staffUnlocked = true;
-    await loadCloudStateAfterLogin();
-    await loadAdminCollections();
-    await loadAttendanceFromCollection();
-    await syncOperationalCollections();
-    // Complete the one-time legacy -> dedicated source migration checkpoint.
-    await syncAppMeta();
-    startRealtimeSync();
-    // Refresh the admin display name after collection-backed profiles load.
-    const refreshedAdmin = (state.adminAccounts || []).find(item =>
-      (item.email || "").trim().toLowerCase() === (user.email || "").trim().toLowerCase()
-    );
-    if(refreshedAdmin?.username){
-      session.adminUsername = refreshedAdmin.username;
-      state.admin.username = refreshedAdmin.username;
-    }
-    startLicenseAlertTimer();
-    updateNavForRole("admin");
-
-    if(document.getElementById("remember-admin").checked) saveRememberedSession("admin");
-
-    err.textContent = "";
-    document.getElementById("login-user").value = "";
-    document.getElementById("login-pass").value = "";
-    switchView("admin");
-    showToast("Welcome back, admin");
-  }catch(error){
-    console.error("Firebase admin login error:", error);
-
-    err.textContent = describeFirebaseAuthError(error, "admin");
-  }finally{
-    setLoginLoading("admin-login-btn", null);
-  }
-}
-async function attemptStaffLogin(){
-  ensureStateReady();
-  const email = document.getElementById("staff-user").value.trim();
-  const p = document.getElementById("staff-pass").value;
-  const err = document.getElementById("staff-error");
-  err.textContent = "";
-
-  if(!email || !p){
-    err.textContent = "Please enter your Firebase staff email and password.";
-    return;
-  }
-
-  setLoginLoading("staff-login-btn", "Signing in...");
-
-  try{
-    const remember = document.getElementById("remember-staff").checked;
-    await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
-    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, p);
-    const user = userCredential.user;
-
-    // Resolve role first. Staff is intentionally not allowed to read appMeta.
-    const roleDetails = await getFirebaseRoleDetails(user);
-    const role = roleDetails.role;
-    if(role !== "staff"){
-      await firebase.auth().signOut();
-      err.textContent = role === "admin"
-        ? "This email is assigned as Admin. Please use Admin Login."
-        : describeFirebaseRoleFailure(roleDetails, "Staff");
-      return;
-    }
-
-    // Staff Access is also cloud-authoritative; query the exact Firebase email
-    // instead of depending on a stale/local access-directory snapshot.
-    const staffEmail = (user.email || "").trim().toLowerCase();
-    const staffSnap = await withTimeout(
-      db.collection("staffAccounts")
-        .where("email","==",staffEmail)
-        .where("branchId","==",currentBranchId())
-        .get(),
-      10000
-    );
-    const account = staffSnap.docs.length ? {id:staffSnap.docs[0].id, ...staffSnap.docs[0].data()} : null;
-    if(account){
-      const byId = new Map((state.staffAccounts || []).map(a=>[a.id,a]));
-      byId.set(account.id, account);
-      state.staffAccounts = [...byId.values()];
-    }
-    if(!account){
-      await firebase.auth().signOut();
-      err.textContent = "This staff email has not been assigned in the app yet.";
-      return;
-    }
-
-    // Establish Staff session state before loading Staff-authorized collections.
-    session.staffUnlocked = true;
-    session.isAdmin = false;
-    await loadSubscription();
-    if(!subscriptionIsActive()){
-      applySubscriptionAccess();
-      err.textContent = "Subscription expired. Please contact the administrator to renew access.";
-      return;
-    }
-
-    session.isAdmin = false;
-    session.staffUsername = account.username || user.email;
-    session.staffTechnician = canonicalStaffTechnicianName(account);
-    await loadStaffCollections();
-    await loadStaffOperationalCollections();
-    await loadAttendanceFromCollection();
-    startRealtimeSync();
-    updateNavForRole("staff");
-    if(document.getElementById("remember-staff").checked) saveRememberedSession("staff");
-    err.textContent = "";
-    document.getElementById("staff-user").value = "";
-    document.getElementById("staff-pass").value = "";
-    switchView(session.pendingView || "employee");
-    showToast("Welcome");
-  }catch(error){
-    console.error("Firebase staff login error:", error);
-    err.textContent = describeFirebaseAuthError(error, "staff");
-  }finally{
-    setLoginLoading("staff-login-btn", null);
-  }
-}
 function showLogoutLoading(){
   document.getElementById("logout-overlay")?.remove();
   const overlay = document.createElement("div");
