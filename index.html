@@ -1094,8 +1094,8 @@
             <h2>ADMIN LOGIN</h2>
             <p class="hint">Manage jobs, inventory and branch sales</p>
             <div class="field">
-              <label>Email</label>
-              <input type="email" id="login-user" placeholder="Enter admin email" autocomplete="username">
+              <label>Username</label>
+              <input type="text" id="login-user" placeholder="Enter admin username" autocomplete="username">
             </div>
             <div class="field">
               <label>Password</label>
@@ -1123,8 +1123,8 @@
       <h2>STAFF ACCESS</h2>
       <p class="hint">Enter the staff password to open the dashboard</p>
       <div class="field">
-        <label>Email</label>
-        <input type="email" id="staff-user" placeholder="Enter staff email" autocomplete="username">
+        <label>Username</label>
+        <input type="text" id="staff-user" placeholder="Enter staff username" autocomplete="username">
       </div>
       <div class="field">
         <label>Password</label>
@@ -1477,6 +1477,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 
 <script>
 /* ======================= STATE ======================= */
@@ -1593,6 +1594,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const cloudFunctions = firebase.functions();
 const subscriptionRef = db.collection("subscriptions").doc("gids-tech");
 const appMetaRef = db.collection("appMeta").doc("gids-tech");
 const TRIAL_DAYS = 7;
@@ -2189,6 +2191,35 @@ function readLocal(){
 }
 function writeLocal(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ /* ignore quota errors */ }
+}
+
+// loginDirectory holds ONLY username->email pairs (no passwords, no other
+// fields). It exists so the login screen can resolve a typed Username into
+// the Firebase email needed for signInWithEmailAndPassword, before the
+// person is authenticated. Requires a Firestore rule allowing public read
+// of this collection only:
+//   match /loginDirectory/{username} { allow read: if true; allow write: if request.auth != null; }
+async function syncLoginDirectoryEntry(oldUsername, newUsername, email){
+  try{
+    const cleanNew = String(newUsername || "").trim().toLowerCase();
+    const cleanOld = String(oldUsername || "").trim().toLowerCase();
+    if(cleanOld && cleanOld !== cleanNew){
+      await db.collection("loginDirectory").doc(cleanOld).delete().catch(()=>{});
+    }
+    if(cleanNew && email){
+      await db.collection("loginDirectory").doc(cleanNew).set({ email: String(email).trim().toLowerCase() });
+    }
+  }catch(e){
+    console.error("Could not sync loginDirectory entry:", e);
+  }
+}
+async function removeLoginDirectoryEntry(username){
+  try{
+    const clean = String(username || "").trim().toLowerCase();
+    if(clean) await db.collection("loginDirectory").doc(clean).delete();
+  }catch(e){
+    console.error("Could not remove loginDirectory entry:", e);
+  }
 }
 
 function stableAdminDocId(account){
@@ -3596,6 +3627,7 @@ function switchView(key){
       bindBranchSelector("admin");
     } else {
       rightEl.innerHTML = branchSelectorHTML("ui.branch") +
+        `<button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()">Change Password</button>` +
         `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
         `<button class="pill-btn danger" data-logout-action type="button">Sign out</button>`;
       bindBranchSelector("employee");
@@ -3682,6 +3714,7 @@ function switchView(key){
       rightEl.innerHTML = branchSelectorHTML("ui.adminBranch") +
         `<div class="badge-role"><span class="dot"></span><span>Admin</span></div>` +
         `<button class="pill-btn ghost" onclick="switchView('security-access')">Security and Access</button>` +
+        `<button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()">Change Password</button>` +
         `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
         `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
       bindBranchSelector("admin");
@@ -3810,14 +3843,14 @@ function describeFirebaseAuthError(error, label){
 
 async function attemptLogin(){
   ensureStateReady();
-  const email = document.getElementById("login-user").value.trim();
+  const username = document.getElementById("login-user").value.trim();
   const password = document.getElementById("login-pass").value;
   const err = document.getElementById("login-error");
 
   err.textContent = "";
 
-  if(!email || !password){
-    err.textContent = "Please enter your email and password.";
+  if(!username || !password){
+    err.textContent = "Please enter your username and password.";
     return;
   }
 
@@ -3826,6 +3859,23 @@ async function attemptLogin(){
   try{
     const remember = document.getElementById("remember-admin").checked;
     await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
+
+    // Resolve the typed Username to the Firebase email Firebase Auth actually
+    // needs, via the public loginDirectory lookup (username -> email only).
+    let email;
+    try{
+      const lookup = await withTimeout(db.collection("loginDirectory").doc(username.toLowerCase()).get(), 8000);
+      if(!lookup.exists || !lookup.data()?.email){
+        err.textContent = "That username was not found. Check with your owner or admin.";
+        return;
+      }
+      email = lookup.data().email;
+    }catch(lookupError){
+      console.error("Could not resolve username:", lookupError);
+      err.textContent = "Could not verify that username right now. Please try again.";
+      return;
+    }
+
     const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
     const user = userCredential.user;
 
@@ -3937,13 +3987,13 @@ async function attemptLogin(){
 }
 async function attemptStaffLogin(){
   ensureStateReady();
-  const email = document.getElementById("staff-user").value.trim();
+  const username = document.getElementById("staff-user").value.trim();
   const p = document.getElementById("staff-pass").value;
   const err = document.getElementById("staff-error");
   err.textContent = "";
 
-  if(!email || !p){
-    err.textContent = "Please enter your Firebase staff email and password.";
+  if(!username || !p){
+    err.textContent = "Please enter your username and password.";
     return;
   }
 
@@ -3952,6 +4002,21 @@ async function attemptStaffLogin(){
   try{
     const remember = document.getElementById("remember-staff").checked;
     await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
+
+    let email;
+    try{
+      const lookup = await withTimeout(db.collection("loginDirectory").doc(username.toLowerCase()).get(), 8000);
+      if(!lookup.exists || !lookup.data()?.email){
+        err.textContent = "That username was not found. Check with your owner or admin.";
+        return;
+      }
+      email = lookup.data().email;
+    }catch(lookupError){
+      console.error("Could not resolve username:", lookupError);
+      err.textContent = "Could not verify that username right now. Please try again.";
+      return;
+    }
+
     const userCredential = await firebase.auth().signInWithEmailAndPassword(email, p);
     const user = userCredential.user;
 
@@ -4284,6 +4349,7 @@ function accessActionOptions(account, type){
   const options = [action(status === "revoked" ? "Revoked" : "Active", "current")];
   if(status === "revoked") options.push(action("Restore", "restore"));
   else options.push(action("Revoke", "revoke"));
+  if(account?.email) options.push(action("Reset Password", "reset-password"));
   options.push(action("Delete", "delete"));
   return `<select class="access-action-select" data-account-type="${type}" data-account-id="${safeId}" onchange="handleAccessAction(this)">${options.join("")}</select>`;
 }
@@ -4296,6 +4362,29 @@ function handleAccessAction(select){
   if(action === "restore") return type === "staff" ? restoreStaffAccount(id) : restoreAdminAccount(id);
   if(action === "revoke") return type === "staff" ? revokeStaffAccount(id) : revokeAdminAccount(id);
   if(action === "delete") return type === "staff" ? deleteStaffAccount(id) : deleteAdminAccount(id);
+  if(action === "reset-password") return sendAccountPasswordReset(type, id);
+}
+
+async function sendAccountPasswordReset(type, id){
+  if(!hasSecurityAccess()) return;
+  const accounts = type === "staff" ? state.staffAccounts : state.adminAccounts;
+  const account = type === "staff"
+    ? (accounts || []).find(item => item.id === id)
+    : (accounts || []).find(item => item.username === id);
+  if(!account){ showToast("Account not found."); return; }
+  if(!account.email){ showToast("This account has no email on file yet. Add one first."); return; }
+  if(!confirm(`Send a password reset email to ${account.email}?`)) return;
+  try{
+    await firebase.auth().sendPasswordResetEmail(account.email);
+    showToast(`Password reset email sent to ${account.email}`);
+  }catch(error){
+    console.error("Could not send password reset email:", error);
+    if(error?.code === "auth/user-not-found"){
+      showToast("No Firebase account exists yet for this email. Ask your developer to create it first.");
+    }else{
+      showToast("Could not send the password reset email. Please try again.");
+    }
+  }
 }
 
 function renderStaffAccess(){
@@ -4475,49 +4564,81 @@ function openAdminAccountModal(username=""){
       <span>${escapeHTML(branch)}</span>
     </label>`;
   }).join("");
-  openOverlay(`<h3>${editing ? "Edit admin profile" : "Add admin profile"}</h3><div class="sub">Set the owner-managed admin name, username, password, and assigned branch access.</div>
+  openOverlay(`<h3>${editing ? "Edit admin profile" : "Add admin profile"}</h3><div class="sub">${editing ? "Update name, username, or branch access. Email and password can't be changed here — use Reset Password to let them set a new one." : "Creates a real Firebase sign-in for this admin."}</div>
     <div class="field"><label>Name</label><input id="admin-account-name" value="${editing ? escapeHTML(editing.name || editing.username || "") : ""}" autocomplete="off" placeholder="e.g. Jaja"></div>
     <div class="field"><label>Username</label><input id="admin-account-username" value="${editing ? escapeHTML(editing.username || "") : ""}" autocomplete="off" placeholder="e.g. adminjaja"></div>
-    <div class="field"><label>Password</label><div class="pw-field"><input id="admin-account-password" type="password" value="${editing ? escapeHTML(editing.password || "") : ""}" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="admin-account-password" aria-label="Show password">👁</button></div></div>
+    <div class="field"><label>Email${editing ? "" : " (for Firebase sign-in & password reset)"}</label><input id="admin-account-email" type="email" value="${editing ? escapeHTML(editing.email || "") : ""}" autocomplete="off" placeholder="e.g. jaja@gidsayphonetech.com" ${editing ? "disabled" : ""}></div>
+    ${editing ? "" : `<div class="field"><label>Password</label><div class="pw-field"><input id="admin-account-password" type="password" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="admin-account-password" aria-label="Show password">👁</button></div></div>`}
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
     <div class="login-error" id="admin-account-error"></div>
-    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveAdminAccount('${editing ? escapeHTML(editing.username) : ""}')">Save profile</button></div>`);
+    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" id="admin-account-save-btn" onclick="saveAdminAccount('${editing ? escapeHTML(editing.username) : ""}')">Save profile</button></div>`);
 }
 
 async function saveAdminAccount(oldUsername){
   if(!hasSecurityAccess()) return;
   const name = document.getElementById("admin-account-name").value.trim();
   const username = document.getElementById("admin-account-username").value.trim();
-  const password = document.getElementById("admin-account-password").value;
+  const email = document.getElementById("admin-account-email").value.trim().toLowerCase();
   const selectedBranches = [...document.querySelectorAll('[data-branch-checkbox="admin"]')].filter(el => el.checked).map(el => el.value);
   const error = document.getElementById("admin-account-error");
-  if(!name || !username || !password){ error.textContent = "Name, username, and password are required."; return; }
-  if(password.length < 4){ error.textContent = "Password must be at least 4 characters long."; return; }
-  if(!selectedBranches.length){ error.textContent = "Select at least one branch for this admin."; return; }
-  if(state.adminAccounts.some(account=>account.username!==oldUsername && String(account.username || "").trim().toLowerCase()===username.toLowerCase())){ error.textContent = "That username is already assigned."; return; }
-  const account = oldUsername
-    ? state.adminAccounts.find(item=>item.username===oldUsername)
-    : {id:uid(), username, name, password, status:"active", firebaseUid:"", branchId:currentBranchId(), branchIds:selectedBranches};
-  if(!account){ error.textContent = "Admin account not found."; return; }
   const branchIds = selectedBranches.filter(Boolean);
-  Object.assign(account,{name, username, password, branchIds, branchId:branchIds[0] || currentBranchId()});
-  if(!oldUsername) state.adminAccounts.push(account);
-  state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
-  if(oldUsername && oldUsername!==username){
-    if(!Array.isArray(state.removedAdminUsernames)) state.removedAdminUsernames = [];
-    if(!state.removedAdminUsernames.includes(oldUsername)) state.removedAdminUsernames.push(oldUsername);
+  error.textContent = "";
+
+  if(!name || !username || !email){ error.textContent = "Name, username, and email are required."; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ error.textContent = "Enter a valid email address."; return; }
+  if(!branchIds.length){ error.textContent = "Select at least one branch for this admin."; return; }
+  if(state.adminAccounts.some(account=>account.username!==oldUsername && String(account.username || "").trim().toLowerCase()===username.toLowerCase())){ error.textContent = "That username is already assigned."; return; }
+
+  const btn = document.getElementById("admin-account-save-btn");
+
+  if(!oldUsername){
+    // Creating a new account: the real Firebase Auth user must be created
+    // server-side (Cloud Function), never with a client-side Admin SDK key.
+    const password = document.getElementById("admin-account-password").value;
+    if(!password){ error.textContent = "Password is required."; return; }
+    if(password.length < 6){ error.textContent = "Password must be at least 6 characters long."; return; }
+
+    btn.disabled = true;
+    btn.textContent = "Creating...";
+    try{
+      const result = await cloudFunctions.httpsCallable("createStaffOrAdminAccount")({
+        role: "admin", name, username, email, password, branchIds
+      });
+      const uid = result.data.uid;
+      const account = {id:uid, firebaseUid:uid, username, name, email, status:"active", branchId:branchIds[0], branchIds};
+      state.adminAccounts.push(account);
+      state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
+      writeLocal();
+      closeOverlay();
+      renderAdminAccess();
+      renderOwnerAccessControls();
+      showToast("Admin account created");
+    }catch(err){
+      console.error("Could not create admin account:", err);
+      error.textContent = err?.message || "Could not create the admin account.";
+    }finally{
+      btn.disabled = false;
+      btn.textContent = "Save profile";
+    }
+    return;
   }
+
+  // Editing an existing account: profile fields only, no Auth changes.
+  const account = state.adminAccounts.find(item=>item.username===oldUsername);
+  if(!account){ error.textContent = "Admin account not found."; return; }
+  Object.assign(account,{name, username, branchIds, branchId:branchIds[0] || currentBranchId()});
+  state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
   try{
-    const ref = db.collection("adminAccounts").doc(account.id || stableAdminDocId(account));
-    account.id = account.id || ref.id;
-    await withTimeout(ref.set({...account, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    const ref = db.collection("adminAccounts").doc(account.id || account.firebaseUid || stableAdminDocId(account));
+    await withTimeout(ref.set({name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await syncLoginDirectoryEntry(oldUsername, username, email);
     writeLocal();
     if(session.adminUsername===oldUsername) session.adminUsername = username;
     state.admin = {uid:firebase.auth().currentUser?.uid || "", email:firebase.auth().currentUser?.email || "", username:session.adminUsername || username};
     closeOverlay();
     renderAdminAccess();
     renderOwnerAccessControls();
-    showToast(oldUsername ? "Admin access updated" : "Admin access assigned");
+    showToast("Admin access updated");
   }catch(e){
     console.error("Could not save admin access:", e);
     error.textContent = "Could not save Admin Access to the cloud. Please try again.";
@@ -4525,28 +4646,29 @@ async function saveAdminAccount(oldUsername){
 }
 
 async function revokeAdminAccount(username){
-  if(!hasSecurityAccess() || !confirm("Revoke this admin access?")) return;
+  if(!hasSecurityAccess() || !confirm("Suspend this admin's access? This disables their real Firebase login, not just an app flag.")) return;
   const account = state.adminAccounts.find(item=>item.username===username);
   if(!account) return;
   if(session.adminUsername===username){
-    showToast("You cannot revoke the admin account currently in use");
+    showToast("You cannot suspend the admin account currently in use");
     return;
   }
   const activeAdminCount = (state.adminAccounts || []).filter(a=>String(a.status || "active").toLowerCase() === "active").length;
   if(activeAdminCount <= 1){
-    showToast("You cannot revoke the last active Admin. Keep a recovery administrator available.");
+    showToast("You cannot suspend the last active Admin. Keep a recovery administrator available.");
     return;
   }
+  const uidToUse = account.firebaseUid || account.id;
   try{
-    const ref = db.collection("adminAccounts").doc(account.id || stableAdminDocId(account));
-    await withTimeout(ref.set({status:"revoked", branchId:account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await cloudFunctions.httpsCallable("setAccountStatus")({ role:"admin", uid:uidToUse, action:"suspend" });
     account.status = "revoked";
     writeLocal();
     renderAdminAccess();
-    showToast("Admin access revoked");
+    renderOwnerAccessControls();
+    showToast("Admin access suspended");
   }catch(e){
-    console.error("Could not revoke admin access:", e);
-    showToast("Could not revoke Admin Access from the cloud");
+    console.error("Could not suspend admin access:", e);
+    showToast(e?.message || "Could not suspend Admin access");
   }
 }
 
@@ -4554,16 +4676,17 @@ async function restoreAdminAccount(username){
   if(!hasSecurityAccess()) return;
   const account = state.adminAccounts.find(item=>item.username===username);
   if(!account) return;
+  const uidToUse = account.firebaseUid || account.id;
   try{
-    const ref = db.collection("adminAccounts").doc(account.id || stableAdminDocId(account));
-    await withTimeout(ref.set({status:"active", branchId:account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await cloudFunctions.httpsCallable("setAccountStatus")({ role:"admin", uid:uidToUse, action:"restore" });
     account.status = "active";
     writeLocal();
     renderAdminAccess();
+    renderOwnerAccessControls();
     showToast("Admin access restored");
   }catch(e){
     console.error("Could not restore admin access:", e);
-    showToast("Could not restore Admin Access in the cloud");
+    showToast(e?.message || "Could not restore Admin access");
   }
 }
 
@@ -4582,14 +4705,15 @@ function openStaffAccountModal(editId="", technician=""){
   }).join("");
   openOverlay(`
     <h3>${editing ? "Edit staff access" : "Assign staff access"}</h3>
-    <div class="sub">Set the owner-managed staff name, username, password, and assigned branch access.</div>
+    <div class="sub">${editing ? "Update name, username, or branch access. Email and password can't be changed here — use Reset Password to let them set a new one." : "Creates a real Firebase sign-in for this staff member."}</div>
     <div class="field"><label>Technician</label><select id="staff-account-tech">${options}</select></div>
     <div class="field"><label>Name</label><input id="staff-account-name" value="${editing ? escapeHTML(editing.name || editing.technician || "") : ""}" autocomplete="off" placeholder="e.g. Tristan"></div>
     <div class="field"><label>Username</label><input id="staff-account-username" value="${editing ? escapeHTML(editing.username || "") : ""}" autocomplete="off" placeholder="e.g. stafftristan"></div>
-    <div class="field"><label>Password</label><div class="pw-field"><input id="staff-account-password" type="password" value="${editing ? escapeHTML(editing.password || "") : ""}" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="staff-account-password" aria-label="Show password">👁</button></div></div>
+    <div class="field"><label>Email${editing ? "" : " (for Firebase sign-in & password reset)"}</label><input id="staff-account-email" type="email" value="${editing ? escapeHTML(editing.email || "") : ""}" autocomplete="off" placeholder="e.g. tristan@gidsayphonetech.com" ${editing ? "disabled" : ""}></div>
+    ${editing ? "" : `<div class="field"><label>Password</label><div class="pw-field"><input id="staff-account-password" type="password" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="staff-account-password" aria-label="Show password">👁</button></div></div>`}
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
     <div class="login-error" id="staff-account-error"></div>
-    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveStaffAccount('${editId}')">Save access</button></div>
+    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" id="staff-account-save-btn" onclick="saveStaffAccount('${editId}')">Save access</button></div>
   `);
 }
 
@@ -4598,32 +4722,65 @@ async function saveStaffAccount(id){
   const technician = document.getElementById("staff-account-tech").value;
   const name = document.getElementById("staff-account-name").value.trim();
   const username = document.getElementById("staff-account-username").value.trim();
-  const password = document.getElementById("staff-account-password").value;
+  const email = document.getElementById("staff-account-email").value.trim().toLowerCase();
   const selectedBranches = [...document.querySelectorAll('[data-branch-checkbox="staff"]')].filter(el => el.checked).map(el => el.value);
   const error = document.getElementById("staff-account-error");
-  if(!technician || !name || !username || !password){ error.textContent = "Technician, name, username, and password are required."; return; }
-  if(password.length < 4){ error.textContent = "Password must be at least 4 characters long."; return; }
-  if(!selectedBranches.length){ error.textContent = "Select at least one branch for this staff."; return; }
+  const branchIds = selectedBranches.filter(Boolean);
+  error.textContent = "";
+
+  if(!technician || !name || !username || !email){ error.textContent = "Technician, name, username, and email are required."; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ error.textContent = "Enter a valid email address."; return; }
+  if(!branchIds.length){ error.textContent = "Select at least one branch for this staff."; return; }
   const duplicateUsername = state.staffAccounts.some(item=>item.id!==id && String(item.username || "").trim().toLowerCase()===username.toLowerCase());
   const duplicateTech = state.staffAccounts.some(item=>item.id!==id && item.technician===technician);
   if(duplicateUsername){ error.textContent = "That username is already assigned."; return; }
   if(duplicateTech){ error.textContent = "That technician already has an account."; return; }
-  const account = id
-    ? state.staffAccounts.find(item=>item.id===id)
-    : {id:uid(), technician, name, username, password, status:"active", firebaseUid:"", branchId:currentBranchId(), branchIds:selectedBranches};
+
+  const btn = document.getElementById("staff-account-save-btn");
+
+  if(!id){
+    const password = document.getElementById("staff-account-password").value;
+    if(!password){ error.textContent = "Password is required."; return; }
+    if(password.length < 6){ error.textContent = "Password must be at least 6 characters long."; return; }
+
+    btn.disabled = true;
+    btn.textContent = "Creating...";
+    try{
+      const result = await cloudFunctions.httpsCallable("createStaffOrAdminAccount")({
+        role: "staff", name, username, email, password, branchIds, technician
+      });
+      const uid = result.data.uid;
+      const account = {id:uid, firebaseUid:uid, technician, name, username, email, status:"active", branchId:branchIds[0], branchIds};
+      state.staffAccounts.push(account);
+      writeLocal();
+      renderStaffAccess();
+      renderOwnerAccessControls();
+      closeOverlay();
+      showToast("Staff access assigned");
+    }catch(err){
+      console.error("Could not create staff account:", err);
+      error.textContent = err?.message || "Could not create the staff account.";
+    }finally{
+      btn.disabled = false;
+      btn.textContent = "Save access";
+    }
+    return;
+  }
+
+  const account = state.staffAccounts.find(item=>item.id===id);
   if(!account){ error.textContent = "Staff account not found."; return; }
-  const branchIds = selectedBranches.filter(Boolean);
-  Object.assign(account, {technician, name, username, password, branchIds, branchId: branchIds[0] || account.branchId || currentBranchId()});
-  if(!id) state.staffAccounts.push(account);
+  const previousUsername = account.username || "";
+  Object.assign(account, {technician, name, username, branchIds, branchId: branchIds[0] || account.branchId || currentBranchId()});
 
   try{
     const ref = db.collection("staffAccounts").doc(account.id);
-    await withTimeout(ref.set({...account, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await withTimeout(ref.set({technician, name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await syncLoginDirectoryEntry(previousUsername, username, email);
     writeLocal();
     renderStaffAccess();
     renderOwnerAccessControls();
     closeOverlay();
-    showToast(id ? "Staff access updated" : "Staff access assigned");
+    showToast("Staff access updated");
   }catch(e){
     console.error("Could not save staff access:", e);
     error.textContent = "Could not save Staff Access to the cloud. Please try again.";
@@ -4631,12 +4788,13 @@ async function saveStaffAccount(id){
 }
 
 async function revokeStaffAccount(id){
-  if(!hasSecurityAccess() || !confirm("Revoke this technician's access? This will also remove the technician from future Add Job assignments.")) return;
+  if(!hasSecurityAccess() || !confirm("Suspend this technician's access? This disables their real Firebase login and removes them from future Add Job assignments.")) return;
   const account = (state.staffAccounts || []).find(item=>item.id===id);
   if(!account) return;
   const technician = account.technician || "";
+  const uidToUse = account.firebaseUid || account.id;
   try{
-    await withTimeout(db.collection("staffAccounts").doc(id).set({status:"revoked", branchId:account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await cloudFunctions.httpsCallable("setAccountStatus")({ role:"staff", uid:uidToUse, action:"suspend" });
     account.status = "revoked";
     if(technician){
       TECHS.splice(0, TECHS.length, ...TECHS.filter(name=>name!==technician));
@@ -4647,10 +4805,11 @@ async function revokeStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
-    showToast(`${technician || "Staff"} access revoked`);
+    renderOwnerAccessControls();
+    showToast(`${technician || "Staff"} access suspended`);
   }catch(e){
-    console.error("Could not revoke staff access:", e);
-    showToast("Could not revoke Staff Access from the cloud");
+    console.error("Could not suspend staff access:", e);
+    showToast(e?.message || "Could not suspend Staff access");
   }
 }
 
@@ -4658,8 +4817,9 @@ async function restoreStaffAccount(id){
   if(!hasSecurityAccess()) return;
   const account = (state.staffAccounts || []).find(item=>item.id===id);
   if(!account) return;
+  const uidToUse = account.firebaseUid || account.id;
   try{
-    await withTimeout(db.collection("staffAccounts").doc(id).set({status:"active", branchId:account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await cloudFunctions.httpsCallable("setAccountStatus")({ role:"staff", uid:uidToUse, action:"restore" });
     account.status = "active";
     if(account.technician && !TECHS.includes(account.technician)) TECHS.push(account.technician);
     state.technicians = [...TECHS];
@@ -4667,10 +4827,11 @@ async function restoreStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
+    renderOwnerAccessControls();
     showToast(`${account.technician || "Staff"} access restored`);
   }catch(e){
     console.error("Could not restore staff access:", e);
-    showToast("Could not restore Staff Access in the cloud");
+    showToast(e?.message || "Could not restore Staff access");
   }
 }
 
@@ -4684,21 +4845,23 @@ async function deleteAdminAccount(username){
     showToast("You cannot delete the last active Admin. Keep a recovery administrator available.");
     return;
   }
-  if(!confirm(`Delete Admin Access for ${account.email || username}? This removes the GIDS access record.`)) return;
+  if(!confirm(`Permanently delete Admin access for ${account.email || username}? This deletes their real Firebase login too — this cannot be undone.`)) return;
+  const uidToUse = account.firebaseUid || account.id;
   try{
-    await withTimeout(db.collection("adminAccounts").doc(account.id || stableAdminDocId(account)).delete(), 10000);
+    await cloudFunctions.httpsCallable("deleteStaffOrAdminAccount")({ role:"admin", uid:uidToUse, username });
     state.adminAccounts = state.adminAccounts.filter(item=>item.username!==username);
-    writeLocal(); renderAdminAccess(); showToast("Admin access deleted");
-  }catch(e){ console.error("Could not delete admin access:",e); showToast("Could not delete Admin Access from the cloud"); }
+    writeLocal(); renderAdminAccess(); renderOwnerAccessControls(); showToast("Admin access deleted");
+  }catch(e){ console.error("Could not delete admin access:",e); showToast(e?.message || "Could not delete Admin access"); }
 }
 
 async function deleteStaffAccount(id){
   if(!hasSecurityAccess()) return;
   const account = (state.staffAccounts || []).find(item=>item.id===id);
   if(!account) return;
-  if(!confirm(`Delete Staff Access for ${account.email || account.technician || "this account"}? This removes the GIDS access record.`)) return;
+  if(!confirm(`Permanently delete Staff access for ${account.email || account.technician || "this account"}? This deletes their real Firebase login too — this cannot be undone.`)) return;
+  const uidToUse = account.firebaseUid || account.id;
   try{
-    await withTimeout(db.collection("staffAccounts").doc(id).delete(), 10000);
+    await cloudFunctions.httpsCallable("deleteStaffOrAdminAccount")({ role:"staff", uid:uidToUse, username:account.username });
     state.staffAccounts = state.staffAccounts.filter(item=>item.id!==id);
     if(account.technician){
       TECHS.splice(0, TECHS.length, ...TECHS.filter(name=>name!==account.technician));
@@ -4706,8 +4869,8 @@ async function deleteStaffAccount(id){
       if(!Array.isArray(state.removedTechnicians)) state.removedTechnicians = [];
       if(!state.removedTechnicians.includes(account.technician)) state.removedTechnicians.push(account.technician);
     }
-    writeLocal(); renderAll(); renderStaffAccess(); showToast("Staff access deleted");
-  }catch(e){ console.error("Could not delete staff access:",e); showToast("Could not delete Staff Access from the cloud"); }
+    writeLocal(); renderAll(); renderStaffAccess(); renderOwnerAccessControls(); showToast("Staff access deleted");
+  }catch(e){ console.error("Could not delete staff access:",e); showToast(e?.message || "Could not delete Staff access"); }
 }
 
 function attendanceReportWindow(period){
@@ -6399,6 +6562,7 @@ async function submitChangePassword(){
     const credential = firebase.auth.EmailAuthProvider.credential(user.email, current);
     await user.reauthenticateWithCredential(credential);
     await user.updatePassword(next);
+    await markPasswordUpdated(user.email);
     closeOverlay();
     showToast("Password updated");
   }catch(error){
@@ -6413,6 +6577,29 @@ async function submitChangePassword(){
   }finally{
     btn.disabled = false;
     btn.textContent = originalLabel;
+  }
+}
+// Records when an Admin or Staff member changes their own password, so the
+// Owner's Access tab can show whether the Owner-assigned password is still
+// in use or has since been changed by the account holder. Not applied to
+// Owner accounts (Owner isn't tracked in adminAccounts/staffAccounts).
+async function markPasswordUpdated(email){
+  if(!email || session.isOwner) return;
+  const cleanEmail = String(email).trim().toLowerCase();
+  try{
+    if(session.isAdmin){
+      const snap = await db.collection("adminAccounts").where("email","==",cleanEmail).limit(1).get();
+      if(!snap.empty){
+        await snap.docs[0].ref.set({ passwordUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
+      }
+    }else if(session.staffUnlocked){
+      const snap = await db.collection("staffAccounts").where("email","==",cleanEmail).limit(1).get();
+      if(!snap.empty){
+        await snap.docs[0].ref.set({ passwordUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
+      }
+    }
+  }catch(e){
+    console.error("Could not record passwordUpdatedAt:", e);
   }
 }
 function openCalculatorModal(){
