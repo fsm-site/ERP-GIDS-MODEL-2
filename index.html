@@ -6840,11 +6840,14 @@ function renderOwnerDashboard(){
     return;
   }
 
-  // Branch is active: always rebuild the real dashboard template first, in
-  // case a previous inactive-branch render replaced it with the banner above
-  // (that innerHTML swap destroys these child elements, so switching back to
-  // an active branch must recreate them, not just try to update stale nodes).
-  if(overview) overview.innerHTML = ownerOverviewActiveTemplate();
+  // Branch is active: rebuild the real dashboard template only if it isn't
+  // already in place (e.g. first load, or recovering from the inactive
+  // banner above). Rebuilding on every render — which fires on every
+  // realtime Firestore update — was destroying and recreating this button
+  // constantly, occasionally eating a click that landed mid-rebuild.
+  if(overview && !document.getElementById("owner-stat-clients")){
+    overview.innerHTML = ownerOverviewActiveTemplate();
+  }
   const clientSummary = document.getElementById("owner-stat-clients");
   const salesSummary = document.getElementById("owner-stat-sales");
   const accessSummary = document.getElementById("owner-stat-access");
