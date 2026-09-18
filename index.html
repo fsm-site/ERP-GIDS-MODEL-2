@@ -227,6 +227,7 @@
   .login-card .field label, .login-card .remember-choice{ color:#e7f3ff; }
   .login-error{ color:var(--warn); font-size:12px; font-weight:600; margin-top:4px; min-height:16px; }
   .role-choice{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:22px; }
+  #login-role-choice{ display:flex; justify-content:center; }
   .role-choice .pill-btn{ min-height:52px; }
 
   /* ---------- Subtabs (admin) ---------- */
@@ -1956,7 +1957,7 @@
    - Future branches can be activated here after you configure their users,
      data, and Firestore access rules. */
 const BRANCHES = ["San Antonio","Bataan","Angeles"];
-const ACTIVE_BRANCHES = ["San Antonio"];
+const ACTIVE_BRANCHES = ["San Antonio", "Bataan"]; // TEMP: testing only — revert to ["San Antonio"] when done
 let ENTITLED_BRANCHES = [...ACTIVE_BRANCHES];
 let technicianDirectoryLoaded = false;
 const DEFAULT_BRANCH = ACTIVE_BRANCHES[0] || BRANCHES[0];
