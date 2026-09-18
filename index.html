@@ -1500,7 +1500,7 @@ const BRANCH_CONFIG = {
 };
 function branchIdForName(name){ return BRANCH_CONFIG[name]?.id || null; }
 function activeBranches(){ return BRANCHES.filter(name=>ENTITLED_BRANCHES.includes(name)); }
-function isBranchActive(name){ return ENTITLED_BRANCHES.includes(name); }
+function isBranchActive(name){ return ACTIVE_BRANCHES.includes(name) || ENTITLED_BRANCHES.includes(name); }
 function branchStatusLabel(name){ return isBranchActive(name) ? "Active" : "Not Yet Active"; }
 function branchSelectorLabel(name){ return `${name} - ${branchStatusLabel(name)}`; }
 function normalizeAssignedBranches(value){
@@ -4939,6 +4939,24 @@ function attendanceDateTimeValue(value){
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/* Combined Staff + Admin roster for attendance, synced with the accounts
+   created in Owner's Access tab. value = the underlying technician identifier
+   (Staff's technician name, or Admin's username) used to match attendance
+   records; label = the readable "Staff - Name" / "Admin - Name" display. */
+function attendanceRoster(){
+  const staff = (state.staffAccounts || [])
+    .filter(a => String(a.status||"active").toLowerCase() !== "revoked" && a.technician)
+    .map(a => ({ value:a.technician, label:`Staff - ${a.name || a.technician}` }));
+  const admin = (state.adminAccounts || [])
+    .filter(a => String(a.status||"active").toLowerCase() !== "revoked" && a.username)
+    .map(a => ({ value:a.username, label:`Admin - ${a.name || a.username}` }));
+  return [...staff, ...admin];
+}
+function attendanceRosterLabel(value){
+  const entry = attendanceRoster().find(r => r.value === value);
+  return entry ? entry.label : (value || "—");
+}
+
 function renderAttendance(){
   const select = document.getElementById("attendance-tech");
   const body = document.getElementById("attendance-body");
@@ -4954,15 +4972,16 @@ function renderAttendance(){
   // check in/out only their own attendance, but the selector must still show
   // the complete current technician list exactly as Admin sees it. The action
   // guards below enforce the self-service permission.
-  const attendanceTechs = Array.isArray(TECHS) ? [...TECHS] : [];
+  const roster = attendanceRoster();
   const staffTech = canonicalStaffTechnicianName(session.staffTechnician);
   if(!session.isAdmin && staffTech && staffTech !== session.staffTechnician){
     session.staffTechnician = staffTech;
   }
-  const visibleAttendanceTechs = session.isAdmin ? attendanceTechs : (staffTech ? [staffTech] : []);
-  select.innerHTML = visibleAttendanceTechs.length
-    ? visibleAttendanceTechs.map(tech=>`<option value="${escapeHTML(tech)}">Assigned technician</option>`).join("")
+  const visibleRoster = session.isAdmin ? roster : roster.filter(r => r.value === staffTech);
+  select.innerHTML = visibleRoster.length
+    ? visibleRoster.map(r=>`<option value="${escapeHTML(r.value)}">${escapeHTML(r.label)}</option>`).join("")
     : `<option value="">No attendance available</option>`;
+  const visibleAttendanceTechs = visibleRoster.map(r=>r.value);
   if(!session.isAdmin && staffTech && visibleAttendanceTechs.includes(staffTech)) select.value = staffTech;
   else if(visibleAttendanceTechs.includes(current)) select.value = current;
   else if(visibleAttendanceTechs.length) select.value = visibleAttendanceTechs[0];
@@ -4976,7 +4995,7 @@ function renderAttendance(){
       : `<span class="dot"></span><span>Not checked in</span>`;
   const rows = attendanceForToday();
   body.innerHTML = rows.length ? rows.map(record=>`<tr>
-    <td>Assigned technician</td><td>${escapeHTML(formatAttendanceDate(record.date))}</td>
+    <td>${escapeHTML(attendanceRosterLabel(record.tech))}</td><td>${escapeHTML(formatAttendanceDate(record.date))}</td>
     <td>${formatAttendanceTime(record.checkIn)}</td><td>${formatAttendanceTime(record.checkOut)}</td>
     <td><span class="tag ${record.checkOut ? "good" : "low"}">${record.checkOut ? "Completed" : "Present"}</span></td>
     <td style="text-align:right;display:${session.isAdmin ? "table-cell" : "none"}"><div class="row-actions" style="justify-content:flex-end;"><button onclick="openAttendanceEditModal('${record.id}')" title="Edit attendance">${editIconSVG()}</button><button class="del" onclick="deleteAttendance('${record.id}')" title="Delete attendance">${deleteIconSVG()}</button></div></td>
@@ -4987,7 +5006,7 @@ function openAttendanceEditModal(id){
   if(!session.isAdmin) return;
   const record = state.attendance.find(item=>item.id===id);
   if(!record) return;
-  const techOptions = TECHS.map(tech=>`<option value="${escapeHTML(tech)}" ${tech===record.tech ? "selected" : ""}>${escapeHTML(tech)}</option>`).join("");
+  const techOptions = attendanceRoster().map(r=>`<option value="${escapeHTML(r.value)}" ${r.value===record.tech ? "selected" : ""}>${escapeHTML(r.label)}</option>`).join("");
   openOverlay(`
     <h3>Edit attendance</h3>
     <div class="sub">Correct the technician or shift times for this attendance record.</div>
