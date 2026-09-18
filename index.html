@@ -2850,9 +2850,10 @@ async function syncAttendanceToCollection(){
 
 function currentBranchId(){
   const allowed = currentUserAllowedBranches();
-  const selected = (session.isOwner ? (ui.adminBranch || DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH));
+  const usesAdminSelector = session.isOwner || session.isAdmin;
+  const selected = usesAdminSelector ? (ui.adminBranch || DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
   const branchName = allowed.includes(selected) ? selected : (allowed[0] || DEFAULT_BRANCH);
-  if(session.isOwner) ui.adminBranch = branchName;
+  if(usesAdminSelector) ui.adminBranch = branchName;
   else ui.branch = branchName;
   return branchIdForName(branchName) || branchIdForName(DEFAULT_BRANCH) || "branch1";
 }
