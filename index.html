@@ -198,10 +198,13 @@ section{padding:clamp(60px,8vw,112px) 0}
 .promo p{color:var(--muted);font-size:.93rem;margin-top:10px}
 .promo .pill{display:inline-block;margin-top:20px;font-family:var(--font-mono);color:var(--text);font-weight:500;font-size:.82rem;border:1px solid var(--line);padding:7px 14px;border-radius:999px}
 
-/* ---------- VIDEO GALLERY (placeholder) ---------- */
+/* ---------- VIDEO GALLERY ---------- */
 .video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.video-slot{aspect-ratio:16/9;border-radius:14px;background:linear-gradient(150deg,#151A22,#2A3542);display:flex;align-items:center;justify-content:center}
-.video-slot svg{width:52px;height:52px}
+.video-slot{aspect-ratio:16/9;border-radius:14px;background-color:#151A22;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer}
+.video-slot::after{content:"";position:absolute;inset:0;background:rgba(9,13,20,.28);transition:background .2s ease}
+.video-slot:hover::after{background:rgba(9,13,20,.42)}
+.video-slot svg{width:52px;height:52px;position:relative;z-index:1}
+.video-slot iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 
 /* ---------- WHO TRUSTED US (image placeholders) ---------- */
 .trusted-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px}
@@ -444,59 +447,21 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
   </div>
 </section>
 
-<section id="partner">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="kicker">Why partner with us</div>
-      <h2>Built for people who rely on their devices</h2>
-    </div>
-    <div class="why-grid">
-      <article class="why-card">
-        <svg viewBox="0 0 48 48" fill="none" stroke="#3FCDC0" stroke-width="1.8">
-          <rect x="12" y="10" width="24" height="28" rx="4"/><path d="M18 18h12M18 24h12M18 30h7"/>
-          <circle cx="34" cy="34" r="9" fill="#0C0F14" stroke="#173B66"/><path d="M30 34l3 3 5-6" stroke="#7CA2DD" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h3>System updates and device optimization</h3>
-        <p>We keep every unit current with software updates, clean settings and performance checks before it goes out the door.</p>
-        <a href="#contact">Learn more</a>
-      </article>
-      <article class="why-card">
-        <svg viewBox="0 0 48 48" fill="none" stroke="#3FCDC0" stroke-width="1.8">
-          <path d="M24 6l14 6v11c0 9-6 15-14 18-8-3-14-9-14-18V12l14-6z"/>
-          <path d="M18 24l5 5 9-10" stroke="#173B66" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h3>Warranty coverage</h3>
-        <p>Full hardware diagnostics and repair on any device issue, with 7 days of cover on repairs and 30 days on refurbished phones.</p>
-        <a href="#contact">Learn more</a>
-      </article>
-      <article class="why-card">
-        <svg viewBox="0 0 48 48" fill="none" stroke="#3FCDC0" stroke-width="1.8">
-          <rect x="8" y="10" width="18" height="28" rx="4"/><rect x="28" y="18" width="12" height="14" rx="3"/>
-          <path d="M31 25h6M34 22v6" stroke="#173B66" stroke-linecap="round"/>
-        </svg>
-        <h3>Affordable gadgets and accessories</h3>
-        <p>A curated range of smartphones, tablets and accessories priced so you get a dependable device without overspending.</p>
-        <a href="#shop">Buy now</a>
-      </article>
-    </div>
-  </div>
-</section>
-
 <section class="video-gallery" style="background:var(--paper-alt)">
   <div class="wrap">
     <div class="section-head">
       <div class="kicker">See us in action</div>
       <h2>Video gallery</h2>
-      <p>A look at repairs, drop-offs and life at the shop. Videos coming soon.</p>
+      <p>A look at repairs, drop-offs and life at the shop. Tap a video to play.</p>
     </div>
-    <div class="video-grid">
-      <div class="video-slot">
+    <div class="video-grid" id="videoGrid">
+      <div class="video-slot" data-video-id="EMbyeO7Ag6A" style="background-image:url('https://img.youtube.com/vi/EMbyeO7Ag6A/hqdefault.jpg')" role="button" tabindex="0" aria-label="Play video">
         <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="22" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/><path d="M27 23l16 9-16 9V23z" fill="rgba(255,255,255,.85)"/></svg>
       </div>
-      <div class="video-slot">
+      <div class="video-slot" data-video-id="YfisHve-mFc" style="background-image:url('https://img.youtube.com/vi/YfisHve-mFc/hqdefault.jpg')" role="button" tabindex="0" aria-label="Play video">
         <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="22" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/><path d="M27 23l16 9-16 9V23z" fill="rgba(255,255,255,.85)"/></svg>
       </div>
-      <div class="video-slot">
+      <div class="video-slot" data-video-id="BWUW7t1bN24" style="background-image:url('https://img.youtube.com/vi/BWUW7t1bN24/hqdefault.jpg')" role="button" tabindex="0" aria-label="Play video">
         <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="22" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/><path d="M27 23l16 9-16 9V23z" fill="rgba(255,255,255,.85)"/></svg>
       </div>
     </div>
@@ -666,7 +631,6 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
           <li><a href="#top">Home</a></li>
           <li><a href="#about">About us</a></li>
           <li><a href="#shop">Shop</a></li>
-          <li><a href="#partner">Track your repair</a></li>
           <li><a href="#location">Location</a></li>
           <li><a href="#faq">FAQ</a></li>
           <li><a href="#contact">Contact</a></li>
@@ -774,6 +738,25 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
       a.classList.toggle('active', on);
     });
   }, {passive:true});
+
+  /* Video gallery: click a thumbnail to load and autoplay the YouTube video */
+  document.querySelectorAll('.video-slot[data-video-id]').forEach(function(slot){
+    function playVideo(){
+      var id = slot.getAttribute('data-video-id');
+      if(!id) return;
+      var iframe = document.createElement('iframe');
+      iframe.src = 'https://www.youtube.com/embed/' + id + '?autoplay=1&playsinline=1&rel=0';
+      iframe.setAttribute('title', 'Video');
+      iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+      iframe.setAttribute('allowfullscreen', '');
+      slot.innerHTML = '';
+      slot.appendChild(iframe);
+    }
+    slot.addEventListener('click', playVideo);
+    slot.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); playVideo(); }
+    });
+  });
 
   /* Register service worker for offline/installable support */
   if('serviceWorker' in navigator){
