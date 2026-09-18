@@ -868,13 +868,13 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/></svg>
       <span class="label">ATTENDANCE</span>
     </div>
-    <div class="nav-item" data-view="staff-gate">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 4.7-3.2 7.9-8 9-4.8-1.1-8-4.3-8-9V7l8-4z"/><path d="M9 12h6M12 9v6"/></svg>
-      <span class="label">STAFF SIGN IN</span>
-    </div>
     <div class="nav-item" data-view="admin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 3v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V5l8-3z"/></svg>
-      <span class="label" id="admin-nav-label">ADMIN</span>
+      <span class="label" id="admin-nav-label">OWNER</span>
+    </div>
+    <div class="nav-item" data-view="finances">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      <span class="label">FINANCES</span>
     </div>
 
     <div class="rail-foot">REPAIR · SERVICE · ACCESSORIES<br><span id="rail-branch-line">San Antonio · Active Branch</span><br><br><strong>GIDS AYPHONE TECH</strong><div class="copyright">© 2026 GIDS AYPHONE TECH<br>All rights reserved.</div></div>
@@ -1045,29 +1045,101 @@
 
       <!-- ================= TECHNICIAN ATTENDANCE ================= -->
       <div class="view" id="view-attendance">
-        <div class="staff-intro">
-          <div>
-            <div class="hero-eyebrow">TEAM TIMEKEEPING</div>
-            <h2>Technician Attendance</h2>
-            <p>Record who is on shift and keep a clear daily attendance history.</p>
+        <div id="attendance-staff-view">
+          <div class="staff-intro">
+            <div>
+              <div class="hero-eyebrow">TEAM TIMEKEEPING</div>
+              <h2>Technician Attendance</h2>
+              <p>Record who is on shift and keep a clear daily attendance history.</p>
+            </div>
+          </div>
+          <div class="attendance-grid">
+            <div class="panel attendance-summary">
+              <div class="panel-head" style="padding:0 0 14px;">
+                <div><h3>Today's shift</h3><div class="desc" id="attendance-date-label"></div></div>
+              </div>
+              <div class="field"><label>Technician</label><select id="attendance-tech"></select><div id="attendance-self-note" class="desc" style="margin-top:7px;display:none;">You can check in or check out only your own attendance.</div></div>
+              <div class="attendance-status" id="attendance-status"><span class="dot"></span><span>Not checked in</span></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="pill-btn primary" onclick="checkInTechnician()">Check in</button>
+                <button class="pill-btn ghost" onclick="checkOutTechnician()">Check out</button>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div><h3>Attendance log</h3><div class="desc">Today's check-in and check-out records</div></div></div>
+              <div class="attendance-table-wrap">
+                <table><thead><tr><th>Technician</th><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th><th id="attendance-actions-head" style="text-align:right">Actions</th></tr></thead><tbody id="attendance-body"></tbody></table>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="attendance-grid">
-          <div class="panel attendance-summary">
-            <div class="panel-head" style="padding:0 0 14px;">
-              <div><h3>Today's shift</h3><div class="desc" id="attendance-date-label"></div></div>
-            </div>
-            <div class="field"><label>Technician</label><select id="attendance-tech"></select><div id="attendance-self-note" class="desc" style="margin-top:7px;display:none;">You can check in or check out only your own attendance.</div></div>
-            <div class="attendance-status" id="attendance-status"><span class="dot"></span><span>Not checked in</span></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="pill-btn primary" onclick="checkInTechnician()">Check in</button>
-              <button class="pill-btn ghost" onclick="checkOutTechnician()">Check out</button>
+
+        <div id="attendance-owner-view" style="display:none;">
+          <div class="subtabs">
+            <div class="subtab active" data-attendance-sub="dashboard">DASHBOARD</div>
+            <div class="subtab" data-attendance-sub="management">MANAGEMENT</div>
+            <div class="subtab" data-attendance-sub="reports">REPORTS</div>
+          </div>
+
+          <div id="attendance-sub-dashboard">
+            <div class="panel">
+              <div class="panel-head"><div><h3>Attendance Dashboard</h3><div class="desc">Business-wide, today, across all branches</div></div></div>
+              <div class="finance-grid" style="margin-top:6px;">
+                <div class="finance-card"><div class="stat-label">Total Employees</div><div class="stat-value" id="att-total-employees">0</div></div>
+                <div class="finance-card"><div class="stat-label">Present Today</div><div class="stat-value" id="att-present-today">0</div></div>
+                <div class="finance-card"><div class="stat-label">Absent Today</div><div class="stat-value" id="att-absent-today">0</div></div>
+                <div class="finance-card"><div class="stat-label">On Leave</div><div class="stat-value" id="att-on-leave">0</div></div>
+              </div>
             </div>
           </div>
-          <div class="panel">
-            <div class="panel-head"><div><h3>Attendance log</h3><div class="desc">Today's check-in and check-out records</div></div></div>
-            <div class="attendance-table-wrap">
-              <table><thead><tr><th>Technician</th><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th><th id="attendance-actions-head" style="text-align:right">Actions</th></tr></thead><tbody id="attendance-body"></tbody></table>
+
+          <div id="attendance-sub-management" style="display:none;">
+            <div class="panel">
+              <div class="panel-head">
+                <div><h3>Attendance Management</h3><div class="desc">All branches · Time-In / Time-Out · corrections · leave</div></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <select id="att-mgmt-branch" onchange="ui.attMgmtBranch=this.value; renderAttendanceManagement();">
+                    <option value="">All Branches</option>
+                  </select>
+                  <select id="att-mgmt-range" onchange="ui.attMgmtRange=this.value; renderAttendanceManagement();">
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                  </select>
+                  <input type="text" id="att-mgmt-search" placeholder="Search employee..." oninput="ui.attMgmtSearch=this.value; renderAttendanceManagement();">
+                  <button class="pill-btn primary" onclick="openMarkLeaveModal()">Mark Leave</button>
+                </div>
+              </div>
+              <div class="attendance-table-wrap">
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody id="att-mgmt-body"></tbody></table>
+              </div>
+            </div>
+          </div>
+
+          <div id="attendance-sub-reports" style="display:none;">
+            <div class="panel">
+              <div class="panel-head">
+                <div><h3>Attendance Reports</h3><div class="desc">Monthly rollups across the business</div></div>
+                <input type="month" id="att-report-month" onchange="ui.attReportMonth=this.value; renderAttendanceReports();">
+              </div>
+              <div class="subtabs" style="margin-top:12px;">
+                <div class="subtab active" data-report-sub="employee">BY EMPLOYEE</div>
+                <div class="subtab" data-report-sub="branch">BY BRANCH</div>
+                <div class="subtab" data-report-sub="absence">ABSENCE REPORT</div>
+                <div class="subtab" data-report-sub="summary">MONTHLY SUMMARY</div>
+              </div>
+              <div id="att-report-employee" class="attendance-table-wrap">
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th><th style="text-align:right">Action</th></tr></thead><tbody id="att-report-employee-body"></tbody></table>
+              </div>
+              <div id="att-report-branch" class="attendance-table-wrap" style="display:none;">
+                <table><thead><tr><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th></tr></thead><tbody id="att-report-branch-body"></tbody></table>
+              </div>
+              <div id="att-report-absence" class="attendance-table-wrap" style="display:none;">
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Date</th></tr></thead><tbody id="att-report-absence-body"></tbody></table>
+              </div>
+              <div id="att-report-summary" class="attendance-table-wrap" style="display:none;">
+                <table><thead><tr><th>Month</th><th>Total Present</th><th>Total Absent</th><th>Total Leave</th></tr></thead><tbody id="att-report-summary-body"></tbody></table>
+              </div>
             </div>
           </div>
         </div>
@@ -1384,7 +1456,169 @@
   </div>
 </div>
 
+<!-- ================= FINANCES ================= -->
+<div class="view" id="view-finances">
+  <div class="subtabs">
+    <div class="subtab active" data-fin-sub="overview">OVERVIEW</div>
+    <div class="subtab" data-fin-sub="payroll">PAYROLL</div>
+  </div>
+
+  <div id="fin-sub-overview">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>Finance Dashboard</h3>
+        <div class="desc">Business-wide financial summary across all branches</div>
+      </div>
+    </div>
+    <div class="finance-grid" style="margin-top:6px;">
+      <div class="finance-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value" id="fin-total-revenue">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value" id="fin-total-expenses">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Gross Profit</div>
+        <div class="stat-value" id="fin-gross-profit">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Net Profit</div>
+        <div class="stat-value" id="fin-net-profit">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Cash on Hand</div>
+        <div class="stat-value" id="fin-cash-on-hand">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Accounts Receivable</div>
+        <div class="stat-value" id="fin-receivable">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Accounts Payable</div>
+        <div class="stat-value" id="fin-payable">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Pending Payments</div>
+        <div class="stat-value" id="fin-pending-payments">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">This Month's Sales</div>
+        <div class="stat-value" id="fin-month-sales">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">This Month's Expenses</div>
+        <div class="stat-value" id="fin-month-expenses">Not tracked yet</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Sales by Branch</h3>
+        <div class="desc">Total collected revenue, all-time, per branch</div>
+      </div>
+    </div>
+    <div id="fin-sales-by-branch" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Revenue vs Expenses</h3>
+        <div class="desc">Not available yet — requires expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Profit Trend</h3>
+        <div class="desc">Not available yet — requires expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Expenses by Category</h3>
+        <div class="desc">Not available yet — requires expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Cash Flow</h3>
+        <div class="desc">Not available yet — requires cash/expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs cash and expense tracking, which hasn't been built yet.</div>
+  </div>
+  </div>
+
+  <div id="fin-sub-payroll" style="display:none;">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Payroll Dashboard</h3>
+          <div class="desc">Current semi-monthly period, business-wide</div>
+        </div>
+      </div>
+      <div class="finance-grid" style="margin-top:6px;">
+        <div class="finance-card"><div class="stat-label">Total Employees</div><div class="stat-value" id="pr-total-employees">0</div></div>
+        <div class="finance-card"><div class="stat-label">Current Payroll Period</div><div class="stat-value" id="pr-current-period" style="font-size:16px;">—</div></div>
+        <div class="finance-card"><div class="stat-label">Gross Payroll</div><div class="stat-value" id="pr-gross-payroll">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Total Deductions</div><div class="stat-value" id="pr-total-deductions">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Commissions</div><div class="stat-value" id="pr-total-commissions">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Bonuses</div><div class="stat-value" id="pr-total-bonuses">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Net Payroll</div><div class="stat-value" id="pr-net-payroll">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Paid Payroll</div><div class="stat-value" id="pr-paid-payroll">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Next Payroll Date</div><div class="stat-value" id="pr-next-date" style="font-size:16px;">—</div></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-head">
+        <div>
+          <h3>Payroll Management</h3>
+          <div class="desc" id="pr-period-desc">No payroll period created yet for this cutoff.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="pill-btn ghost" onclick="createPayrollPeriod()">Create Payroll Period</button>
+          <button class="pill-btn primary" onclick="calculatePayroll()">Calculate Payroll</button>
+        </div>
+      </div>
+      <div class="attendance-table-wrap">
+        <table><thead><tr><th>Employee</th><th>Branch</th><th>Basic Salary</th><th>Commission</th><th>Bonus</th><th>Deductions</th><th>Gross Pay</th><th>Net Pay</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody id="pr-calc-body"></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-head">
+        <div>
+          <h3>Payroll History</h3>
+          <div class="desc">Past payroll periods</div>
+        </div>
+      </div>
+      <div class="attendance-table-wrap">
+        <table><thead><tr><th>Period</th><th>Pay Date</th><th>Gross</th><th>Net</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody id="pr-history-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ================= ADMIN PANEL ================= -->
+
 <div class="view" id="view-admin-panel">
         <div class="subtabs">
           <div class="subtab active" data-sub="overview">OVERVIEW &amp; JOBS</div>
@@ -1732,7 +1966,7 @@ const BRANCH_CONFIG = {
 };
 function branchIdForName(name){ return BRANCH_CONFIG[name]?.id || null; }
 function activeBranches(){ return BRANCHES.filter(name=>ENTITLED_BRANCHES.includes(name)); }
-function isBranchActive(name){ return ENTITLED_BRANCHES.includes(name); }
+function isBranchActive(name){ return ACTIVE_BRANCHES.includes(name) || ENTITLED_BRANCHES.includes(name); }
 function branchStatusLabel(name){ return isBranchActive(name) ? "Active" : "Not Yet Active"; }
 function branchSelectorLabel(name){ return `${name} - ${branchStatusLabel(name)}`; }
 function normalizeAssignedBranches(value){
@@ -2293,6 +2527,8 @@ function defaultState(){
     adminAccounts: [],
     purchaseOrders: [],
     commissionRates: {},
+    payrollPeriods: [],
+    payrollRecords: [],
     technicians: [...TECHS],
     deletedRecords: {},
     removedTechnicians: [],
@@ -3715,6 +3951,37 @@ function bindNav(){
       if(ui.pubSub==="labor") renderLaborSummary("public-labor-body", null);
     });
   });
+  document.querySelectorAll(".subtab[data-fin-sub]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const next = el.dataset.finSub;
+      document.querySelectorAll(".subtab[data-fin-sub]").forEach(s=>s.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("fin-sub-overview").style.display = next==="overview" ? "block":"none";
+      document.getElementById("fin-sub-payroll").style.display = next==="payroll" ? "block":"none";
+      if(next==="payroll") renderPayrollDashboard();
+    });
+  });
+  document.querySelectorAll(".subtab[data-attendance-sub]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const next = el.dataset.attendanceSub;
+      document.querySelectorAll(".subtab[data-attendance-sub]").forEach(s=>s.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("attendance-sub-dashboard").style.display = next==="dashboard" ? "block":"none";
+      document.getElementById("attendance-sub-management").style.display = next==="management" ? "block":"none";
+      document.getElementById("attendance-sub-reports").style.display = next==="reports" ? "block":"none";
+    });
+  });
+  document.querySelectorAll(".subtab[data-report-sub]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const next = el.dataset.reportSub;
+      document.querySelectorAll(".subtab[data-report-sub]").forEach(s=>s.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("att-report-employee").style.display = next==="employee" ? "block":"none";
+      document.getElementById("att-report-branch").style.display = next==="branch" ? "block":"none";
+      document.getElementById("att-report-absence").style.display = next==="absence" ? "block":"none";
+      document.getElementById("att-report-summary").style.display = next==="summary" ? "block":"none";
+    });
+  });
   document.querySelectorAll(".subtab[data-invsub]").forEach(el=>{
     el.addEventListener("click", ()=>{
       ui.invSub = el.dataset.invsub;
@@ -3748,7 +4015,7 @@ function updateNavForRole(role){
   document.querySelectorAll(".nav-item").forEach(nav => {
     const view = nav.dataset.view;
     const visible = role === "owner"
-      ? ["admin", "employee", "inventory-public", "customer-status", "staff-directory", "attendance"].includes(view)
+      ? ["admin", "employee", "inventory-public", "customer-status", "staff-directory", "attendance", "finances"].includes(view)
       : role === "admin"
         ? view !== "staff-gate"
         : role === "staff"
@@ -3945,7 +4212,6 @@ function switchView(key){
     subEl.innerHTML = "Owner overview · business access and branch health";
     rightEl.innerHTML = branchSelectorHTML("ui.adminBranch") +
       `<div class="badge-role"><span class="dot"></span><span>Owner</span></div>` +
-      `<button class="pill-btn ghost" onclick="switchView('security-access')">Security and Access</button>` +
       `<button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()">Change Password</button>` +
       `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
       `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
@@ -3961,7 +4227,6 @@ function switchView(key){
       subEl.innerHTML = `Full access · jobs, inventory and branch sales`;
       rightEl.innerHTML = branchSelectorHTML("ui.adminBranch") +
         `<div class="badge-role"><span class="dot"></span><span>Admin</span></div>` +
-        `<button class="pill-btn ghost" onclick="switchView('security-access')">Security and Access</button>` +
         `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
         `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
       bindBranchSelector("admin");
@@ -3980,6 +4245,18 @@ function switchView(key){
     titleEl.innerHTML = `CREATE <span class="hi">OWNER</span>`;
     subEl.innerHTML = "Create the business owner account";
     rightEl.innerHTML = "";
+  } else if(key==="finances"){
+    if(!session.isOwner){
+      switchView("role-select");
+      return;
+    }
+    document.getElementById("view-finances").classList.add("active");
+    titleEl.innerHTML = `Hi, <span class="hi">${escapeHTML(currentUserName())}!</span>`;
+    subEl.innerHTML = "Finance overview across all branches";
+    rightEl.innerHTML = `<div class="badge-role"><span class="dot"></span><span>Owner</span></div>` +
+      `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
+      `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
+    renderFinanceDashboard();
   } else if(key==="security-access"){
     if(!hasSecurityAccess()){
       switchView(session.staffUnlocked ? "employee" : "role-select");
@@ -4642,6 +4919,7 @@ function renderAll(){
   renderLaborSummary("public-labor-body", null);
   if(session.isOwner){
     renderOwnerDashboard();
+    renderFinanceDashboard();
     renderOwnerRequests();
     renderOwnerAccessControls();
   }
@@ -4953,6 +5231,8 @@ function openAdminAccountModal(username=""){
     <div class="field"><label>Email${editing ? "" : " (for Firebase sign-in & password reset)"}</label><input id="admin-account-email" type="email" value="${editing ? escapeHTML(editing.email || "") : ""}" autocomplete="off" placeholder="e.g. jaja@gidsayphonetech.com" ${editing ? "disabled" : ""}></div>
     ${editing ? "" : `<div class="field"><label>Password</label><div class="pw-field"><input id="admin-account-password" type="password" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="admin-account-password" aria-label="Show password">👁</button></div></div>`}
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
+    <div class="field"><label>Basic Salary (₱, per payroll period)</label><input id="admin-account-salary" type="number" min="0" step="0.01" value="${editing ? Number(editing.basicSalary||0) : 0}"></div>
+    <div class="field"><label>Commission Rate (% of their sales)</label><input id="admin-account-commission" type="number" min="0" step="0.01" value="${editing ? Number(editing.commissionRate||0) : 0}"></div>
     <div class="login-error" id="admin-account-error"></div>
     <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" id="admin-account-save-btn" onclick="saveAdminAccount('${editing ? escapeHTML(editing.username) : ""}')">Save profile</button></div>`);
 }
@@ -4963,6 +5243,8 @@ async function saveAdminAccount(oldUsername){
   const username = document.getElementById("admin-account-username").value.trim();
   const email = document.getElementById("admin-account-email").value.trim().toLowerCase();
   const selectedBranches = [...document.querySelectorAll('[data-branch-checkbox="admin"]')].filter(el => el.checked).map(el => el.value);
+  const basicSalary = Number(document.getElementById("admin-account-salary")?.value || 0);
+  const commissionRate = Number(document.getElementById("admin-account-commission")?.value || 0);
   const error = document.getElementById("admin-account-error");
   const branchIds = selectedBranches.filter(Boolean);
   error.textContent = "";
@@ -4988,7 +5270,9 @@ async function saveAdminAccount(oldUsername){
         role: "admin", name, username, email, password, branchIds
       });
       const uid = result.data.uid;
-      const account = {id:uid, firebaseUid:uid, username, name, email, status:"active", branchId:branchIds[0], branchIds};
+      // Cloud Function doesn't know about salary fields yet; add them here directly.
+      await db.collection("adminAccounts").doc(uid).set({basicSalary, commissionRate}, {merge:true});
+      const account = {id:uid, firebaseUid:uid, username, name, email, status:"active", branchId:branchIds[0], branchIds, basicSalary, commissionRate};
       state.adminAccounts.push(account);
       state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
       writeLocal();
@@ -5009,11 +5293,11 @@ async function saveAdminAccount(oldUsername){
   // Editing an existing account: profile fields only, no Auth changes.
   const account = state.adminAccounts.find(item=>item.username===oldUsername);
   if(!account){ error.textContent = "Admin account not found."; return; }
-  Object.assign(account,{name, username, branchIds, branchId:branchIds[0] || currentBranchId()});
+  Object.assign(account,{name, username, branchIds, branchId:branchIds[0] || currentBranchId(), basicSalary, commissionRate});
   state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
   try{
     const ref = db.collection("adminAccounts").doc(account.id || account.firebaseUid || stableAdminDocId(account));
-    await withTimeout(ref.set({name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await withTimeout(ref.set({name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId(), basicSalary, commissionRate}, {merge:true}), 10000);
     await syncLoginDirectoryEntry(oldUsername, username, email);
     writeLocal();
     if(session.adminUsername===oldUsername) session.adminUsername = username;
@@ -5092,6 +5376,8 @@ function openStaffAccountModal(editId="", technician=""){
     <div class="field"><label>Email${editing ? "" : " (for Firebase sign-in & password reset)"}</label><input id="staff-account-email" type="email" value="${editing ? escapeHTML(editing.email || "") : ""}" autocomplete="off" placeholder="e.g. tristan@gidsayphonetech.com" ${editing ? "disabled" : ""}></div>
     ${editing ? "" : `<div class="field"><label>Password</label><div class="pw-field"><input id="staff-account-password" type="password" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="staff-account-password" aria-label="Show password">👁</button></div></div>`}
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
+    <div class="field"><label>Basic Salary (₱, per payroll period)</label><input id="staff-account-salary" type="number" min="0" step="0.01" value="${editing ? Number(editing.basicSalary||0) : 0}"></div>
+    <div class="field"><label>Commission Rate (% of their sales)</label><input id="staff-account-commission" type="number" min="0" step="0.01" value="${editing ? Number(editing.commissionRate||0) : 0}"></div>
     <div class="login-error" id="staff-account-error"></div>
     <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" id="staff-account-save-btn" onclick="saveStaffAccount('${editId}')">Save access</button></div>
   `);
@@ -5104,6 +5390,8 @@ async function saveStaffAccount(id){
   const username = document.getElementById("staff-account-username").value.trim();
   const email = document.getElementById("staff-account-email").value.trim().toLowerCase();
   const selectedBranches = [...document.querySelectorAll('[data-branch-checkbox="staff"]')].filter(el => el.checked).map(el => el.value);
+  const basicSalary = Number(document.getElementById("staff-account-salary")?.value || 0);
+  const commissionRate = Number(document.getElementById("staff-account-commission")?.value || 0);
   const error = document.getElementById("staff-account-error");
   const branchIds = selectedBranches.filter(Boolean);
   error.textContent = "";
@@ -5130,7 +5418,9 @@ async function saveStaffAccount(id){
         role: "staff", name, username, email, password, branchIds, technician
       });
       const uid = result.data.uid;
-      const account = {id:uid, firebaseUid:uid, technician, name, username, email, status:"active", branchId:branchIds[0], branchIds};
+      // Cloud Function doesn't know about salary fields yet; add them here directly.
+      await db.collection("staffAccounts").doc(uid).set({basicSalary, commissionRate}, {merge:true});
+      const account = {id:uid, firebaseUid:uid, technician, name, username, email, status:"active", branchId:branchIds[0], branchIds, basicSalary, commissionRate};
       state.staffAccounts.push(account);
       if(!TECHS.includes(technician)){
         TECHS.push(technician);
@@ -5157,11 +5447,11 @@ async function saveStaffAccount(id){
   if(!account){ error.textContent = "Staff account not found."; return; }
   const previousUsername = account.username || "";
   const previousTechnician = account.technician || "";
-  Object.assign(account, {technician, name, username, branchIds, branchId: branchIds[0] || account.branchId || currentBranchId()});
+  Object.assign(account, {technician, name, username, branchIds, branchId: branchIds[0] || account.branchId || currentBranchId(), basicSalary, commissionRate});
 
   try{
     const ref = db.collection("staffAccounts").doc(account.id);
-    await withTimeout(ref.set({technician, name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await withTimeout(ref.set({technician, name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId(), basicSalary, commissionRate}, {merge:true}), 10000);
     await syncLoginDirectoryEntry(previousUsername, username, email);
     if(previousTechnician !== technician){
       if(previousTechnician) TECHS.splice(0, TECHS.length, ...TECHS.filter(t=>t!==previousTechnician));
@@ -5330,7 +5620,221 @@ function attendanceDateTimeValue(value){
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function allActiveEmployees(){
+  const staff = (state.staffAccounts || [])
+    .filter(a => String(a.status||"active").toLowerCase() !== "revoked")
+    .map(a => ({ id:a.id, name:a.name || a.technician || a.username || "Staff", branch: (a.branchIds && a.branchIds[0]) || a.branch || DEFAULT_BRANCH, role:"staff", technician:a.technician, basicSalary:Number(a.basicSalary||0), commissionRate:Number(a.commissionRate||0) }));
+  const admin = (state.adminAccounts || [])
+    .filter(a => String(a.status||"active").toLowerCase() !== "revoked")
+    .map(a => ({ id:a.id || a.username, name:a.name || a.username || "Admin", branch: (a.branchIds && a.branchIds[0]) || a.branch || DEFAULT_BRANCH, role:"admin", technician:a.username, basicSalary:Number(a.basicSalary||0), commissionRate:Number(a.commissionRate||0) }));
+  return [...staff, ...admin];
+}
+
+function inDateRange(dateStr, range){
+  if(!dateStr) return false;
+  const d = parseSiteDate(dateStr);
+  if(!d) return false;
+  const today = getToday();
+  if(range === "today") return dateStr === todayStr();
+  if(range === "week"){
+    const start = new Date(today);
+    start.setDate(start.getDate() - start.getDay());
+    return d >= start && d <= today;
+  }
+  if(range === "month"){
+    return dateStr.slice(0,7) === monthStr();
+  }
+  return true;
+}
+
+function attendanceStatusBadge(record){
+  if(!record) return `<span class="tag low">Absent</span>`;
+  if(record.status === "leave") return `<span class="tag">On Leave</span>`;
+  if(record.checkOut) return `<span class="tag good">Completed</span>`;
+  if(record.checkIn) return `<span class="tag good">Present</span>`;
+  return `<span class="tag low">Absent</span>`;
+}
+
+function renderAttendanceDashboard(){
+  const employees = allActiveEmployees();
+  const today = todayStr();
+  const todaysRecords = (state.attendance || []).filter(r => r.date === today);
+  const presentNames = new Set(todaysRecords.filter(r => r.status !== "leave" && r.checkIn).map(r => r.tech));
+  const leaveNames = new Set(todaysRecords.filter(r => r.status === "leave").map(r => r.tech));
+  const presentCount = employees.filter(e => presentNames.has(e.technician)).length;
+  const leaveCount = employees.filter(e => leaveNames.has(e.technician)).length;
+  const absentCount = Math.max(0, employees.length - presentCount - leaveCount);
+
+  const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+  set("att-total-employees", employees.length);
+  set("att-present-today", presentCount);
+  set("att-absent-today", absentCount);
+  set("att-on-leave", leaveCount);
+}
+
+function renderAttendanceManagement(){
+  const branchSelect = document.getElementById("att-mgmt-branch");
+  if(branchSelect && branchSelect.options.length <= 1){
+    branchSelect.innerHTML = `<option value="">All Branches</option>` + BRANCHES.map(b=>`<option value="${escapeHTML(b)}">${escapeHTML(b)}</option>`).join("");
+  }
+  const body = document.getElementById("att-mgmt-body");
+  if(!body) return;
+  const branchFilter = ui.attMgmtBranch || "";
+  const range = ui.attMgmtRange || "today";
+  const search = (ui.attMgmtSearch || "").trim().toLowerCase();
+
+  const employeesByTech = new Map(allActiveEmployees().map(e => [e.technician, e]));
+  let rows = (state.attendance || []).filter(r => inDateRange(r.date, range));
+  if(branchFilter) rows = rows.filter(r => (r.branchId === branchIdForName(branchFilter)) || employeesByTech.get(r.tech)?.branch === branchFilter);
+  if(search) rows = rows.filter(r => String(r.tech||"").toLowerCase().includes(search));
+  rows = rows.sort((a,b) => (b.date||"").localeCompare(a.date||""));
+
+  body.innerHTML = rows.length ? rows.map(r => {
+    const emp = employeesByTech.get(r.tech);
+    const branchName = emp?.branch || "—";
+    return `<tr>
+      <td>${escapeHTML(r.tech || "—")}</td>
+      <td>${escapeHTML(branchName)}</td>
+      <td>${escapeHTML(formatSiteDate(r.date))}</td>
+      <td>${formatAttendanceTime(r.checkIn)}</td>
+      <td>${formatAttendanceTime(r.checkOut)}</td>
+      <td>${attendanceStatusBadge(r)}</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(r.tech)}')">View</button>
+        <button class="pill-btn small ghost" onclick="openAttendanceEditModal('${r.id}')">Edit</button>
+        <button class="pill-btn small ghost" onclick="deleteAttendance('${r.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="7">No attendance records for this filter.</td></tr>`;
+}
+
+function openMarkLeaveModal(){
+  const employees = allActiveEmployees();
+  const options = employees.map(e => `<option value="${escapeHTML(e.technician)}">${escapeHTML(e.name)} (${escapeHTML(e.branch)})</option>`).join("");
+  openOverlay(`
+    <h3>Mark Leave</h3>
+    <div class="sub">Records a full-day leave for this employee.</div>
+    <div class="field"><label>Employee</label><select id="leave-employee">${options}</select></div>
+    <div class="field"><label>Date</label><input type="date" id="leave-date" value="${todayStr()}"></div>
+    <div class="login-error" id="leave-error"></div>
+    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveMarkLeave()">Save</button></div>
+  `);
+}
+
+async function saveMarkLeave(){
+  const tech = document.getElementById("leave-employee").value;
+  const date = document.getElementById("leave-date").value;
+  const error = document.getElementById("leave-error");
+  if(!tech || !date){ error.textContent = "Select an employee and date."; return; }
+  const duplicate = (state.attendance || []).some(r => r.tech === tech && r.date === date);
+  if(duplicate){ error.textContent = "This employee already has an attendance record for that date."; return; }
+  const emp = allActiveEmployees().find(e => e.technician === tech);
+  const record = { id: uid(), uid:"", branchId: branchIdForName(emp?.branch || DEFAULT_BRANCH), tech, date, checkIn:"", checkOut:"", status:"leave" };
+  state.attendance.push(record);
+  try{
+    await withTimeout(db.collection("attendance").doc(record.id).set(record), 10000);
+    await syncAppMeta();
+  }catch(e){ console.error("Could not save leave record:", e); }
+  writeLocal();
+  closeOverlay();
+  renderAttendance();
+  showToast("Leave recorded");
+}
+
+function viewEmployeeAttendanceHistory(tech){
+  const emp = allActiveEmployees().find(e => e.technician === tech);
+  const records = (state.attendance || []).filter(r => r.tech === tech).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const rows = records.slice(0,60).map(r => `
+    <tr><td>${escapeHTML(formatSiteDate(r.date))}</td><td>${formatAttendanceTime(r.checkIn)}</td><td>${formatAttendanceTime(r.checkOut)}</td><td>${attendanceStatusBadge(r)}</td></tr>
+  `).join("");
+  openOverlay(`
+    <h3>${escapeHTML(emp?.name || tech)} — Attendance history</h3>
+    <div class="sub">${escapeHTML(emp?.branch || "")} · last 60 records</div>
+    <div class="attendance-table-wrap" style="margin-top:12px;max-height:400px;overflow-y:auto;">
+      <table><thead><tr><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No records yet.</td></tr>'}</tbody></table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
+  `, "modal-light");
+}
+
+function renderAttendanceReports(){
+  const monthInput = document.getElementById("att-report-month");
+  if(monthInput && !monthInput.value) monthInput.value = monthStr();
+  const month = ui.attReportMonth || monthInput?.value || monthStr();
+  const employees = allActiveEmployees();
+  const records = (state.attendance || []).filter(r => (r.date||"").slice(0,7) === month);
+
+  const byEmployeeBody = document.getElementById("att-report-employee-body");
+  if(byEmployeeBody){
+    byEmployeeBody.innerHTML = employees.map(e => {
+      const empRecords = records.filter(r => r.tech === e.technician);
+      const present = empRecords.filter(r => r.status !== "leave" && r.checkIn).length;
+      const leave = empRecords.filter(r => r.status === "leave").length;
+      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+      const absent = Math.max(0, daysInMonth - present - leave);
+      return `<tr><td>${escapeHTML(e.name)}</td><td>${escapeHTML(e.branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td>
+        <td style="text-align:right"><button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(e.technician)}')">View</button></td></tr>`;
+    }).join("") || `<tr class="empty-row"><td colspan="6">No employees found.</td></tr>`;
+  }
+
+  const byBranchBody = document.getElementById("att-report-branch-body");
+  if(byBranchBody){
+    byBranchBody.innerHTML = BRANCHES.map(branch => {
+      const branchEmployees = employees.filter(e => e.branch === branch);
+      const techs = new Set(branchEmployees.map(e => e.technician));
+      const branchRecords = records.filter(r => techs.has(r.tech));
+      const present = branchRecords.filter(r => r.status !== "leave" && r.checkIn).length;
+      const leave = branchRecords.filter(r => r.status === "leave").length;
+      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+      const absent = Math.max(0, (branchEmployees.length * daysInMonth) - present - leave);
+      return `<tr><td>${escapeHTML(branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td></tr>`;
+    }).join("");
+  }
+
+  const absenceBody = document.getElementById("att-report-absence-body");
+  if(absenceBody){
+    const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+    const monthDates = Array.from({length:daysInMonth}, (_,i)=> `${month}-${String(i+1).padStart(2,"0")}`)
+      .filter(d => parseSiteDate(d) <= getToday());
+    const absenceRows = [];
+    employees.forEach(e => {
+      monthDates.forEach(d => {
+        const hasRecord = records.some(r => r.tech === e.technician && r.date === d);
+        if(!hasRecord) absenceRows.push({ name:e.name, branch:e.branch, date:d });
+      });
+    });
+    absenceBody.innerHTML = absenceRows.length
+      ? absenceRows.slice(0,200).map(a => `<tr><td>${escapeHTML(a.name)}</td><td>${escapeHTML(a.branch)}</td><td>${escapeHTML(formatSiteDate(a.date))}</td></tr>`).join("")
+      : `<tr class="empty-row"><td colspan="3">No absences recorded for this month.</td></tr>`;
+  }
+
+  const summaryBody = document.getElementById("att-report-summary-body");
+  if(summaryBody){
+    const allRecords = state.attendance || [];
+    const months = [...new Set(allRecords.map(r => (r.date||"").slice(0,7)))].filter(Boolean).sort().reverse().slice(0,6);
+    summaryBody.innerHTML = months.length ? months.map(m => {
+      const monthRecords = allRecords.filter(r => (r.date||"").slice(0,7) === m);
+      const present = monthRecords.filter(r => r.status !== "leave" && r.checkIn).length;
+      const leave = monthRecords.filter(r => r.status === "leave").length;
+      return `<tr><td>${escapeHTML(m)}</td><td>${present}</td><td>—</td><td>${leave}</td></tr>`;
+    }).join("") : `<tr class="empty-row"><td colspan="4">No attendance history yet.</td></tr>`;
+  }
+}
+
 function renderAttendance(){
+  const staffView = document.getElementById("attendance-staff-view");
+  const ownerView = document.getElementById("attendance-owner-view");
+  if(session.isOwner){
+    if(staffView) staffView.style.display = "none";
+    if(ownerView) ownerView.style.display = "block";
+    renderAttendanceDashboard();
+    renderAttendanceManagement();
+    renderAttendanceReports();
+    return;
+  }
+  if(staffView) staffView.style.display = "block";
+  if(ownerView) ownerView.style.display = "none";
+
   const select = document.getElementById("attendance-tech");
   const body = document.getElementById("attendance-body");
   const status = document.getElementById("attendance-status");
@@ -5989,6 +6493,270 @@ function cogsForTransactions(txns){
     const item = state.inventory.find(i=>i.id===t.itemUsed);
     return s + (item ? Number(item.cost||0) * Number(t.quantity||1) : 0);
   }, 0);
+}
+
+function renderFinanceDashboard(){
+  if(!session.isOwner) return;
+  const all = state.transactions || [];
+  const month = monthStr();
+  const monthly = all.filter(t => (t.date||"").slice(0,7) === month);
+
+  const totalRevenue = all.reduce((s,t)=>s+collectedAmount(t), 0);
+  const monthSales = monthly.reduce((s,t)=>s+collectedAmount(t), 0);
+  const cogs = cogsForTransactions(all);
+  const grossProfit = totalRevenue - cogs;
+  const unpaid = all.filter(t => balanceAmount(t) > 0);
+  const receivable = unpaid.reduce((s,t)=>s+balanceAmount(t), 0);
+
+  const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+  set("fin-total-revenue", peso(totalRevenue));
+  set("fin-month-sales", peso(monthSales));
+  set("fin-gross-profit", peso(grossProfit));
+  set("fin-receivable", peso(receivable));
+  set("fin-pending-payments", `${unpaid.length} job${unpaid.length===1?"":"s"}`);
+
+  const branchTotals = BRANCHES.map(name => ({
+    name,
+    total: all.filter(t=>t.branch===name).reduce((s,t)=>s+collectedAmount(t), 0)
+  }));
+  const maxBranch = Math.max(...branchTotals.map(b=>b.total), 1);
+  const branchChart = document.getElementById("fin-sales-by-branch");
+  if(branchChart){
+    branchChart.innerHTML = branchTotals.map(b => `
+      <div class="bar-row"><span>${escapeHTML(b.name)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(b.total/maxBranch*100)}%"></div></div>
+      <b style="text-align:right">${peso(b.total)}</b></div>`).join("");
+  }
+}
+
+/* ======================= PAYROLL ======================= */
+function currentPayrollCutoff(){
+  const today = getToday();
+  const y = today.getFullYear(), m = today.getMonth(), day = today.getDate();
+  const mm = String(m+1).padStart(2,"0");
+  const lastDay = new Date(y, m+1, 0).getDate();
+  if(day <= 15){
+    return { id:`${y}-${mm}-first`, startDate:`${y}-${mm}-01`, endDate:`${y}-${mm}-15`, payDate:`${y}-${mm}-15`, label:`${y}-${mm} (1–15)` };
+  }
+  return { id:`${y}-${mm}-second`, startDate:`${y}-${mm}-16`, endDate:`${y}-${mm}-${String(lastDay).padStart(2,"0")}`, payDate:`${y}-${mm}-${String(lastDay).padStart(2,"0")}`, label:`${y}-${mm} (16–${lastDay})` };
+}
+function nextPayrollDateText(){
+  const today = getToday();
+  const y = today.getFullYear(), m = today.getMonth(), day = today.getDate();
+  const lastDay = new Date(y, m+1, 0).getDate();
+  let next;
+  if(day < 15) next = new Date(y,m,15);
+  else if(day < lastDay) next = new Date(y,m,lastDay);
+  else next = new Date(y,m+1,15);
+  return formatSiteDate(todayStr(next));
+}
+
+let payrollLoaded = false;
+async function ensurePayrollLoaded(){
+  if(payrollLoaded) return;
+  try{
+    const [periodsSnap, recordsSnap] = await Promise.all([
+      db.collection("payrollPeriods").get(),
+      db.collection("payrollRecords").get()
+    ]);
+    state.payrollPeriods = periodsSnap.docs.map(d=>({id:d.id,...d.data()}));
+    state.payrollRecords = recordsSnap.docs.map(d=>({id:d.id,...d.data()}));
+    payrollLoaded = true;
+    writeLocal();
+  }catch(e){ console.error("Could not load payroll data:", e); }
+}
+
+async function createPayrollPeriod(){
+  const cutoff = currentPayrollCutoff();
+  if((state.payrollPeriods||[]).some(p=>p.id===cutoff.id)){
+    showToast("A payroll period already exists for this cutoff.");
+    return;
+  }
+  const period = { id:cutoff.id, startDate:cutoff.startDate, endDate:cutoff.endDate, payDate:cutoff.payDate, status:"draft", createdAt: Date.now() };
+  state.payrollPeriods.push(period);
+  try{
+    await db.collection("payrollPeriods").doc(period.id).set(period);
+  }catch(e){ console.error("Could not save payroll period:", e); }
+  writeLocal();
+  showToast("Payroll period created for " + cutoff.label);
+  renderPayrollDashboard();
+}
+
+function commissionForEmployee(emp, startDate, endDate){
+  if(!emp.commissionRate) return 0;
+  const sales = (state.transactions||[])
+    .filter(t => t.tech === emp.technician && t.date >= startDate && t.date <= endDate)
+    .reduce((s,t)=>s+collectedAmount(t), 0);
+  return sales * (emp.commissionRate/100);
+}
+
+async function calculatePayroll(){
+  const cutoff = currentPayrollCutoff();
+  let period = (state.payrollPeriods||[]).find(p=>p.id===cutoff.id);
+  if(!period){
+    await createPayrollPeriod();
+    period = (state.payrollPeriods||[]).find(p=>p.id===cutoff.id);
+  }
+  const employees = allActiveEmployees();
+  const existingRecords = new Map((state.payrollRecords||[]).filter(r=>r.periodId===cutoff.id).map(r=>[r.employeeId, r]));
+
+  for(const emp of employees){
+    const existing = existingRecords.get(emp.id);
+    const commission = commissionForEmployee(emp, cutoff.startDate, cutoff.endDate);
+    const bonus = existing ? Number(existing.bonus||0) : 0;
+    const deductions = existing ? Number(existing.deductions||0) : 0;
+    const basicSalary = Number(emp.basicSalary||0);
+    const grossPay = basicSalary + commission + bonus;
+    const netPay = grossPay - deductions;
+    const record = {
+      id: existing?.id || uid(),
+      periodId: cutoff.id,
+      employeeId: emp.id,
+      employeeName: emp.name,
+      role: emp.role,
+      branch: emp.branch,
+      basicSalary, commission, bonus, deductions, grossPay, netPay,
+      status: existing?.status || "pending"
+    };
+    state.payrollRecords = [...(state.payrollRecords||[]).filter(r=>!(r.periodId===cutoff.id && r.employeeId===emp.id)), record];
+    try{
+      await db.collection("payrollRecords").doc(record.id).set(record, {merge:true});
+    }catch(e){ console.error("Could not save payroll record:", e); }
+  }
+  period.status = "calculated";
+  try{ await db.collection("payrollPeriods").doc(period.id).set({status:"calculated"}, {merge:true}); }catch(e){}
+  writeLocal();
+  renderPayrollDashboard();
+  showToast("Payroll calculated for " + cutoff.label);
+}
+
+async function updatePayrollField(recordId, field, value){
+  const record = (state.payrollRecords||[]).find(r=>r.id===recordId);
+  if(!record) return;
+  record[field] = Number(value)||0;
+  record.grossPay = Number(record.basicSalary) + Number(record.commission) + Number(record.bonus);
+  record.netPay = record.grossPay - Number(record.deductions);
+  try{
+    await db.collection("payrollRecords").doc(recordId).set({[field]:record[field], grossPay:record.grossPay, netPay:record.netPay}, {merge:true});
+  }catch(e){ console.error("Could not update payroll record:", e); }
+  writeLocal();
+  renderPayrollDashboard();
+}
+
+async function markPayrollRecordPaid(recordId){
+  const record = (state.payrollRecords||[]).find(r=>r.id===recordId);
+  if(!record) return;
+  record.status = "paid";
+  try{ await db.collection("payrollRecords").doc(recordId).set({status:"paid"}, {merge:true}); }catch(e){}
+  writeLocal();
+  renderPayrollDashboard();
+  showToast(`${record.employeeName} marked as paid`);
+}
+
+function viewPayslip(recordId){
+  const record = (state.payrollRecords||[]).find(r=>r.id===recordId);
+  if(!record) return;
+  const period = (state.payrollPeriods||[]).find(p=>p.id===record.periodId);
+  openOverlay(`
+    <h3>Payslip — ${escapeHTML(record.employeeName)}</h3>
+    <div class="sub">${escapeHTML(period?.label || record.periodId)} · Pay date: ${escapeHTML(formatSiteDate(period?.payDate))}</div>
+    <table style="width:100%;margin-top:14px;"><tbody>
+      <tr><td style="font-weight:600;">Branch</td><td>${escapeHTML(record.branch)}</td></tr>
+      <tr><td style="font-weight:600;">Basic Salary</td><td>${peso(record.basicSalary)}</td></tr>
+      <tr><td style="font-weight:600;">Commission</td><td>${peso(record.commission)}</td></tr>
+      <tr><td style="font-weight:600;">Bonus</td><td>${peso(record.bonus)}</td></tr>
+      <tr><td style="font-weight:600;">Gross Pay</td><td>${peso(record.grossPay)}</td></tr>
+      <tr><td style="font-weight:600;">Deductions</td><td>${peso(record.deductions)}</td></tr>
+      <tr><td style="font-weight:600;">Net Pay</td><td><b>${peso(record.netPay)}</b></td></tr>
+      <tr><td style="font-weight:600;">Status</td><td>${record.status==="paid" ? '<span class="tag good">Paid</span>' : '<span class="tag low">Pending</span>'}</td></tr>
+    </tbody></table>
+    <div class="modal-actions" style="margin-top:16px;">
+      ${record.status!=="paid" ? `<button class="pill-btn primary" onclick="markPayrollRecordPaid('${record.id}'); closeOverlay();">Mark as Paid</button>` : ""}
+      <button class="pill-btn ghost" onclick="closeOverlay()">Close</button>
+    </div>
+  `, "modal-light");
+}
+
+async function renderPayrollDashboard(){
+  await ensurePayrollLoaded();
+  const cutoff = currentPayrollCutoff();
+  const period = (state.payrollPeriods||[]).find(p=>p.id===cutoff.id);
+  const records = (state.payrollRecords||[]).filter(r=>r.periodId===cutoff.id);
+  const employees = allActiveEmployees();
+
+  const grossTotal = records.reduce((s,r)=>s+Number(r.grossPay||0), 0);
+  const deductionsTotal = records.reduce((s,r)=>s+Number(r.deductions||0), 0);
+  const commissionTotal = records.reduce((s,r)=>s+Number(r.commission||0), 0);
+  const bonusTotal = records.reduce((s,r)=>s+Number(r.bonus||0), 0);
+  const netTotal = records.reduce((s,r)=>s+Number(r.netPay||0), 0);
+  const paidTotal = records.filter(r=>r.status==="paid").reduce((s,r)=>s+Number(r.netPay||0), 0);
+
+  const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+  set("pr-total-employees", employees.length);
+  set("pr-current-period", period ? cutoff.label : `${cutoff.label} (not created)`);
+  set("pr-gross-payroll", peso(grossTotal));
+  set("pr-total-deductions", peso(deductionsTotal));
+  set("pr-total-commissions", peso(commissionTotal));
+  set("pr-total-bonuses", peso(bonusTotal));
+  set("pr-net-payroll", peso(netTotal));
+  set("pr-paid-payroll", peso(paidTotal));
+  set("pr-next-date", nextPayrollDateText());
+
+  const periodDesc = document.getElementById("pr-period-desc");
+  if(periodDesc) periodDesc.textContent = period ? `Period ${cutoff.label} · ${period.status}` : `No payroll period created yet for ${cutoff.label}.`;
+
+  const calcBody = document.getElementById("pr-calc-body");
+  if(calcBody){
+    calcBody.innerHTML = records.length ? records.map(r => `
+      <tr>
+        <td>${escapeHTML(r.employeeName)}</td>
+        <td>${escapeHTML(r.branch)}</td>
+        <td>${peso(r.basicSalary)}</td>
+        <td>${peso(r.commission)}</td>
+        <td><input type="number" min="0" step="0.01" value="${Number(r.bonus||0)}" style="width:90px;" onchange="updatePayrollField('${r.id}','bonus',this.value)"></td>
+        <td><input type="number" min="0" step="0.01" value="${Number(r.deductions||0)}" style="width:90px;" onchange="updatePayrollField('${r.id}','deductions',this.value)"></td>
+        <td>${peso(r.grossPay)}</td>
+        <td><b>${peso(r.netPay)}</b></td>
+        <td>${r.status==="paid" ? '<span class="tag good">Paid</span>' : '<span class="tag low">Pending</span>'}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="pill-btn small ghost" onclick="viewPayslip('${r.id}')">View</button>
+          ${r.status!=="paid" ? `<button class="pill-btn small primary" onclick="markPayrollRecordPaid('${r.id}')">Mark Paid</button>` : ""}
+        </td>
+      </tr>
+    `).join("") : `<tr class="empty-row"><td colspan="10">No payroll calculated yet for this period. Click "Calculate Payroll" to generate it.</td></tr>`;
+  }
+
+  const historyBody = document.getElementById("pr-history-body");
+  if(historyBody){
+    const periods = [...(state.payrollPeriods||[])].sort((a,b)=>(b.id||"").localeCompare(a.id||""));
+    historyBody.innerHTML = periods.length ? periods.map(p => {
+      const periodRecords = (state.payrollRecords||[]).filter(r=>r.periodId===p.id);
+      const gross = periodRecords.reduce((s,r)=>s+Number(r.grossPay||0),0);
+      const net = periodRecords.reduce((s,r)=>s+Number(r.netPay||0),0);
+      return `<tr>
+        <td>${escapeHTML(p.id)}</td>
+        <td>${escapeHTML(formatSiteDate(p.payDate))}</td>
+        <td>${peso(gross)}</td>
+        <td>${peso(net)}</td>
+        <td><span class="tag ${p.status==="calculated"?"good":""}">${escapeHTML(p.status||"draft")}</span></td>
+        <td style="text-align:right"><button class="pill-btn small ghost" onclick="viewPayrollPeriodHistory('${p.id}')">View</button></td>
+      </tr>`;
+    }).join("") : `<tr class="empty-row"><td colspan="6">No payroll periods yet.</td></tr>`;
+  }
+}
+
+function viewPayrollPeriodHistory(periodId){
+  const period = (state.payrollPeriods||[]).find(p=>p.id===periodId);
+  const records = (state.payrollRecords||[]).filter(r=>r.periodId===periodId);
+  const rows = records.map(r => `<tr><td>${escapeHTML(r.employeeName)}</td><td>${peso(r.grossPay)}</td><td>${peso(r.netPay)}</td><td>${r.status==="paid" ? '<span class="tag good">Paid</span>' : '<span class="tag low">Pending</span>'}</td><td style="text-align:right"><button class="pill-btn small ghost" onclick="viewPayslip('${r.id}')">View</button></td></tr>`).join("");
+  openOverlay(`
+    <h3>Payroll Period ${escapeHTML(periodId)}</h3>
+    <div class="sub">Pay date: ${escapeHTML(formatSiteDate(period?.payDate))} · ${escapeHTML(period?.status||"draft")}</div>
+    <div class="attendance-table-wrap" style="margin-top:12px;max-height:400px;overflow-y:auto;">
+      <table><thead><tr><th>Employee</th><th>Gross</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5">No records.</td></tr>'}</tbody></table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
+  `, "modal-light");
 }
 
 function renderOwnerDashboard(){
