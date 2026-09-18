@@ -6776,13 +6776,46 @@ function viewPayrollPeriodHistory(periodId){
   `, "modal-light");
 }
 
+function ownerOverviewActiveTemplate(){
+  return `
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Business clients today</div>
+        <div class="stat-value" id="owner-stat-clients">0</div>
+        <div class="stat-sub">Across the active business branch</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Business sales today</div>
+        <div class="stat-value blue" id="owner-stat-sales">₱0</div>
+        <div class="stat-sub">Revenue from the active branch</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open access</div>
+        <div class="stat-value" id="owner-stat-access">0</div>
+        <div class="stat-sub">Current active user roles</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Owner dashboard</h3>
+          <div class="desc">Business-level summary for the active branch</div>
+        </div>
+        <button class="pill-btn primary" onclick="switchView('admin')">Open admin dashboard</button>
+      </div>
+      <div style="padding:20px;">
+        <div class="muted-box" id="owner-dashboard-summary">
+          Review branch operations, financial activity, and access control from the business owner view.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderOwnerDashboard(){
   const selectedBranch = BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH;
   const overview = document.getElementById("owner-sub-overview");
-  const clientSummary = document.getElementById("owner-stat-clients");
-  const salesSummary = document.getElementById("owner-stat-sales");
-  const accessSummary = document.getElementById("owner-stat-access");
-  const summary = document.getElementById("owner-dashboard-summary");
 
   if(!isBranchActive(selectedBranch)){
     if(overview){
@@ -6802,12 +6835,18 @@ function renderOwnerDashboard(){
         </div>
       `;
     }
-    if(clientSummary) clientSummary.textContent = "—";
-    if(salesSummary) salesSummary.textContent = "—";
-    if(accessSummary) accessSummary.textContent = "—";
-    if(summary) summary.textContent = "Not Yet Active. Contact your Site Administrator";
     return;
   }
+
+  // Branch is active: always rebuild the real dashboard template first, in
+  // case a previous inactive-branch render replaced it with the banner above
+  // (that innerHTML swap destroys these child elements, so switching back to
+  // an active branch must recreate them, not just try to update stale nodes).
+  if(overview) overview.innerHTML = ownerOverviewActiveTemplate();
+  const clientSummary = document.getElementById("owner-stat-clients");
+  const salesSummary = document.getElementById("owner-stat-sales");
+  const accessSummary = document.getElementById("owner-stat-access");
+  const summary = document.getElementById("owner-dashboard-summary");
 
   const totalClients = state.transactions.filter(t => t.branch === selectedBranch && t.date === todayStr()).length;
   const sales = state.transactions.filter(t => t.branch === selectedBranch && t.date === todayStr()).reduce((s, t) => s + collectedAmount(t), 0);
