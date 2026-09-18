@@ -1490,7 +1490,7 @@
    - Future branches can be activated here after you configure their users,
      data, and Firestore access rules. */
 const BRANCHES = ["San Antonio","Bataan","Angeles"];
-const ACTIVE_BRANCHES = ["San Antonio"];
+const ACTIVE_BRANCHES = ["San Antonio", "Bataan"]; // TEMP: testing only — revert to ["San Antonio"] when done
 let ENTITLED_BRANCHES = [...ACTIVE_BRANCHES];
 let technicianDirectoryLoaded = false;
 const DEFAULT_BRANCH = ACTIVE_BRANCHES[0] || BRANCHES[0];
@@ -3640,11 +3640,7 @@ function switchView(key){
 
   if((key==="employee" || key==="inventory-public") && !session.staffUnlocked && !session.isAdmin){
     session.pendingView = key;
-    document.getElementById("view-staff-gate").classList.add("active");
-    titleEl.innerHTML = `STAFF <span class="hi">ACCESS</span>`;
-    subEl.innerHTML = "Enter the staff password to continue";
-    rightEl.innerHTML = "";
-    renderAll();
+    switchView("staff-gate");
     return;
   }
 
