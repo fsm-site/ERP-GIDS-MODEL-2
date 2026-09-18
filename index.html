@@ -4854,7 +4854,9 @@ function removeTechnician(){
 function renderRepairStatus(){
   const body = document.getElementById("repair-status-body");
   if(!body) return;
-  const branch = session.isOwner ? ui.adminBranch : (session.isAdmin ? ui.adminBranch : ui.branch);
+  const branch = session.isOwner
+    ? (BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH)
+    : (session.isAdmin ? (BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH) : ui.branch);
   const q = String(ui.repairSearch || "").trim().toLowerCase();
   const dateSelection = ui.repairDate || "today";
 
@@ -6479,7 +6481,7 @@ function renderEmployeeDashboard(){
 function renderPublicInventory(){
   const body = document.getElementById("public-inv-body");
   if(!body) return;
-  const selectedBranch = session.isOwner ? (ui.adminBranch || DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
+  const selectedBranch = session.isOwner ? (BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
   if(session.isOwner && !isBranchActive(selectedBranch)){
     body.innerHTML = `<tr><td colspan="5"><div style="padding:18px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">Not Yet Active. Contact your Site Administrator</div></td></tr>`;
     return;
@@ -6775,7 +6777,7 @@ function viewPayrollPeriodHistory(periodId){
 }
 
 function renderOwnerDashboard(){
-  const selectedBranch = ui.adminBranch || DEFAULT_BRANCH;
+  const selectedBranch = BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH;
   const overview = document.getElementById("owner-sub-overview");
   const clientSummary = document.getElementById("owner-stat-clients");
   const salesSummary = document.getElementById("owner-stat-sales");
