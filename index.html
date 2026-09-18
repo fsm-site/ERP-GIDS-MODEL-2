@@ -2372,6 +2372,12 @@ async function syncAttendanceToCollection(){
   }catch(e){ console.error("Attendance collection sync failed:", e); }
 }
 
+function currentBranchName(){
+  const allowed = currentUserAllowedBranches();
+  const usesAdminSelector = session.isOwner || session.isAdmin;
+  const selected = usesAdminSelector ? (ui.adminBranch || DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
+  return allowed.includes(selected) ? selected : (allowed[0] || DEFAULT_BRANCH);
+}
 function currentBranchId(){
   const allowed = currentUserAllowedBranches();
   const usesAdminSelector = session.isOwner || session.isAdmin;
@@ -2768,9 +2774,19 @@ async function loadAdminCollections(){
   const user = firebase.auth().currentUser;
   if(!user || user.isAnonymous || !session.isAdmin) return false;
   const branchId = currentBranchId();
+  const branchName = currentBranchName();
   try{
     const readBranch = async (name) => {
       const snap = await withTimeout(db.collection(name).where("branchId","==",branchId).get(), 10000);
+      return snap.docs.map(doc=>({id:doc.id, ...doc.data()}));
+    };
+    // staffAccounts/adminAccounts store branchId/branchIds as branch NAMES
+    // (e.g. "San Antonio"), not the "branch1"-style IDs every other
+    // collection uses. Matching by array-contains on the name avoids the
+    // mismatch, and also correctly includes accounts assigned to multiple
+    // branches (not just their first/primary one).
+    const readAccountsBranch = async (name) => {
+      const snap = await withTimeout(db.collection(name).where("branchIds","array-contains",branchName).get(), 10000);
       return snap.docs.map(doc=>({id:doc.id, ...doc.data()}));
     };
     const [jobs, salesPrivate, staffProfiles, suppliers, stockMovements, staffAccounts, adminAccounts, purchaseOrders, commissionDocs, inventoryPrivate] = await Promise.all([
@@ -2779,8 +2795,8 @@ async function loadAdminCollections(){
       readBranch("staffProfiles"),
       readBranch("suppliers"),
       readBranch("stockMovements"),
-      readBranch("staffAccounts"),
-      readBranch("adminAccounts"),
+      readAccountsBranch("staffAccounts"),
+      readAccountsBranch("adminAccounts"),
       readBranch("purchaseOrders"),
       readBranch("commissionRates"),
       readBranch("inventoryPrivate")
@@ -3088,6 +3104,7 @@ function startRealtimeSync(){
   const user = firebase.auth().currentUser;
   if(!user || user.isAnonymous || !subscriptionIsActive()) return;
   const branchId = currentBranchId();
+  const branchName = currentBranchName();
   const role = session.isAdmin ? "admin" : (session.staffUnlocked ? "staff" : null);
   if(!role) return;
 
@@ -3095,6 +3112,20 @@ function startRealtimeSync(){
     try{
       const unsub = db.collection(collectionName)
         .where("branchId","==",branchId)
+        .onSnapshot(
+          snap => { callback(snap.docs.map(doc=>({id:doc.id,...doc.data()}))); },
+          err => console.error(`Realtime ${collectionName} sync failed:`, err)
+        );
+      realtimeUnsubs.push(unsub);
+    }catch(e){ console.error(`Could not start realtime ${collectionName} sync:`, e); }
+  };
+  // staffAccounts/adminAccounts store branch assignment as names in a
+  // branchIds array, not the "branch1"-style id every other collection
+  // uses — match accordingly, and pick up multi-branch accounts too.
+  const watchAccounts = (collectionName, callback) => {
+    try{
+      const unsub = db.collection(collectionName)
+        .where("branchIds","array-contains",branchName)
         .onSnapshot(
           snap => { callback(snap.docs.map(doc=>({id:doc.id,...doc.data()}))); },
           err => console.error(`Realtime ${collectionName} sync failed:`, err)
@@ -3127,12 +3158,12 @@ function startRealtimeSync(){
       writeLocal();
       renderAll();
     });
-    watch("staffAccounts", records=>{
+    watchAccounts("staffAccounts", records=>{
       state.staffAccounts = records;
       writeLocal();
       renderAll();
     });
-    watch("adminAccounts", records=>{
+    watchAccounts("adminAccounts", records=>{
       state.adminAccounts = normalizeAdminAccounts(records);
       writeLocal();
       renderAll();
@@ -3209,6 +3240,18 @@ function startRealtimeSync(){
     // can never overwrite the real Staff directory with zero records.
     watch("staffProfiles", records=>{
       state.staffProfiles = records;
+      writeLocal();
+      renderAll();
+    });
+    // Staff sees the same full Staff+Admin roster as Admin for the
+    // attendance dropdown, even though Staff can only check in themselves.
+    watchAccounts("staffAccounts", records=>{
+      state.staffAccounts = records;
+      writeLocal();
+      renderAll();
+    });
+    watchAccounts("adminAccounts", records=>{
+      state.adminAccounts = normalizeAdminAccounts(records);
       writeLocal();
       renderAll();
     });
