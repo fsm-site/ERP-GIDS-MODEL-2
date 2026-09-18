@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Subscription Manager — Developer Only</title>
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Subscription">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="manifest" href="manifest.json">
 <style>
   :root{
     --bg:#0b1220; --card:#141d33; --line:#28324a; --text:#eaf0ff; --muted:#8ea0c8;
@@ -24,7 +31,7 @@
   .field label{ display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; }
   .field input, .field select{
     width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
-    background:#0e1526; color:var(--text); font-size:14px; font-family:inherit;
+    background:#0e1526; color:var(--text); font-size:16px; font-family:inherit;
   }
   .field input:focus, .field select:focus{ outline:none; border-color:var(--blue); }
   .pw-field{ position:relative; }
@@ -312,6 +319,12 @@
       document.getElementById("app-view").style.display = "none";
     }
   });
+</script>
+
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js?v=1"));
+}
 </script>
 
 </body>
