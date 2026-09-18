@@ -2,9 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gids Ayphone Tech | iPhone &amp; Device Repair, Floridablanca</title>
 <meta name="description" content="Trusted iPhone and device repair, pre-owned phones, and tech accessories in Floridablanca, Pampanga. Screen repairs in 60 minutes, 7-day warranty.">
+
+<!-- PWA: installable on iPhone, iPad and Android home screens -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#173B66">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gids Ayphone">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <!-- SF Pro is Apple system UI type; it is not distributed as a public webfont, so it is served via the OS-native system font stack below, which renders true SF Pro on macOS/iOS/iPadOS and each platform's equivalent elsewhere -->
 <style>
 :root{
@@ -93,7 +105,7 @@ section{padding:clamp(60px,8vw,112px) 0}
 .hero.reveal{opacity:1;transform:none}
 
 /* ---------- HEADER ---------- */
-.site-header{position:sticky;top:0;z-index:60;background:var(--paper);display:flex;align-items:stretch;justify-content:space-between;border-bottom:1px solid var(--line)}
+.site-header{position:sticky;top:0;z-index:60;background:var(--paper);display:flex;align-items:stretch;justify-content:space-between;border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
 .brand-plate{background:var(--ink);color:#fff;padding:18px 54px 18px 26px;clip-path:polygon(0 0,100% 0,86% 100%,0 100%);display:flex;align-items:center;flex:0 0 auto}
 .brand{font-family:var(--font-display);font-weight:700;font-size:1.28rem;letter-spacing:-.01em;text-decoration:none;color:#fff;display:flex;align-items:center;gap:9px}
 .brand .led{width:9px;height:9px;border-radius:50%;background:var(--cyan);display:inline-block;box-shadow:0 0 0 3px rgba(63,205,192,.18);animation:pulse 2.6s ease-in-out infinite}
@@ -132,7 +144,7 @@ section{padding:clamp(60px,8vw,112px) 0}
 .hero-readouts{display:flex;gap:clamp(20px,4vw,40px);margin-top:44px;padding-top:26px;border-top:1px solid rgba(255,255,255,.24);flex-wrap:wrap}
 .readout .num{font-family:var(--font-mono);font-weight:700;font-size:clamp(1.4rem,2.4vw,1.9rem);color:#fff}
 .readout .lbl{font-size:.82rem;color:rgba(255,255,255,.68);margin-top:2px}
-.hero-dots{position:absolute;z-index:2;right:clamp(18px,3vw,32px);bottom:clamp(18px,3vw,32px);display:flex;gap:8px}
+.hero-dots{position:absolute;z-index:2;right:clamp(18px,3vw,32px);bottom:calc(clamp(18px,3vw,32px) + env(safe-area-inset-bottom));display:flex;gap:8px}
 .hero-dots span{width:6px;height:6px;border-radius:1px;background:rgba(255,255,255,.35);transform:rotate(45deg);transition:background .3s ease}
 .hero-dots span.active{background:var(--navy-light)}
 
@@ -240,7 +252,7 @@ section{padding:clamp(60px,8vw,112px) 0}
 .faq-item p{margin-top:14px;color:var(--muted);font-size:.95rem;max-width:64ch}
 
 /* ---------- FOOTER ---------- */
-footer{background:var(--ink);color:var(--on-dark);padding:64px 0 32px}
+footer{background:var(--ink);color:var(--on-dark);padding:64px 0 calc(32px + env(safe-area-inset-bottom))}
 .foot-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:36px}
 footer h4{color:#fff;font-family:var(--font-body);font-size:1.02rem;font-weight:700;margin-bottom:18px}
 footer a,footer li{color:var(--on-dark-muted);text-decoration:none;font-size:.94rem}
@@ -756,6 +768,13 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
       a.classList.toggle('active', on);
     });
   }, {passive:true});
+
+  /* Register service worker for offline/installable support */
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('service-worker.js').catch(function(){ /* ignore on unsupported hosts */ });
+    });
+  }
 </script>
 </body>
 </html>
