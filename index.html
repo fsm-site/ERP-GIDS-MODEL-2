@@ -200,7 +200,7 @@ section{padding:clamp(60px,8vw,112px) 0}
 
 /* ---------- VIDEO GALLERY ---------- */
 .video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.video-slot{aspect-ratio:16/9;border-radius:14px;background-color:#151A22;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer}
+.video-slot{aspect-ratio:9/16;max-width:340px;margin-inline:auto;border-radius:14px;background-color:#151A22;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer}
 .video-slot::after{content:"";position:absolute;inset:0;background:rgba(9,13,20,.28);transition:background .2s ease}
 .video-slot:hover::after{background:rgba(9,13,20,.42)}
 .video-slot svg{width:52px;height:52px;position:relative;z-index:1}
@@ -474,7 +474,7 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
       <div class="kicker">Find us</div>
       <h2>Our locations</h2>
     </div>
-    <div class="loc-grid" style="grid-template-columns:minmax(0,420px);justify-content:center">
+    <div class="loc-grid" style="grid-template-columns:minmax(0,420px) minmax(0,1fr);max-width:920px;margin-inline:auto;align-items:stretch">
       <article class="loc" style="max-width:420px;margin:0 auto">
         <div class="city">PAMPANGA</div>
         <h3>Floridablanca</h3>
@@ -482,6 +482,9 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
         <div class="row"><span>Mon – Sat</span><span>8:00am – 7:00pm</span></div>
         <div class="row"><span>Sunday</span><span>1:30pm – 6:30pm</span></div>
       </article>
+      <div style="border-radius:var(--radius-lg);overflow:hidden;min-height:280px">
+        <iframe src="https://www.google.com/maps?q=Gids+Ayphone+Tech,1353+R.P+Songco+St,+Floridablanca,+Pampanga&output=embed" width="100%" height="100%" style="border:0;display:block;min-height:280px" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Gids Ayphone Tech location map" allowfullscreen></iframe>
+      </div>
     </div>
   </div>
 </section>
