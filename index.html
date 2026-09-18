@@ -141,9 +141,6 @@ section{padding:clamp(60px,8vw,112px) 0}
 .hero-h1{color:#fff;font-size:clamp(2.2rem,4.6vw,3.5rem);font-weight:700}
 .hero-lede{margin-top:20px;color:rgba(255,255,255,.82);font-size:1.06rem;max-width:48ch}
 .hero-cta{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
-.hero-readouts{display:flex;gap:clamp(20px,4vw,40px);margin-top:44px;padding-top:26px;border-top:1px solid rgba(255,255,255,.24);flex-wrap:wrap}
-.readout .num{font-family:var(--font-mono);font-weight:700;font-size:clamp(1.4rem,2.4vw,1.9rem);color:#fff}
-.readout .lbl{font-size:.82rem;color:rgba(255,255,255,.68);margin-top:2px}
 .hero-dots{position:absolute;z-index:2;right:clamp(18px,3vw,32px);bottom:calc(clamp(18px,3vw,32px) + env(safe-area-inset-bottom));display:flex;gap:8px}
 .hero-dots span{width:6px;height:6px;border-radius:1px;background:rgba(255,255,255,.35);transform:rotate(45deg);transition:background .3s ease}
 .hero-dots span.active{background:var(--navy-light)}
@@ -200,6 +197,15 @@ section{padding:clamp(60px,8vw,112px) 0}
 .promo h3{font-size:1.5rem;font-weight:800;color:var(--navy);margin-top:30px}
 .promo p{color:var(--muted);font-size:.93rem;margin-top:10px}
 .promo .pill{display:inline-block;margin-top:20px;font-family:var(--font-mono);color:var(--text);font-weight:500;font-size:.82rem;border:1px solid var(--line);padding:7px 14px;border-radius:999px}
+
+/* ---------- VIDEO GALLERY (placeholder) ---------- */
+.video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.video-slot{aspect-ratio:16/9;border-radius:14px;background:linear-gradient(150deg,#151A22,#2A3542);display:flex;align-items:center;justify-content:center}
+.video-slot svg{width:52px;height:52px}
+
+/* ---------- WHO TRUSTED US (image placeholders) ---------- */
+.trusted-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px}
+.trusted-slot{aspect-ratio:1/1;border-radius:50%;background:var(--paper-alt);border:1.5px dashed var(--line)}
 
 /* ---------- LOCATIONS ---------- */
 .loc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
@@ -270,8 +276,8 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
 
 /* ---------- RESPONSIVE ---------- */
 @media (max-width:980px){
-  .svc-grid,.contact-grid,.gallery{grid-template-columns:repeat(2,1fr)}
-  .why-grid,.promo-grid,.loc-grid,.reviews{grid-template-columns:1fr}
+  .svc-grid,.contact-grid,.gallery,.trusted-grid{grid-template-columns:repeat(2,1fr)}
+  .why-grid,.promo-grid,.loc-grid,.reviews,.video-grid{grid-template-columns:1fr}
   .foot-grid{grid-template-columns:1fr 1fr}
   .stats-row{flex-direction:column}
   .stat{border-right:0;border-bottom:1px solid var(--line)}
@@ -312,7 +318,7 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
   </nav>
   <div class="header-cta">
     <a class="phone-link" href="tel:+639171070249">0917 107 0249</a>
-    <a class="btn" href="#contact">Book a repair</a>
+    <a class="btn" href="https://www.facebook.com/profile.php?id=61572616797089" target="_blank" rel="noopener">Book a repair</a>
   </div>
 </header>
 
@@ -345,34 +351,17 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
   <div class="hero-content">
     <div class="wrap">
       <div class="kicker kicker-dark">Floridablanca, Pampanga</div>
-      <h1 class="hero-h1">Your device, diagnosed, repaired, and handed back the same day.</h1>
-      <p class="hero-lede">Gids Ayphone Tech is a repair and tech shop for iPhones and everyday devices — honest diagnostics, quality parts, and gadgets and accessories priced to last. If it's broken, slow, or due an upgrade, we're the people to bring it to.</p>
+      <h1 class="hero-h1">Your Trusted Phone &amp; Tech Partner</h1>
+      <p class="hero-lede">From cellphone repairs and troubleshooting to gadgets, accessories, and everyday tech solutions — we provide reliable products and dependable service to keep your devices working and your life connected.</p>
       <div class="hero-cta">
-        <a class="btn" href="tel:+639171070249">Call the shop</a>
-        <a class="btn btn-outline" href="#shop">Browse pre-owned iPhones</a>
-      </div>
-      <div class="hero-readouts">
-        <div class="readout"><div class="num">60min</div><div class="lbl">Avg. screen repair</div></div>
-        <div class="readout"><div class="num">1595+</div><div class="lbl">Customers served</div></div>
-        <div class="readout"><div class="num">7 days</div><div class="lbl">Repair warranty</div></div>
+        <a class="btn" href="https://www.facebook.com/profile.php?id=61572616797089" target="_blank" rel="noopener">Book a repair</a>
+        <a class="btn btn-outline" href="https://www.facebook.com/profile.php?id=61572616797089" target="_blank" rel="noopener">Call the shop</a>
       </div>
     </div>
   </div>
 </section>
 
-<section class="partners" id="about">
-  <div class="wrap">
-    <div class="partners-label mono">Brand partners we stock &amp; service</div>
-    <div class="logo-row">
-      <div class="logo-mark">PRESTIZ<small>ACCESSORIES</small></div>
-      <div class="logo-mark">TechLife<small>DEVICES</small></div>
-      <div class="logo-mark">SAKURA<small>PARTS</small></div>
-      <div class="logo-mark">AKASO<small>CAMERAS</small></div>
-    </div>
-  </div>
-</section>
-
-<section class="services">
+<section class="services" id="about">
   <div class="wrap">
     <div class="section-head">
       <div class="kicker">What we do</div>
@@ -493,31 +482,23 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
   </div>
 </section>
 
-<section class="promos" style="background:var(--paper-alt)">
+<section class="video-gallery" style="background:var(--paper-alt)">
   <div class="wrap">
     <div class="section-head">
-      <div class="kicker">Right now in store</div>
-      <h2>Promotion deals</h2>
+      <div class="kicker">See us in action</div>
+      <h2>Video gallery</h2>
+      <p>A look at repairs, drop-offs and life at the shop. Videos coming soon.</p>
     </div>
-    <div class="promo-grid">
-      <article class="promo">
-        <div class="promo-code"><span>GA-001</span><span>Walk-in</span></div>
-        <h3>60 minutes</h3>
-        <p>That is all it takes to fix most screen and battery problems while you wait in store.</p>
-        <span class="pill">Walk in anytime</span>
-      </article>
-      <article class="promo">
-        <div class="promo-code"><span>GA-002</span><span>In-store only</span></div>
-        <h3>Up to 30% off</h3>
-        <p>Save on every smartphone bought in store, with accessories bundled in on selected units.</p>
-        <span class="pill">In store only</span>
-      </article>
-      <article class="promo">
-        <div class="promo-code"><span>GA-003</span><span>Screen repair</span></div>
-        <h3>Basag ang screen?</h3>
-        <p>Sagot ka namin. Bring in a broken display and we will replace it on the spot.</p>
-        <span class="pill">Visit Gids Ayphone Tech today</span>
-      </article>
+    <div class="video-grid">
+      <div class="video-slot">
+        <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="22" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/><path d="M27 23l16 9-16 9V23z" fill="rgba(255,255,255,.85)"/></svg>
+      </div>
+      <div class="video-slot">
+        <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="22" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/><path d="M27 23l16 9-16 9V23z" fill="rgba(255,255,255,.85)"/></svg>
+      </div>
+      <div class="video-slot">
+        <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="22" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/><path d="M27 23l16 9-16 9V23z" fill="rgba(255,255,255,.85)"/></svg>
+      </div>
     </div>
   </div>
 </section>
@@ -528,8 +509,8 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
       <div class="kicker">Find us</div>
       <h2>Our locations</h2>
     </div>
-    <div class="loc-grid">
-      <article class="loc">
+    <div class="loc-grid" style="grid-template-columns:minmax(0,420px);justify-content:center">
+      <article class="loc" style="max-width:420px;margin:0 auto">
         <div class="city">PAMPANGA</div>
         <h3>Floridablanca</h3>
         <div class="row"><span>Address</span><span>1353 R.P Songco St, Floridablanca, Pampanga</span></div>
@@ -544,7 +525,14 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
   <div class="wrap">
     <div class="section-head">
       <div class="kicker">Track record</div>
-      <h2>Our journey of excellence</h2>
+      <h2>Who Trusted Us</h2>
+      <p>Customer photos coming soon.</p>
+    </div>
+    <div class="trusted-grid">
+      <div class="trusted-slot"></div>
+      <div class="trusted-slot"></div>
+      <div class="trusted-slot"></div>
+      <div class="trusted-slot"></div>
     </div>
     <div class="stats-row">
       <div class="stat">
@@ -727,11 +715,10 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
     }
     var autoTimer = null;
     function startAuto(){
-      if(!reduceMotion && slides.length > 1){
-        autoTimer = setInterval(function(){
-          showSlide((slideIndex + 1) % slides.length);
-        }, 4500);
-      }
+      if(reduceMotion || slides.length < 2) return;
+      autoTimer = setInterval(function(){
+        showSlide((slideIndex + 1) % slides.length);
+      }, 4500);
     }
     startAuto();
 
@@ -739,7 +726,7 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
     if(heroNext && slides.length > 1){
       heroNext.addEventListener('click', function(){
         showSlide((slideIndex + 1) % slides.length);
-        if(autoTimer) clearInterval(autoTimer);
+        if(autoTimer){ clearInterval(autoTimer); }
         startAuto();
       });
     }
