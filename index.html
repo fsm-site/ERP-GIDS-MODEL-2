@@ -199,8 +199,9 @@ section{padding:clamp(60px,8vw,112px) 0}
 .promo .pill{display:inline-block;margin-top:20px;font-family:var(--font-mono);color:var(--text);font-weight:500;font-size:.82rem;border:1px solid var(--line);padding:7px 14px;border-radius:999px}
 
 /* ---------- VIDEO GALLERY ---------- */
-.video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.video-slot{aspect-ratio:9/16;max-width:340px;margin-inline:auto;border-radius:14px;background-color:#151A22;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer}
+.video-gallery .wrap{width:min(1400px,94vw)}
+.video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;justify-items:center}
+.video-slot{aspect-ratio:9/16;width:100%;max-width:510px;border-radius:14px;background-color:#151A22;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer}
 .video-slot::after{content:"";position:absolute;inset:0;background:rgba(9,13,20,.28);transition:background .2s ease}
 .video-slot:hover::after{background:rgba(9,13,20,.42)}
 .video-slot svg{width:52px;height:52px;position:relative;z-index:1}
@@ -505,11 +506,11 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
     <div class="stats-row">
       <div class="stat">
         <svg viewBox="0 0 64 64" fill="none"><path d="M32 6l22 9v19c0 13-9 22-22 27C19 56 10 47 10 34V15l22-9z" fill="#151A22" stroke="#173B66" stroke-width="1.4"/><path d="M22 33l7 7 15-16" stroke="#7CA2DD" stroke-width="3" stroke-linecap="round"/></svg>
-        <div><div class="num">400+</div><div class="label">Served Customers</div></div>
+        <div><div class="num">1595+</div><div class="label">Customer satisfaction</div></div>
       </div>
       <div class="stat">
         <svg viewBox="0 0 64 64" fill="none"><path d="M32 6l7.6 16.4L57 24.6 44.5 36.6 47.7 54 32 45.6 16.3 54l3.2-17.4L7 24.6l17.4-2.2L32 6z" fill="#151A22" stroke="#3FCDC0" stroke-width="1.4"/></svg>
-        <div><div class="num">500+</div><div class="label">Gadget Repaired</div></div>
+        <div><div class="num">628+</div><div class="label">Ratings</div></div>
       </div>
     </div>
     <div class="reviews">
