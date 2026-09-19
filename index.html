@@ -6357,6 +6357,11 @@ async function saveTxn(id, isAdmin){
     if(!trialJob) state.nextSeq = seq + 1;
     const newJob = {id:newId, ts:Date.now(), date, branch, tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, customerName, customerPhone, appointmentAt, jobStatus, invoiceStatus, amountPaid, balance, description, quantity, amount, paymentMode, cashAmount, eWalletAmount, clientTip, serviceNo, receiptNo, isTrial:trialJob, statusToken: makeRepairStatusToken()};
     state.transactions.push(newJob);
+    // Must run BEFORE the Firestore write below — otherwise the write
+    // captures the old (pre-increment) used-count, so the cloud copy of
+    // inventory never actually reflects this job's consumption, even
+    // though it looks correct in this browser's own local state.
+    adjustInventoryUsage(previousItem, itemUsed, previousQty, quantity);
     if(staffCreated){
       try{
         await createStaffJobInCollection(newJob);
@@ -6371,7 +6376,6 @@ async function saveTxn(id, isAdmin){
       }
     }
   }
-  adjustInventoryUsage(previousItem, itemUsed, previousQty, quantity);
   try{
     if(isAdmin){
       const savedJob = state.transactions.find(x=>x.id === savedJobId);
