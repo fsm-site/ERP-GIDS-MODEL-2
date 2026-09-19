@@ -1489,15 +1489,14 @@
      planned for activation soon.
    - Future branches can be activated here after you configure their users,
      data, and Firestore access rules. */
-const BRANCHES = ["San Antonio","Bataan","Angeles"];
-const ACTIVE_BRANCHES = ["San Antonio", "Bataan"]; // TEMP: testing only — revert to ["San Antonio"] when done
+const BRANCHES = ["San Antonio","Bataan"];
+const ACTIVE_BRANCHES = ["San Antonio", "Bataan"];
 let ENTITLED_BRANCHES = [...ACTIVE_BRANCHES];
 let technicianDirectoryLoaded = false;
 const DEFAULT_BRANCH = ACTIVE_BRANCHES[0] || BRANCHES[0];
 const BRANCH_CONFIG = {
   "San Antonio": { id:"branch1", status:"active" },
-  "Bataan": { id:"branch2", status:"pending" },
-  "Angeles": { id:"branch3", status:"locked" }
+  "Bataan": { id:"branch2", status:"pending" }
 };
 function branchIdForName(name){ return BRANCH_CONFIG[name]?.id || null; }
 function activeBranches(){ return BRANCHES.filter(name=>ENTITLED_BRANCHES.includes(name)); }
@@ -6991,24 +6990,22 @@ async function saveInv(id){
   const reorderLevel = Math.max(0, Number(document.getElementById("i-reorder").value || LOW_STOCK_THRESHOLD));
   const location = document.getElementById("i-location").value.trim();
   if(!itemName){ showToast("Item name is required"); return; }
-  if(session.isAdmin && !session.isOwner && id){
-    const existing = state.inventory.find(item => item.id === id);
-    if(existing){
-      const confirmed = confirm("Request owner approval to revise this inventory item?");
-      if(!confirmed) return;
-      const proposedChanges = {itemName, sku, supplier, quantity, cost, price, used, reorderLevel, location};
-      await requestOwnerAction({
-        type: "inventory-revision",
-        title: "Inventory revision request",
-        details: `Update ${existing.itemName || "inventory item"} in ${ui.adminBranch || DEFAULT_BRANCH}.`,
-        branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH,
-        entityId: id,
-        entityName: existing.itemName || "Inventory item",
-        payload: { branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH, changes: proposedChanges }
-      });
-      showToast("Owner approval requested for this inventory revision");
-      return;
-    }
+  const proposedChanges = {itemName, sku, supplier, quantity, cost, price, used, reorderLevel, location};
+  if(session.isAdmin && !session.isOwner){
+    const confirmed = confirm(id ? "Request owner approval to revise this inventory item?" : "Request owner approval to add this inventory item?");
+    if(!confirmed) return;
+    await requestOwnerAction({
+      type: id ? "inventory-revision" : "inventory-create",
+      title: id ? "Inventory revision request" : "New inventory item request",
+      details: `${id ? "Update" : "Add"} ${itemName} in ${ui.adminBranch || DEFAULT_BRANCH}.`,
+      branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH,
+      entityId: id || "",
+      entityName: itemName,
+      payload: { branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH, changes: proposedChanges }
+    });
+    closeOverlay();
+    showToast(`Owner approval requested to ${id ? "revise" : "add"} this item`);
+    return;
   }
   let item;
   const ownerView = Boolean(session.isOwner);
