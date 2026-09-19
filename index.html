@@ -134,6 +134,7 @@ section{padding:clamp(64px,6vw,88px) 0}
 /* ---------- HERO ---------- */
 .hero{position:relative;padding:0;overflow:hidden}
 .hero-slides{position:relative;height:min(72vh,640px);overflow:hidden}
+@supports (height:100svh){.hero-slides{height:min(72svh,640px)}}
 .hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease}
 .hero-slide.active{opacity:1}
 .hero-slide img{width:100%;height:100%;object-fit:cover;object-position:center center}
@@ -250,6 +251,7 @@ section{padding:clamp(64px,6vw,88px) 0}
 
 /* ---------- LOCATIONS ---------- */
 .loc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.loc-grid-map{grid-template-columns:minmax(0,420px) minmax(0,1fr);max-width:920px;margin-inline:auto;align-items:stretch}
 .loc{background:var(--ink);color:var(--on-dark);border-radius:var(--radius-lg);padding:32px 30px}
 .loc h3{color:#fff;font-size:1.28rem;font-weight:700;margin-bottom:4px}
 .loc .city{color:var(--navy-light);font-family:var(--font-mono);font-size:.76rem;letter-spacing:.04em;margin-bottom:20px}
@@ -342,6 +344,24 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;justify-items:end;gap:
   .site-header{position:relative}
   .rail-btn{width:38px;height:38px;font-size:1rem}
   .foot-grid{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .wrap{width:92vw}
+  section{padding:clamp(44px,10vw,64px) 0}
+  .hero-content .wrap{margin-left:20px;margin-right:20px}
+  .hero-cta{flex-direction:column;align-items:stretch}
+  .hero-cta .btn{justify-content:center}
+  .svc-grid,.contact-grid,.gallery{grid-template-columns:1fr}
+  .video-grid{gap:16px}
+  .stat{flex-direction:column;text-align:center;gap:8px;padding:22px 16px}
+  .foot-grid{text-align:center}
+  .foot-grid>div:not(.footer-brand){text-align:center}
+  footer ul{justify-items:center}
+  .foot-line{justify-content:center}
+  .foot-social{justify-content:center}
+  .footer-logo-crop{height:220px}
+  .promo-grid{grid-template-columns:1fr}
+  .ccard{padding:28px 18px}
 }
 </style>
 </head>
@@ -608,7 +628,7 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;justify-items:end;gap:
       <div class="kicker">Find us</div>
       <h2>Our locations</h2>
     </div>
-    <div class="loc-grid" style="grid-template-columns:minmax(0,420px) minmax(0,1fr);max-width:920px;margin-inline:auto;align-items:stretch">
+    <div class="loc-grid loc-grid-map">
       <article class="loc" style="max-width:420px;margin:0 auto">
         <div class="city">PAMPANGA</div>
         <h3>Floridablanca</h3>
