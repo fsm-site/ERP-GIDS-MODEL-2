@@ -1843,8 +1843,8 @@
                   <label>Branch</label>
                   <select id="rep-branch">
                     <option value="__all__">All Branches</option>
-                    <option value="Downtown">San Antonio</option>
-                    <option value="Northside">Upcoming Branch</option>
+                    <option value="San Antonio">San Antonio</option>
+                    <option value="Bataan">Bataan</option>
                   </select>
                 </div>
                 <div class="field" style="margin-bottom:0;">
@@ -6417,7 +6417,11 @@ async function approveOwnerRequest(id){
       // added more recently, or a sync timing gap, could otherwise cause
       // this to silently do nothing while still marking "Approved").
       const target = state.transactions.find(entry => entry.id === request.entityId);
-      if(target && target.itemUsed) adjustInventoryUsage(target.itemUsed, null, Number(target.quantity||1), 0);
+      let affectedItem = null;
+      if(target && target.itemUsed){
+        adjustInventoryUsage(target.itemUsed, null, Number(target.quantity||1), 0);
+        affectedItem = state.inventory.find(i=>i.id===target.itemUsed);
+      }
       state.transactions = state.transactions.filter(entry => entry.id !== request.entityId);
       markDeleted("transactions", request.entityId);
       const batch = db.batch();
@@ -6427,6 +6431,7 @@ async function approveOwnerRequest(id){
       if(statusToken) batch.delete(db.collection("repairStatusPublic").doc(statusToken));
       await withTimeout(batch.commit(), 10000);
       await syncAppMeta();
+      if(affectedItem) await syncInventoryChange(affectedItem, false);
     } else if(request.type === "job-revision"){
       const target = state.transactions.find(entry => entry.id === request.entityId);
       const changes = request.payload?.changes;
@@ -7919,7 +7924,11 @@ async function deleteTxn(id){
     return;
   }
   if(!confirm("Delete this job? This can't be undone.")) return;
-  if(t && t.itemUsed) adjustInventoryUsage(t.itemUsed, null, Number(t.quantity||1), 0);
+  let affectedItem = null;
+  if(t && t.itemUsed){
+    adjustInventoryUsage(t.itemUsed, null, Number(t.quantity||1), 0);
+    affectedItem = state.inventory.find(i=>i.id===t.itemUsed);
+  }
   state.transactions = state.transactions.filter(t=>t.id!==id);
   markDeleted("transactions", id);
   renderAll();
@@ -7935,6 +7944,10 @@ async function deleteTxn(id){
       }
       await withTimeout(batch.commit(), 10000);
       await syncAppMeta();
+      // The job deletion above frees up inventory usage locally — this
+      // must also be pushed to the cloud, or Admin/Staff and a page
+      // refresh here would never see the increased available quantity.
+      if(affectedItem) await syncInventoryChange(affectedItem, false);
     }
     writeLocal();
     showToast("Job deleted");
