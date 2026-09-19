@@ -2188,7 +2188,7 @@ function balanceAmount(t){
   return Math.max(0, Number(t.fee||0) - collectedAmount(t));
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
-const CUSTOMER_STATUS_BASE_URL = "https://tracker-gidsayphonetech.vercel.app/";
+const CUSTOMER_STATUS_BASE_URL = "https://track.gidsayphonetech.com/";
 function makeRepairStatusToken(){
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let token = "";
