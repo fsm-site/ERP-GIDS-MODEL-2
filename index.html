@@ -2972,7 +2972,8 @@ async function syncAdminJobTransaction(job, inventoryIds=[]){
       id:item.id, branchId, name:item.name || item.itemName || "",
       itemName:item.itemName || item.name || "", quantity:Number(item.quantity||0),
       used:Number(item.used||0), active:item.active !== false,
-      reorderLevel:Number(item.reorderLevel ?? LOW_STOCK_THRESHOLD)
+      reorderLevel:Number(item.reorderLevel ?? LOW_STOCK_THRESHOLD),
+      price:Number(item.price||0)
     };
     batch.set(db.collection("inventoryPrivate").doc(item.id), privateRecord, {merge:true});
     batch.set(db.collection("inventoryPublic").doc(item.id), publicRecord, {merge:true});
@@ -3479,7 +3480,8 @@ async function syncInventoryChange(item, removed=false){
       id:item.id, branchId, name:item.name || item.itemName || "",
       itemName:item.itemName || item.name || "", quantity:Number(item.quantity||0),
       used:Number(item.used||0), active:item.active !== false,
-      reorderLevel:Number(item.reorderLevel ?? LOW_STOCK_THRESHOLD)
+      reorderLevel:Number(item.reorderLevel ?? LOW_STOCK_THRESHOLD),
+      price:Number(item.price||0)
     };
     batch.set(privateRef, privateRecord, {merge:true});
     batch.set(publicRef, publicRecord, {merge:true});
