@@ -2974,10 +2974,19 @@ async function saveState(){
     if(session.isAdmin){
       // Admin writes now target dedicated collections + appMeta. The legacy
       // app-data document is retained only as a one-time migration source.
+      // NOTE: syncOperationalCollections() (a blind full mirror of local
+      // jobs/inventory to Firestore) is deliberately NOT called here. This
+      // function runs after almost every Admin action — if Admin's local
+      // cache is even briefly behind a change made independently elsewhere
+      // (e.g. Owner approving a revision), this would silently overwrite
+      // that correct cloud value with Admin's stale local copy. Every real
+      // mutation point already has its own targeted sync call
+      // (syncInventoryChange, syncAdminJobTransaction, etc.) — this broad
+      // mirror is only safe to run once, right after login (see
+      // attemptLogin), not on every save.
       await syncAppMeta();
       await syncTechnicianDirectory();
       await syncAttendanceToCollection();
-      await syncOperationalCollections();
       writeLocal();
       return;
     }
