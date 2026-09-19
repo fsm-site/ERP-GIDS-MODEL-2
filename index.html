@@ -1450,8 +1450,7 @@
         <thead><tr><th>Branch</th><th>Status</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td>San Antonio</td><td><span class="tag good">Active</span></td><td>Primary business branch in operation.</td></tr>
-          <tr><td>Bataan</td><td><span class="tag low">Not Yet Active</span></td><td>Waiting for activation.</td></tr>
-          <tr><td>Angeles</td><td><span class="tag low">Not Yet Active</span></td><td>Reserved for future rollout.</td></tr>
+          <tr><td>Bataan</td><td><span class="tag good">Active</span></td><td>Second active business branch.</td></tr>
         </tbody>
       </table>
     </div>
@@ -1956,15 +1955,14 @@
      planned for activation soon.
    - Future branches can be activated here after you configure their users,
      data, and Firestore access rules. */
-const BRANCHES = ["San Antonio","Bataan","Angeles"];
-const ACTIVE_BRANCHES = ["San Antonio", "Bataan"]; // TEMP: testing only — revert to ["San Antonio"] when done
+const BRANCHES = ["San Antonio","Bataan"];
+const ACTIVE_BRANCHES = ["San Antonio", "Bataan"];
 let ENTITLED_BRANCHES = [...ACTIVE_BRANCHES];
 let technicianDirectoryLoaded = false;
 const DEFAULT_BRANCH = ACTIVE_BRANCHES[0] || BRANCHES[0];
 const BRANCH_CONFIG = {
   "San Antonio": { id:"branch1", status:"active" },
-  "Bataan": { id:"branch2", status:"pending" },
-  "Angeles": { id:"branch3", status:"locked" }
+  "Bataan": { id:"branch2", status:"pending" }
 };
 function branchIdForName(name){ return BRANCH_CONFIG[name]?.id || null; }
 function activeBranches(){ return BRANCHES.filter(name=>ENTITLED_BRANCHES.includes(name)); }
@@ -6403,6 +6401,14 @@ async function approveOwnerRequest(id){
         Object.assign(target, changes);
         await syncInventoryChange(target, false);
       }
+    } else if(request.type === "inventory-create"){
+      const changes = request.payload?.changes;
+      if(changes && changes.itemName){
+        const newItem = {id: uid(), ...changes};
+        state.inventory.push(newItem);
+        if(newItem.quantity) addStockMovement(newItem, Number(newItem.quantity), "Purchase", "Opening stock");
+        await syncInventoryChange(newItem, false);
+      }
     } else if(request.type === "tech-name-request"){
       const technicianName = String(request.payload?.technician || "").trim();
       const email = String(request.payload?.email || "").trim().toLowerCase();
@@ -7221,7 +7227,7 @@ function renderAdminInventory(){
   const head = document.getElementById("admin-inv-head");
   if(head){
     head.innerHTML = ownerView
-      ? '<tr><th>Item / SKU</th><th>Supplier</th><th>Quantity</th><th>Item cost</th><th>Price (SRP)</th><th>Total price</th><th>Available</th><th style="text-align:right">Actions</th></tr>'
+      ? '<tr><th>Item / SKU</th><th>Supplier</th><th>Quantity</th><th>Item cost</th><th>Capital</th><th>Price (SRP)</th><th>Available</th><th>Used</th><th style="text-align:right">Actions</th></tr>'
       : '<tr><th>Item / SKU</th><th>Quantity</th><th>Available</th><th>Price (SRP)</th><th>Total price</th><th style="text-align:right">Actions</th></tr>';
   }
   renderLowStockBanner();
@@ -7236,11 +7242,12 @@ function renderAdminInventory(){
       return `<tr>
         <td><b>${escapeHTML(i.itemName)}</b><div class="stat-sub">${escapeHTML(i.sku || i.barcode || "No SKU")}</div></td>
         <td>${escapeHTML(i.supplier || "—")}</td>
-        <td>${i.quantity} <span class="stat-sub">(${i.used||0} used)</span></td>
+        <td>${i.quantity}</td>
         <td>${peso(i.cost)}</td>
+        <td>${peso(Number(i.cost||0)*Number(i.quantity||0))}</td>
         <td>${peso(i.price)}</td>
-        <td class="fee">${peso(Number(i.quantity||0)*Number(i.price||0))}</td>
         <td>${availTag(avail, Number(i.reorderLevel ?? LOW_STOCK_THRESHOLD))}</td>
+        <td>${Number(i.used||0)} <button class="pill-btn small ghost" onclick="viewInventoryUsage('${i.id}')">View</button></td>
         <td style="text-align:right">
           <div class="row-actions" style="justify-content:flex-end;">
             <button onclick="openInvModal('${i.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
@@ -8299,6 +8306,21 @@ function downloadReceiptPdf(id){
   showToast("Receipt downloaded");
 }
 
+function viewInventoryUsage(itemId){
+  const item = state.inventory.find(i=>i.id===itemId);
+  if(!item) return;
+  const uses = (state.transactions||[]).filter(t=>t.itemUsed===itemId).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const rows = uses.map(t => `<tr><td>${escapeHTML(t.branch||"—")}</td><td>${escapeHTML(t.serviceNo||t.id)} — ${escapeHTML(t.customerName||"")}</td><td>${escapeHTML(t.tech||"—")}</td><td>${escapeHTML(formatSiteDate(t.date))}</td></tr>`).join("");
+  openOverlay(`
+    <h3>${escapeHTML(item.itemName)} — Usage</h3>
+    <div class="sub">${uses.length} job${uses.length===1?"":"s"} used this item</div>
+    <div class="attendance-table-wrap" style="margin-top:12px;max-height:400px;overflow-y:auto;">
+      <table><thead><tr><th>Branch</th><th>Job</th><th>Technician</th><th>Date</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No usage recorded yet.</td></tr>'}</tbody></table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
+  `, "modal-light");
+}
+
 function openInvModal(editId=null){
   const editing = editId ? state.inventory.find(i=>i.id===editId) : null;
   const ownerView = Boolean(session.isOwner);
@@ -8343,23 +8365,23 @@ async function saveInv(id){
   const reorderLevel = Math.max(0, Number(document.getElementById("i-reorder").value || LOW_STOCK_THRESHOLD));
   const location = document.getElementById("i-location").value.trim();
   if(!itemName){ showToast("Item name is required"); return; }
-  if(session.isAdmin && !session.isOwner && id){
-    const existing = state.inventory.find(item => item.id === id);
-    if(existing){
-      const confirmed = confirm("Request owner approval to revise this inventory item?");
-      if(!confirmed) return;
-      requestOwnerAction({
-        type: "inventory-revision",
-        title: "Inventory revision request",
-        details: `Update ${existing.itemName || "inventory item"} in ${ui.adminBranch || DEFAULT_BRANCH}.`,
-        branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH,
-        entityId: id,
-        entityName: existing.itemName || "Inventory item",
-        payload: { branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH }
-      });
-      showToast("Owner approval requested for this inventory revision");
-      return;
-    }
+  const proposedChanges = {itemName, sku, supplier, quantity, cost, price, used, reorderLevel, location};
+  if(session.isAdmin && !session.isOwner){
+    const existing = id ? state.inventory.find(item => item.id === id) : null;
+    const confirmed = confirm(id ? "Request owner approval to revise this inventory item?" : "Request owner approval to add this inventory item?");
+    if(!confirmed) return;
+    requestOwnerAction({
+      type: id ? "inventory-revision" : "inventory-create",
+      title: id ? "Inventory revision request" : "New inventory item request",
+      details: `${id ? "Update" : "Add"} ${itemName} in ${ui.adminBranch || DEFAULT_BRANCH}.`,
+      branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH,
+      entityId: id || "",
+      entityName: itemName,
+      payload: { branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH, changes: proposedChanges }
+    });
+    closeOverlay();
+    showToast(`Owner approval requested to ${id ? "revise" : "add"} this item`);
+    return;
   }
   let item;
   const ownerView = Boolean(session.isOwner);
