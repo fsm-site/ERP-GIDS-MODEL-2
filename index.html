@@ -3146,7 +3146,8 @@ async function syncOperationalCollections(){
           quantity: Number(normalized.quantity || 0),
           used: Number(normalized.used || 0),
           active: normalized.active !== false,
-          reorderLevel: Number(normalized.reorderLevel ?? LOW_STOCK_THRESHOLD)
+          reorderLevel: Number(normalized.reorderLevel ?? LOW_STOCK_THRESHOLD),
+          price: Number(normalized.price || 0)
         };
         batch.set(db.collection("inventoryPublic").doc(normalized.id), publicRecord, {merge:true});
       });
@@ -6408,46 +6409,49 @@ async function approveOwnerRequest(id){
   const request = (state.ownerRequests || []).find(item => item.id === id);
   if(!request || request.status !== "pending") return;
   const branch = request.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH;
+  const branchIdFromRequest = branchIdForName(branch) || currentBranchId();
   try{
     if(request.type === "job-delete"){
+      // Act on Firestore directly by entityId — do not depend on the job
+      // already being present in Owner's local cache (a branch that was
+      // added more recently, or a sync timing gap, could otherwise cause
+      // this to silently do nothing while still marking "Approved").
       const target = state.transactions.find(entry => entry.id === request.entityId);
-      if(target){
-        if(target.itemUsed) adjustInventoryUsage(target.itemUsed, null, Number(target.quantity||1), 0);
-        state.transactions = state.transactions.filter(entry => entry.id !== request.entityId);
-        markDeleted("transactions", request.entityId);
-        const batch = db.batch();
-        batch.delete(db.collection("jobs").doc(request.entityId));
-        batch.delete(db.collection("salesPrivate").doc(request.entityId));
-        const statusToken = target.statusToken ? String(target.statusToken) : "";
-        if(statusToken) batch.delete(db.collection("repairStatusPublic").doc(statusToken));
-        await withTimeout(batch.commit(), 10000);
-        await syncAppMeta();
-      }
+      if(target && target.itemUsed) adjustInventoryUsage(target.itemUsed, null, Number(target.quantity||1), 0);
+      state.transactions = state.transactions.filter(entry => entry.id !== request.entityId);
+      markDeleted("transactions", request.entityId);
+      const batch = db.batch();
+      batch.delete(db.collection("jobs").doc(request.entityId));
+      batch.delete(db.collection("salesPrivate").doc(request.entityId));
+      const statusToken = target?.statusToken ? String(target.statusToken) : "";
+      if(statusToken) batch.delete(db.collection("repairStatusPublic").doc(statusToken));
+      await withTimeout(batch.commit(), 10000);
+      await syncAppMeta();
     } else if(request.type === "job-revision"){
       const target = state.transactions.find(entry => entry.id === request.entityId);
       const changes = request.payload?.changes;
-      if(target && changes){
-        Object.assign(target, changes);
-        await syncAdminJobTransaction(target, [changes.itemUsed].filter(Boolean));
+      if(changes){
+        const jobToSync = target ? Object.assign(target, changes) : {id: request.entityId, branch, branchId: branchIdFromRequest, ...changes};
+        if(!target) state.transactions.push(jobToSync);
+        await syncAdminJobTransaction(jobToSync, [changes.itemUsed].filter(Boolean));
       }
     } else if(request.type === "inventory-delete"){
       const target = state.inventory.find(entry => entry.id === request.entityId);
-      if(target){
-        state.inventory = state.inventory.filter(entry => entry.id !== request.entityId);
-        markDeleted("inventory", request.entityId);
-        await syncInventoryChange(target, true);
-      }
+      state.inventory = state.inventory.filter(entry => entry.id !== request.entityId);
+      markDeleted("inventory", request.entityId);
+      await syncInventoryChange(target || {id: request.entityId, branchId: branchIdFromRequest}, true);
     } else if(request.type === "inventory-revision"){
       const target = state.inventory.find(entry => entry.id === request.entityId);
       const changes = request.payload?.changes;
-      if(target && changes){
-        Object.assign(target, changes);
-        await syncInventoryChange(target, false);
+      if(changes){
+        const itemToSync = target ? Object.assign(target, changes) : {id: request.entityId, branchId: branchIdFromRequest, ...changes};
+        if(!target) state.inventory.push(itemToSync);
+        await syncInventoryChange(itemToSync, false);
       }
     } else if(request.type === "inventory-create"){
       const changes = request.payload?.changes;
       if(changes && changes.itemName){
-        const newItem = {id: uid(), ...changes};
+        const newItem = {id: uid(), branchId: branchIdFromRequest, ...changes};
         state.inventory.push(newItem);
         if(newItem.quantity) addStockMovement(newItem, Number(newItem.quantity), "Purchase", "Opening stock");
         await syncInventoryChange(newItem, false);
