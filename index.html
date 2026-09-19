@@ -974,7 +974,7 @@
         </div>
 
         <div id="pub-sub-parts">
-          <div class="panel">
+          <div class="panel" id="pub-inv-single-panel">
             <div class="panel-head">
               <div>
                 <h3>Parts &amp; accessories inventory</h3>
@@ -986,6 +986,22 @@
               <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
               <tbody id="public-inv-body"></tbody>
             </table>
+          </div>
+          <div id="pub-inv-branch-panels" style="display:none;">
+            <div class="panel">
+              <div class="panel-head"><div><h3>San Antonio</h3><div class="desc">Inventory for this branch</div></div></div>
+              <table>
+                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
+                <tbody id="public-inv-body-branch1"></tbody>
+              </table>
+            </div>
+            <div class="panel" style="margin-top:16px;">
+              <div class="panel-head"><div><h3>Bataan</h3><div class="desc">Inventory for this branch</div></div></div>
+              <table>
+                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
+                <tbody id="public-inv-body-branch2"></tbody>
+              </table>
+            </div>
           </div>
           <div class="public-note">This inventory is public view — pricing and edit access are admin-only.</div>
         </div>
@@ -1966,6 +1982,7 @@ const BRANCH_CONFIG = {
   "Bataan": { id:"branch2", status:"pending" }
 };
 function branchIdForName(name){ return BRANCH_CONFIG[name]?.id || null; }
+function branchNameForId(id){ return BRANCHES.find(name => BRANCH_CONFIG[name]?.id === id) || null; }
 function activeBranches(){ return BRANCHES.filter(name=>ENTITLED_BRANCHES.includes(name)); }
 function isBranchActive(name){ return ACTIVE_BRANCHES.includes(name) || ENTITLED_BRANCHES.includes(name); }
 function branchStatusLabel(name){ return isBranchActive(name) ? "Active" : "Not Yet Active"; }
@@ -2188,7 +2205,7 @@ function balanceAmount(t){
   return Math.max(0, Number(t.fee||0) - collectedAmount(t));
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
-const CUSTOMER_STATUS_BASE_URL = "https://track.gidsayphonetech.com/";
+const CUSTOMER_STATUS_BASE_URL = "https://tracker-gidsayphonetech.vercel.app/";
 function makeRepairStatusToken(){
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let token = "";
@@ -3466,7 +3483,7 @@ async function saveState(){
 async function syncInventoryChange(item, removed=false){
   const user = firebase.auth().currentUser;
   if(!user || user.isAnonymous || !session.isAdmin) throw new Error("Admin authentication required");
-  const branchId = currentBranchId();
+  const branchId = item.branchId || currentBranchId();
   const batch = db.batch();
   const privateRef = db.collection("inventoryPrivate").doc(item.id);
   const publicRef = db.collection("inventoryPublic").doc(item.id);
@@ -3608,11 +3625,16 @@ function startRealtimeSync(){
       writeLocal();
       renderAll();
     });
-    watch("inventoryPrivate", records=>{
-      state.inventory = records;
-      writeLocal();
-      renderAll();
-    });
+    // Unfiltered so Owner sees inventory across both branches at once
+    // (needed for the per-branch sections on the Inventory page), rather
+    // than only whichever branch happens to be currently selected.
+    try{
+      const unsubInv = db.collection("inventoryPrivate").onSnapshot(
+        snap => { state.inventory = snap.docs.map(doc=>({id:doc.id,...doc.data()})); writeLocal(); renderAll(); },
+        err => console.error("Realtime inventoryPrivate (owner) sync failed:", err)
+      );
+      realtimeUnsubs.push(unsubInv);
+    }catch(e){ console.error("Could not start owner inventory sync:", e); }
     watch("staffProfiles", records=>{
       state.staffProfiles = records;
       writeLocal();
@@ -4308,6 +4330,12 @@ function bindBranchSelector(who){
   el.addEventListener("change", ()=>{
     if(who==="employee") ui.branch = el.value; else ui.adminBranch = el.value;
     updateRailBranchFooter();
+    // Realtime listeners are branch-filtered at the Firestore query level
+    // (see startRealtimeSync). Switching branches here previously only
+    // updated the display label — the underlying data stayed subscribed
+    // to whichever branch was active at login, making inventory/jobs for
+    // the newly-selected branch appear empty ("disappeared").
+    startRealtimeSync();
     renderAll();
   });
 }
@@ -6490,15 +6518,33 @@ function renderEmployeeDashboard(){
 }
 
 function renderPublicInventory(){
-  const body = document.getElementById("public-inv-body");
-  if(!body) return;
   const addBtn = document.getElementById("pub-inv-add-btn");
   if(addBtn) addBtn.style.display = session.isOwner ? "inline-flex" : "none";
-  const selectedBranch = session.isOwner ? (BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
-  if(session.isOwner && !isBranchActive(selectedBranch)){
-    body.innerHTML = `<tr><td colspan="5"><div style="padding:18px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">Not Yet Active. Contact your Site Administrator</div></td></tr>`;
+  const singlePanel = document.getElementById("pub-inv-single-panel");
+  const branchPanels = document.getElementById("pub-inv-branch-panels");
+
+  if(session.isOwner){
+    if(singlePanel) singlePanel.style.display = "none";
+    if(branchPanels) branchPanels.style.display = "block";
+    const rowsFor = (branchId) => {
+      const items = state.inventory.filter(i => i.branchId === branchId);
+      return items.length ? items.map(i=>{
+        const avail = Number(i.quantity) - Number(i.used||0);
+        return `<tr><td>${escapeHTML(i.itemName)}</td><td>${i.quantity}</td><td>${Number(i.used||0)}</td><td>${peso(Number(i.price||0))}</td><td>${avail}</td></tr>`;
+      }).join("") : `<tr class="empty-row"><td colspan="5">No inventory items yet.</td></tr>`;
+    };
+    const b1 = document.getElementById("public-inv-body-branch1");
+    const b2 = document.getElementById("public-inv-body-branch2");
+    if(b1) b1.innerHTML = rowsFor("branch1");
+    if(b2) b2.innerHTML = rowsFor("branch2");
     return;
   }
+
+  if(singlePanel) singlePanel.style.display = "block";
+  if(branchPanels) branchPanels.style.display = "none";
+  const body = document.getElementById("public-inv-body");
+  if(!body) return;
+  const selectedBranch = ui.branch || DEFAULT_BRANCH;
   body.innerHTML = state.inventory.length ? state.inventory.map(i=>{
     const avail = Number(i.quantity) - Number(i.used||0);
     return `<tr>
@@ -8329,6 +8375,10 @@ function viewInventoryUsage(itemId){
 function openInvModal(editId=null){
   const editing = editId ? state.inventory.find(i=>i.id===editId) : null;
   const ownerView = Boolean(session.isOwner);
+  const currentBranchName = editing ? (branchNameForId(editing.branchId) || DEFAULT_BRANCH) : (ui.adminBranch || DEFAULT_BRANCH);
+  const branchField = ownerView ? `
+      <div class="field"><label>Branch</label><select id="i-branch">${BRANCHES.map(name=>`<option value="${escapeHTML(name)}" ${name===currentBranchName?"selected":""}>${escapeHTML(name)}</option>`).join("")}</select></div>
+    ` : "";
   const supplierField = ownerView ? `
       <div class="field"><label>Supplier</label><input id="i-supplier" list="supplier-options" value="${editing?escapeHTML(editing.supplier || ""):""}"><datalist id="supplier-options">${(state.suppliers||[]).map(s=>`<option value="${escapeHTML(s.name)}">`).join("")}</datalist></div>
     ` : "";
@@ -8343,6 +8393,7 @@ function openInvModal(editId=null){
       <div class="field"><label>SKU / barcode</label><input id="i-sku" placeholder="Scan or type code" value="${editing?escapeHTML(editing.sku || editing.barcode || ""):""}"></div>
       ${supplierField}
     </div>
+    ${branchField}
     <div class="field"><label>Quantity</label><input id="i-qty" type="number" min="0" value="${editing?editing.quantity:""}"></div>
     ${costField}
     <div class="field"><label>Price / SRP (₱) <span style="font-weight:400;color:var(--muted)">used to suggest the service fee</span></label><input id="i-price" type="number" min="0" value="${editing?editing.price:""}"></div>
@@ -8390,15 +8441,19 @@ async function saveInv(id){
   }
   let item;
   const ownerView = Boolean(session.isOwner);
+  const branchSelect = document.getElementById("i-branch");
+  const selectedBranchId = branchSelect ? branchIdForName(branchSelect.value) : null;
   if(id){
     item = state.inventory.find(i=>i.id===id);
     const delta = quantity - Number(item.quantity||0);
     const usedDelta = used - Number(item.used||0);
     Object.assign(item, {itemName, sku, supplier: ownerView ? supplier : (item.supplier || ""), quantity, cost: ownerView ? cost : (item.cost || 0), price, used, reorderLevel, location});
+    if(selectedBranchId) item.branchId = selectedBranchId;
     if(delta) addStockMovement(item, delta, delta>0 ? "Purchase" : "Adjustment", "Inventory edit");
     if(usedDelta) addStockMovement(item, -usedDelta, "Usage adjustment", "Inventory edit");
   } else {
     item = {id:uid(), itemName, sku, barcode:sku, supplier: ownerView ? supplier : "", quantity, cost: ownerView ? cost : 0, price, used, reorderLevel, location};
+    if(selectedBranchId) item.branchId = selectedBranchId;
     state.inventory.push(item);
     if(quantity) addStockMovement(item, quantity, "Purchase", "Opening stock");
   }
