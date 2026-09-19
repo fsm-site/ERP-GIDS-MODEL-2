@@ -3518,9 +3518,15 @@ async function syncInventoryChange(item, removed=false){
     batch.set(publicRef, publicRecord, {merge:true});
   }
 
-  (state.stockMovements || []).filter(m => m && (m.branchId || branchId) === branchId).forEach(movement => {
-    batch.set(db.collection("stockMovements").doc(movement.id), {...movement, branchId}, {merge:true});
-  });
+  // Only the single newest movement (if any) needs to be pushed — this used
+  // to re-write up to 200 historical stock movement documents on every
+  // single inventory save, bloating the batch and risking slow/failed
+  // saves for no real benefit, since older movements were already synced
+  // when they were originally created.
+  const latestMovement = (state.stockMovements || [])[0];
+  if(latestMovement && (latestMovement.branchId || branchId) === branchId){
+    batch.set(db.collection("stockMovements").doc(latestMovement.id), {...latestMovement, branchId}, {merge:true});
+  }
 
   batch.set(appMetaRef, {
     businessId:"gids-tech", version:1,
