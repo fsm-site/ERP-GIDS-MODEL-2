@@ -199,6 +199,7 @@
   .tag{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; }
   .tag.good{ background:rgba(46,204,145,.14); color:var(--good); }
   .tag.low{ background:rgba(255,101,82,.14); color:var(--warn); }
+  .notif-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#ff4d4f; margin-left:6px; vertical-align:middle; box-shadow:0 0 0 2px rgba(255,77,79,.25); }
   .row-actions{ display:flex; gap:6px; }
   .row-actions button{ border:none; background:none; cursor:pointer; padding:5px; border-radius:6px; color:var(--muted); }
   .row-actions button:hover{ background:var(--blue-pale); color:var(--blue-light); }
@@ -873,6 +874,7 @@
     <div class="nav-item" data-view="admin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 3v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V5l8-3z"/></svg>
       <span class="label" id="admin-nav-label">OWNER</span>
+      <span id="owner-nav-badge" class="notif-dot" style="display:none;"></span>
     </div>
     <div class="nav-item" data-view="finances">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
@@ -974,13 +976,15 @@
         </div>
 
         <div id="pub-sub-parts">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+            <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
+          </div>
           <div class="panel" id="pub-inv-single-panel">
             <div class="panel-head">
               <div>
                 <h3>Parts &amp; accessories inventory</h3>
                 <div class="desc">View parts and accessories stock</div>
               </div>
-              <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
             </div>
             <table>
               <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
@@ -1352,7 +1356,7 @@
   <div class="subtabs">
     <div class="subtab active" data-owner-sub="overview">OVERVIEW</div>
     <div class="subtab" data-owner-sub="access">ACCESS</div>
-    <div class="subtab" data-owner-sub="requests">REQUESTS</div>
+    <div class="subtab" data-owner-sub="requests">REQUESTS <span id="owner-requests-badge" class="notif-dot" style="display:none;"></span></div>
     <div class="subtab" data-owner-sub="tech-requests">TECH REQUESTS</div>
     <div class="subtab" data-owner-sub="branches">BRANCHES</div>
   </div>
@@ -6299,6 +6303,12 @@ function renderOwnerRequests(){
   const general = requests.filter(req => req.type !== "tech-name-request");
   const techRequests = requests.filter(req => req.type === "tech-name-request");
 
+  const pendingCount = requests.filter(req => req.status === "pending").length;
+  const tabBadge = document.getElementById("owner-requests-badge");
+  const navBadge = document.getElementById("owner-nav-badge");
+  if(tabBadge) tabBadge.style.display = pendingCount ? "inline-block" : "none";
+  if(navBadge) navBadge.style.display = pendingCount ? "inline-block" : "none";
+
   body.innerHTML = general.length ? general.map(req => `
     <tr>
       <td>${escapeHTML(req.type || "Request")}</td>
@@ -6310,6 +6320,7 @@ function renderOwnerRequests(){
       <td style="text-align:right; white-space:nowrap;">
         <button class="pill-btn small ghost" onclick="viewOwnerRequest('${req.id}')">View</button>
         ${req.status === "pending" ? ` <button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : ''}
+        <button class="pill-btn small ghost" onclick="deleteOwnerRequest('${req.id}')">Delete</button>
       </td>
     </tr>
   `).join("") : `<tr class="empty-row"><td colspan="7">No approval requests yet.</td></tr>`;
@@ -6325,6 +6336,7 @@ function renderOwnerRequests(){
         <td style="text-align:right; white-space:nowrap;">
           <button class="pill-btn small ghost" onclick="viewOwnerRequest('${req.id}')">View</button>
           ${req.status === "pending" ? ` <button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : ''}
+          <button class="pill-btn small ghost" onclick="deleteOwnerRequest('${req.id}')">Delete</button>
         </td>
       </tr>
     `).join("") : `<tr class="empty-row"><td colspan="6">No technician assignment requests.</td></tr>`;
@@ -6488,6 +6500,21 @@ async function denyOwnerRequest(id){
   writeLocal();
   renderOwnerRequests();
   showToast(`${request.title || "Request"} denied`);
+}
+
+async function deleteOwnerRequest(id){
+  const request = (state.ownerRequests || []).find(item => item.id === id);
+  if(!request) return;
+  if(!confirm(`Remove "${request.title || "this request"}" from the list?`)) return;
+  state.ownerRequests = (state.ownerRequests || []).filter(item => item.id !== id);
+  try{
+    await db.collection("ownerRequests").doc(id).delete();
+  }catch(e){
+    console.error("Could not delete request in the cloud:", e);
+  }
+  writeLocal();
+  renderOwnerRequests();
+  showToast("Request removed");
 }
 
 function renderEmployeeDashboard(){
