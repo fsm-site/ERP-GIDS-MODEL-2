@@ -976,7 +976,8 @@
         </div>
 
         <div id="pub-sub-parts">
-          <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
+            <button id="pub-inv-recalc-btn" class="pill-btn ghost" style="display:none;" onclick="recalculateInventoryUsage()">Recalculate Usage</button>
             <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
           </div>
           <div class="panel" id="pub-inv-single-panel">
@@ -6557,6 +6558,8 @@ function renderEmployeeDashboard(){
 function renderPublicInventory(){
   const addBtn = document.getElementById("pub-inv-add-btn");
   if(addBtn) addBtn.style.display = session.isOwner ? "inline-flex" : "none";
+  const recalcBtn = document.getElementById("pub-inv-recalc-btn");
+  if(recalcBtn) recalcBtn.style.display = session.isOwner ? "inline-flex" : "none";
   const singlePanel = document.getElementById("pub-inv-single-panel");
   const branchPanels = document.getElementById("pub-inv-branch-panels");
 
@@ -8422,6 +8425,29 @@ function viewInventoryUsage(itemId){
     </div>
     <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
   `, "modal-light");
+}
+
+async function recalculateInventoryUsage(){
+  if(!session.isOwner) return;
+  if(!confirm("Recalculate used quantity for every inventory item, based on jobs that currently exist? Use this once to correct any leftover drift from before the delete-sync fix.")) return;
+  let corrected = 0;
+  for(const item of state.inventory){
+    const actualUsed = state.transactions
+      .filter(t => t.itemUsed === item.id)
+      .reduce((sum, t) => sum + Number(t.quantity || 1), 0);
+    if(Number(item.used || 0) !== actualUsed){
+      item.used = actualUsed;
+      try{
+        await syncInventoryChange(item, false);
+        corrected++;
+      }catch(e){
+        console.error("Recalculate sync failed for item", item.id, e);
+      }
+    }
+  }
+  writeLocal();
+  renderAll();
+  showToast(corrected ? `Recalculated ${corrected} item${corrected===1?"":"s"}` : "All inventory usage was already correct");
 }
 
 function openInvModal(editId=null){
