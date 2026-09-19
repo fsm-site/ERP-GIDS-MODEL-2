@@ -980,6 +980,7 @@
                 <h3>Parts &amp; accessories inventory</h3>
                 <div class="desc">View parts and accessories stock</div>
               </div>
+              <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
             </div>
             <table>
               <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
@@ -6489,6 +6490,8 @@ function renderEmployeeDashboard(){
 function renderPublicInventory(){
   const body = document.getElementById("public-inv-body");
   if(!body) return;
+  const addBtn = document.getElementById("pub-inv-add-btn");
+  if(addBtn) addBtn.style.display = session.isOwner ? "inline-flex" : "none";
   const selectedBranch = session.isOwner ? (BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
   if(session.isOwner && !isBranchActive(selectedBranch)){
     body.innerHTML = `<tr><td colspan="5"><div style="padding:18px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">Not Yet Active. Contact your Site Administrator</div></td></tr>`;
