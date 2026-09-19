@@ -2440,6 +2440,10 @@ async function createStaffJobInCollection(job){
     const item = state.inventory.find(i=>i.id===job.itemUsed);
     if(item){
       batch.set(db.collection("inventoryPublic").doc(item.id), {used:Number(item.used||0), branchId}, {merge:true});
+      // Staff can create this write but never read inventoryPrivate back
+      // (see Firestore rules) — this only ever updates the `used` count,
+      // never cost/supplier/other private-only fields.
+      batch.set(db.collection("inventoryPrivate").doc(item.id), {used:Number(item.used||0)}, {merge:true});
     }
   }
 
@@ -2648,7 +2652,8 @@ async function syncOperationalCollections(){
           quantity: Number(normalized.quantity || 0),
           used: Number(normalized.used || 0),
           active: normalized.active !== false,
-          reorderLevel: Number(normalized.reorderLevel ?? LOW_STOCK_THRESHOLD)
+          reorderLevel: Number(normalized.reorderLevel ?? LOW_STOCK_THRESHOLD),
+          price: Number(normalized.price || 0)
         };
         batch.set(db.collection("inventoryPublic").doc(normalized.id), publicRecord, {merge:true});
       });
