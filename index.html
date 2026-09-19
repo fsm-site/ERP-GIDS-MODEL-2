@@ -1356,8 +1356,8 @@
                   <label>Branch</label>
                   <select id="rep-branch">
                     <option value="__all__">All Branches</option>
-                    <option value="Downtown">San Antonio</option>
-                    <option value="Northside">Upcoming Branch</option>
+                    <option value="San Antonio">San Antonio</option>
+                    <option value="Bataan">Bataan</option>
                   </select>
                 </div>
                 <div class="field" style="margin-bottom:0;">
@@ -1370,20 +1370,14 @@
                 </div>
               </div>
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="pill-btn primary" onclick="downloadExcelReport()">
+                <button class="pill-btn primary" onclick="requestDownloadReport()">
                   <span style="display:inline-flex;align-items:center;gap:7px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
-                    Download Excel (.xlsx)
-                  </span>
-                </button>
-                <button class="pill-btn primary" onclick="downloadPdfReport()">
-                  <span style="display:inline-flex;align-items:center;gap:7px;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
-                    Download PDF
+                    Request Download Report
                   </span>
                 </button>
               </div>
-              <div class="public-note" style="text-align:left; margin-top:16px;">Leave From/To blank to include every job on record. Report covers jobs, phone/service details, item usage, total sales per tech, inventory and the gross / capital / net sales summary for the selected branch(es).</div>
+              <div class="public-note" style="text-align:left; margin-top:16px;">Leave From/To blank to include every job on record. Sends a request to the Owner for approval before the report is downloaded. Report covers jobs, phone/service details, item usage, total sales per tech, inventory and the gross / capital / net sales summary for the selected branch(es).</div>
             </div>
           </div>
           <div class="panel">
@@ -7187,6 +7181,24 @@ function reportFileBase(){
   const d = getToday();
   const stamp = todayStr(d);
   return `GIDS-report-${stamp}`;
+}
+
+async function requestDownloadReport(){
+  if(!session.isAdmin || session.isOwner) return;
+  const branch = document.getElementById("rep-branch")?.value || "__all__";
+  const from = document.getElementById("rep-from")?.value || "";
+  const to = document.getElementById("rep-to")?.value || "";
+  const branchLabel = branch === "__all__" ? "All Branches" : branch;
+  const rangeLabel = (from || to) ? `${from || "start"} to ${to || "today"}` : "all jobs on record";
+  await requestOwnerAction({
+    type: "report-download",
+    title: "Report download request",
+    details: `Requested a report for ${branchLabel} (${rangeLabel}).`,
+    branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH,
+    entityName: branchLabel,
+    payload: { branchFilter: branch, from, to }
+  });
+  showToast("Owner approval requested for this report download");
 }
 
 function downloadExcelReport(){
