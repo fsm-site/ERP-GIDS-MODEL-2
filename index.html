@@ -3544,7 +3544,7 @@ function updateNavForRole(role){
     const visible = role === "owner"
       ? ["admin", "employee", "inventory-public", "customer-status", "staff-directory", "attendance"].includes(view)
       : role === "admin"
-        ? view !== "staff-gate"
+        ? !["staff-gate", "employee", "inventory-public", "customer-status"].includes(view)
         : role === "staff"
           ? ["employee", "inventory-public", "customer-status", "staff-directory", "attendance"].includes(view)
           : false;
