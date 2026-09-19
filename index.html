@@ -991,14 +991,14 @@
             <div class="panel">
               <div class="panel-head"><div><h3>San Antonio</h3><div class="desc">Inventory for this branch</div></div></div>
               <table>
-                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
+                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th><th style="text-align:right">Actions</th></tr></thead>
                 <tbody id="public-inv-body-branch1"></tbody>
               </table>
             </div>
             <div class="panel" style="margin-top:16px;">
               <div class="panel-head"><div><h3>Bataan</h3><div class="desc">Inventory for this branch</div></div></div>
               <table>
-                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
+                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th><th style="text-align:right">Actions</th></tr></thead>
                 <tbody id="public-inv-body-branch2"></tbody>
               </table>
             </div>
@@ -6530,8 +6530,15 @@ function renderPublicInventory(){
       const items = state.inventory.filter(i => i.branchId === branchId);
       return items.length ? items.map(i=>{
         const avail = Number(i.quantity) - Number(i.used||0);
-        return `<tr><td>${escapeHTML(i.itemName)}</td><td>${i.quantity}</td><td>${Number(i.used||0)}</td><td>${peso(Number(i.price||0))}</td><td>${avail}</td></tr>`;
-      }).join("") : `<tr class="empty-row"><td colspan="5">No inventory items yet.</td></tr>`;
+        return `<tr><td>${escapeHTML(i.itemName)}</td><td>${i.quantity}</td><td>${Number(i.used||0)}</td><td>${peso(Number(i.price||0))}</td><td>${avail}</td>
+          <td style="text-align:right">
+            <div class="row-actions" style="justify-content:flex-end;">
+              <button onclick="openInvModal('${i.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+              <button class="del" onclick="deleteInv('${i.id}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("") : `<tr class="empty-row"><td colspan="6">No inventory items yet.</td></tr>`;
     };
     const b1 = document.getElementById("public-inv-body-branch1");
     const b2 = document.getElementById("public-inv-body-branch2");
