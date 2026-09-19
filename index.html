@@ -6523,11 +6523,12 @@ async function deleteOwnerRequest(id){
 
 function renderEmployeeDashboard(){
   const today = todayStr();
-  document.getElementById("hero-branch").textContent = ui.branch;
+  const branch = (session.isOwner || session.isAdmin) ? (ui.adminBranch || DEFAULT_BRANCH) : ui.branch;
+  document.getElementById("hero-branch").textContent = branch;
   document.getElementById("hero-date").textContent = formatSiteDate(getToday());
-  const rows = state.transactions.filter(t=> t.branch===ui.branch && t.date===today).sort((a,b)=>b.ts-a.ts);
+  const rows = state.transactions.filter(t=> t.branch===branch && t.date===today).sort((a,b)=>b.ts-a.ts);
   document.getElementById("stat-clients").textContent = rows.length;
-  document.getElementById("stat-clients-branch").textContent = ui.branch + " branch";
+  document.getElementById("stat-clients-branch").textContent = branch + " branch";
   document.getElementById("stat-sales").textContent = peso(rows.reduce((s,t)=>s+collectedAmount(t),0));
 
   const body = document.getElementById("employee-txn-body");
@@ -6545,7 +6546,7 @@ function renderEmployeeDashboard(){
           ${balanceAmount(t)>0 ? `<button onclick="collectBalance('${t.id}')" title="Collect balance">${collectIconSVG()}</button>` : ""}
         </div>
       </td>
-    </tr>`).join("") : `<tr class="empty-row"><td colspan="7">No jobs logged yet today for ${ui.branch}. Tap "Add job" to log one.</td></tr>`;
+    </tr>`).join("") : `<tr class="empty-row"><td colspan="7">No jobs logged yet today for ${branch}. Tap "Add job" to log one.</td></tr>`;
 }
 
 function renderPublicInventory(){
