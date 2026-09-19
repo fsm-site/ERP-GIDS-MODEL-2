@@ -94,6 +94,16 @@
   .nav-item.active{ background:var(--blue-pale); color:#fff; border-color:rgba(59,158,255,.4); box-shadow:0 0 0 1px rgba(59,158,255,.1) inset; }
 
   .rail-foot{ margin-top:auto; padding-top:16px; border-top:1px solid var(--line); font-size:11px; color:#4E628A; letter-spacing:.3px; }
+  .rail-controls{ display:flex; flex-direction:column; gap:8px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-top:8px; }
+  .rail-controls .branch-select{ width:100%; }
+  /* These same controls used to live in the topbar per-view — now that
+     they're persistent in the sidebar, hide any old copies still being
+     generated inside the topbar rather than rewriting every view. */
+  .topbar-right select.branch-select,
+  .topbar-right button[onclick*="openChangePasswordModal"],
+  .topbar-right button[onclick*="switchView('security-access')"],
+  .topbar-right [data-logout-action],
+  .topbar-right #refresh-app-btn{ display:none !important; }
   .copyright{ margin-top:10px; font-size:10px; color:#6f87a3; letter-spacing:.2px; }
 
   /* ---------- Main ---------- */
@@ -879,6 +889,14 @@
     <div class="nav-item" data-view="finances">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
       <span class="label">FINANCES</span>
+    </div>
+
+    <div class="rail-controls">
+      <select class="branch-select" id="branch-select" style="width:100%;"></select>
+      <button class="pill-btn ghost" id="sidebar-security-btn" type="button" onclick="switchView('security-access')" style="width:100%;display:none;">Security and Access</button>
+      <button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()" style="width:100%;">Change Password</button>
+      <button class="pill-btn ghost" type="button" onclick="hardRefreshApp()" style="width:100%;" title="Reload the app and re-sync your data">Refresh</button>
+      <button class="pill-btn danger" data-shared-logout data-logout-action type="button" style="width:100%;">Log out</button>
     </div>
 
     <div class="rail-foot">REPAIR · SERVICE · ACCESSORIES<br><span id="rail-branch-line">San Antonio · Active Branch</span><br><br><strong>GIDS AYPHONE TECH</strong><div class="copyright">© 2026 GIDS AYPHONE TECH<br>All rights reserved.</div></div>
@@ -4347,7 +4365,7 @@ function branchSelectorHTML(bindKey){
 function bindBranchSelector(who){
   const el = document.getElementById("branch-select");
   if(!el) return;
-  el.addEventListener("change", ()=>{
+  el.onchange = ()=>{
     if(who==="employee") ui.branch = el.value; else ui.adminBranch = el.value;
     updateRailBranchFooter();
     // Realtime listeners are branch-filtered at the Firestore query level
@@ -4357,7 +4375,7 @@ function bindBranchSelector(who){
     // the newly-selected branch appear empty ("disappeared").
     startRealtimeSync();
     renderAll();
-  });
+  };
 }
 function updateRailBranchFooter(){
   const el = document.getElementById("rail-branch-line");
@@ -4970,8 +4988,22 @@ async function saveStaffRepairStatus(id){
   const ok = await updateJobStatus(id, select.value);
   if(ok) closeOverlay();
 }
+function renderSidebarControls(){
+  const bindKey = (session.isOwner || session.isAdmin) ? "ui.adminBranch" : "ui.branch";
+  const html = branchSelectorHTML(bindKey);
+  const select = document.getElementById("branch-select");
+  if(select && select.innerHTML !== html.replace(/^<select[^>]*>|<\/select>$/g, "")){
+    const optionsHtml = html.replace(/^<select[^>]*>/, "").replace(/<\/select>$/, "");
+    if(select.innerHTML !== optionsHtml) select.innerHTML = optionsHtml;
+  }
+  bindBranchSelector((session.isOwner || session.isAdmin) ? "admin" : "employee");
+  const securityBtn = document.getElementById("sidebar-security-btn");
+  if(securityBtn) securityBtn.style.display = hasSecurityAccess() ? "block" : "none";
+}
+
 function renderAll(){
   updateRailBranchFooter();
+  renderSidebarControls();
   if(session.isDeveloper){
     renderStaffAccess();
     renderAdminAccess();
