@@ -4336,7 +4336,7 @@ function switchView(key){
       titleEl.innerHTML = `Hi, <span class="hi">${escapeHTML(currentUserName())}!</span>`;
       subEl.innerHTML = `Full access · jobs, inventory and branch sales`;
       rightEl.innerHTML = branchSelectorHTML("ui.adminBranch") +
-        `<div class="badge-role"><span class="dot"></span><span>Admin</span></div>` +
+        `<div class="badge-role"><span class="dot"></span><span>${session.isOwner ? "Owner" : "Admin"}</span></div>` +
         `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
         `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
       bindBranchSelector("admin");
