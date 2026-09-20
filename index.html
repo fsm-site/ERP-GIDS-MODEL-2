@@ -216,6 +216,9 @@
   .row-actions button:hover{ background:var(--blue-pale); color:var(--blue-light); }
   .row-actions button.del:hover{ background:rgba(255,101,82,.14); color:var(--warn); }
   .row-actions svg{ width:15px; height:15px; }
+  .row-actions .pill-btn{ border:1px solid var(--line-strong); background:var(--panel-2); padding:6px 9px; color:var(--text); }
+  .row-actions .pill-btn:hover{ background:var(--blue-pale); color:var(--blue-light); }
+  .row-actions .pill-btn.danger:hover{ background:rgba(255,101,82,.14); color:var(--warn); }
 
   /* ---------- Login ---------- */
   .login-wrap{ display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 78px); padding:40px 20px; }
@@ -7405,8 +7408,8 @@ function renderAdminTxnsTable(){
         <div class="row-actions" style="justify-content:flex-end;">
           <button onclick="openReceiptModal('${t.id}')" title="Receipt">${receiptIconSVG()}</button>
           ${balanceAmount(t)>0 ? `<button onclick="collectBalance('${t.id}')" title="Collect balance">${collectIconSVG()}</button>` : ""}
-          <button onclick="openTxnModal(true,'${t.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
-          <button class="del" onclick="deleteTxn('${t.id}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
+          <button class="pill-btn small ghost" onclick="openTxnModal(true,'${t.id}')" title="Edit job">Edit</button>
+          <button class="pill-btn small danger" onclick="deleteTxn('${t.id}')" title="Delete job">Delete</button>
         </div>
       </td>
     </tr>`).join("") : `<tr class="empty-row"><td colspan="8">${emptyMsg}</td></tr>`;
@@ -7625,6 +7628,8 @@ function openTxnModal(isAdmin=!!session.isAdmin, editId=null){
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><strong>Additional services</strong><button class="pill-btn small ghost" type="button" onclick="addAdditionalServiceRow()">+ Add service</button></div>
       <div id="f-additional-services">${additionalServiceRowsHTML(editing?.serviceItems?.slice(1) || [])}</div>
     </div>
+    <div class="field"><label>Discounted Client</label><select id="f-discounted-client" onchange="toggleDiscountAmount()"><option value="No" ${!editing||editing.discountedClient!=="Yes"?"selected":""}>No</option><option value="Yes" ${editing&&editing.discountedClient==="Yes"?"selected":""}>Yes</option></select></div>
+    <div class="field" id="f-discount-wrap" style="display:none;"><label>Discount amount (₱)</label><input id="f-discount" type="number" min="0" step="0.01" placeholder="0" value="${editing&&editing.discountAmount!=null?editing.discountAmount:""}" oninput="recalcTotal()"></div>
     <div class="field"><label>Total amount (₱) <span style="font-weight:400;color:var(--muted)">all services included</span></label><input id="f-fee" type="number" min="0" value="${editing?editing.fee:0}" readonly style="background:var(--panel-2); font-weight:700;"></div>
     <div class="field"><label>Mode of payment</label><select id="f-payment"><option value="">Select payment…</option>${paymentOptions}</select></div>
     <div id="f-mix-wrap" style="display:none;grid-template-columns:1fr 1fr;gap:12px;">
@@ -7676,6 +7681,7 @@ function openTxnModal(isAdmin=!!session.isAdmin, editId=null){
     moreServicesEl.value = "Yes";
   }
   toggleAdditionalServices();
+  toggleDiscountAmount();
   document.getElementById("f-payment").addEventListener("change", onPaymentModeChange);
   onPaymentModeChange();
   onInvoiceStatusChange();
@@ -7735,9 +7741,23 @@ function recalcTotal(){
   const amt = Number(amtEl.value || 0);
   const additionalTotal = [...document.querySelectorAll(".f-additional-amount")]
     .reduce((total,input)=>total + Math.max(0, Number(input.value || 0)), 0);
-  feeEl.value = Number((qty * amt + additionalTotal).toFixed(2));
+  const subtotal = qty * amt + additionalTotal;
+  const discount = Math.max(0, Number(document.getElementById("f-discount")?.value || 0));
+  feeEl.value = Number(Math.max(0, subtotal - discount).toFixed(2));
   recalcBalance();
   recalcMixPayment();
+}
+
+function toggleDiscountAmount(){
+  const selector = document.getElementById("f-discounted-client");
+  const wrap = document.getElementById("f-discount-wrap");
+  if(!selector || !wrap) return;
+  wrap.style.display = selector.value === "Yes" ? "block" : "none";
+  if(selector.value !== "Yes"){
+    const discountEl = document.getElementById("f-discount");
+    if(discountEl) discountEl.value = "";
+  }
+  recalcTotal();
 }
 
 function toggleAdditionalServices(){
@@ -7844,7 +7864,8 @@ async function saveTxn(id, isAdmin){
   // Never let a shared dashboard button accidentally downgrade an Admin save
   // into the Staff-only cloud path. The authenticated role is authoritative.
   isAdmin = !!(isAdmin || session.isAdmin);
-  if(isAdmin && !session.isOwner && id){
+  const ownerCanManageJobsDirectly = session.isOwner === true;
+  if(isAdmin && !ownerCanManageJobsDirectly && id){
     const existing = state.transactions.find(item => item.id === id);
     if(existing){
       const confirmed = confirm("Request owner approval before revising this job?");
@@ -7872,6 +7893,10 @@ async function saveTxn(id, isAdmin){
   const description = document.getElementById("f-desc").value.trim();
   const quantity = Math.max(1, Number(document.getElementById("f-qty").value || 1));
   const amount = Number(document.getElementById("f-amount").value || 0);
+  const discountedClient = document.getElementById("f-discounted-client").value;
+  const discountRaw = document.getElementById("f-discount")?.value.trim() || "";
+  const discountAmount = discountRaw === "" ? 0 : Number(discountRaw);
+  if(!Number.isFinite(discountAmount) || discountAmount < 0){ showToast("Enter a valid discount amount"); return; }
   const date = document.getElementById("f-date").value || todayStr();
   const paymentMode = document.getElementById("f-payment").value.trim();
   const cashAmount = Number(document.getElementById("f-cash-amount")?.value || 0);
@@ -7894,6 +7919,9 @@ async function saveTxn(id, isAdmin){
     showToast("Complete each additional service and amount");
     return;
   }
+  const subtotal = Number((quantity * amount + additionalServices.reduce((total,item)=>total + item.amount, 0)).toFixed(2));
+  if(discountedClient === "No" && discountAmount > 0){ showToast("Select Yes for a discounted client"); return; }
+  if(discountAmount > subtotal){ showToast("Discount cannot exceed the service total"); return; }
   const serviceItems = [{serviceType, amount:Number((quantity * amount).toFixed(2))}, ...additionalServices];
 
   let amountPaid = 0, balance = 0;
@@ -7940,7 +7968,7 @@ async function saveTxn(id, isAdmin){
 
   if(id){
     const t = state.transactions.find(x=>x.id===id);
-    Object.assign(t, {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip});
+    Object.assign(t, {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip, discountedClient, discountAmount});
     if(Object.prototype.hasOwnProperty.call(t,"customerEmail")) delete t.customerEmail;
   } else {
     // Real jobs use the persistent 3-digit sequence. Trial jobs are clearly
@@ -7964,7 +7992,7 @@ async function saveTxn(id, isAdmin){
       ? trialTrackingNo("RCPT")
       : serviceNo.replace(/^SVC-/, "RCPT-");
     if(!trialJob) state.nextSeq = seq + 1;
-    const newJob = {id:newId, ts:Date.now(), date, branch, tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, customerName, customerPhone, appointmentAt, jobStatus, invoiceStatus, amountPaid, balance, description, quantity, amount, paymentMode, cashAmount, eWalletAmount, clientTip, serviceNo, receiptNo, isTrial:trialJob, statusToken: makeRepairStatusToken()};
+    const newJob = {id:newId, ts:Date.now(), date, branch, tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, customerName, customerPhone, appointmentAt, jobStatus, invoiceStatus, amountPaid, balance, description, quantity, amount, paymentMode, cashAmount, eWalletAmount, clientTip, discountedClient, discountAmount, serviceNo, receiptNo, isTrial:trialJob, statusToken: makeRepairStatusToken()};
     state.transactions.push(newJob);
     if(staffCreated){
       try{
@@ -8051,7 +8079,8 @@ function addStockMovement(item, qty, type, reference){
 async function deleteTxn(id){
   const t = state.transactions.find(x=>x.id===id);
   if(!t) return;
-  if(session.isAdmin && !session.isOwner){
+  const ownerCanManageJobsDirectly = session.isOwner === true;
+  if(session.isAdmin && !ownerCanManageJobsDirectly){
     const confirmed = confirm("Send this deletion request to the owner for approval?");
     if(!confirmed) return;
     requestOwnerAction({
