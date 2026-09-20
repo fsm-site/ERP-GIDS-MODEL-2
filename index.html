@@ -2367,6 +2367,8 @@ async function createStaffJobInCollection(job){
     balance: Number(job.balance || 0),
     cashAmount: Number(job.cashAmount || 0),
     eWalletAmount: Number(job.eWalletAmount || 0),
+    discountedClient: job.discountedClient === "Yes" ? "Yes" : "No",
+    discountAmount: Number(job.discountAmount || 0),
     invoiceStatus: job.invoiceStatus || "",
     paymentMode: job.paymentMode || "",
     clientTip: Number(job.clientTip || 0),
@@ -2424,6 +2426,7 @@ async function syncAdminJobTransaction(job, inventoryIds=[]){
     customerName: job.customerName || "", fee: Number(job.fee || 0), amount: Number(job.amount || 0),
     amountPaid: Number(job.amountPaid || 0), balance: Number(job.balance || 0),
     cashAmount: Number(job.cashAmount || 0), eWalletAmount: Number(job.eWalletAmount || 0),
+    discountedClient: job.discountedClient === "Yes" ? "Yes" : "No", discountAmount: Number(job.discountAmount || 0),
     invoiceStatus: job.invoiceStatus || "", paymentMode: job.paymentMode || "", clientTip: Number(job.clientTip || 0)
   };
 
@@ -2707,6 +2710,7 @@ async function syncOperationalCollections(){
           tech: t.tech || "", customerName: t.customerName || "",
           fee: Number(t.fee || 0), amount: Number(t.amount || 0),
           amountPaid: Number(t.amountPaid || 0), balance: Number(t.balance || 0),
+          discountedClient: t.discountedClient === "Yes" ? "Yes" : "No", discountAmount: Number(t.discountAmount || 0),
           invoiceStatus: t.invoiceStatus || "", paymentMode: t.paymentMode || ""
         };
         batch.set(db.collection("salesPrivate").doc(id), saleRecord, {merge:true});
@@ -5990,6 +5994,8 @@ function openTxnModal(isAdmin=!!session.isAdmin, editId=null){
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><strong>Additional services</strong><button class="pill-btn small ghost" type="button" onclick="addAdditionalServiceRow()">+ Add service</button></div>
       <div id="f-additional-services">${additionalServiceRowsHTML(editing?.serviceItems?.slice(1) || [])}</div>
     </div>
+    <div class="field"><label>Discounted Client</label><select id="f-discounted-client" onchange="toggleDiscountField()"><option value="No" ${!editing||editing.discountedClient!=="Yes"?"selected":""}>No</option><option value="Yes" ${editing&&editing.discountedClient==="Yes"?"selected":""}>Yes</option></select></div>
+    <div class="field" id="f-discount-wrap" style="display:none;"><label>Amount of discount (₱)</label><input id="f-discount" type="number" min="0" step="0.01" placeholder="0" value="${editing&&editing.discountAmount!=null?editing.discountAmount:""}" oninput="recalcTotal()"></div>
     <div class="field"><label>Total amount (₱) <span style="font-weight:400;color:var(--muted)">all services included</span></label><input id="f-fee" type="number" min="0" value="${editing?editing.fee:0}" readonly style="background:var(--panel-2); font-weight:700;"></div>
     <div class="field"><label>Mode of payment</label><select id="f-payment"><option value="">Select payment…</option>${paymentOptions}</select></div>
     <div id="f-mix-wrap" style="display:none;grid-template-columns:1fr 1fr;gap:12px;">
@@ -6041,6 +6047,7 @@ function openTxnModal(isAdmin=!!session.isAdmin, editId=null){
     moreServicesEl.value = "Yes";
   }
   toggleAdditionalServices();
+  toggleDiscountField();
   document.getElementById("f-payment").addEventListener("change", onPaymentModeChange);
   onPaymentModeChange();
   onInvoiceStatusChange();
@@ -6100,9 +6107,21 @@ function recalcTotal(){
   const amt = Number(amtEl.value || 0);
   const additionalTotal = [...document.querySelectorAll(".f-additional-amount")]
     .reduce((total,input)=>total + Math.max(0, Number(input.value || 0)), 0);
-  feeEl.value = Number((qty * amt + additionalTotal).toFixed(2));
+  const subtotal = qty * amt + additionalTotal;
+  const discount = document.getElementById("f-discounted-client")?.value === "Yes"
+    ? Math.max(0, Number(document.getElementById("f-discount")?.value || 0))
+    : 0;
+  feeEl.value = Number(Math.max(0, subtotal - discount).toFixed(2));
   recalcBalance();
   recalcMixPayment();
+}
+
+function toggleDiscountField(){
+  const selector = document.getElementById("f-discounted-client");
+  const wrap = document.getElementById("f-discount-wrap");
+  if(!selector || !wrap) return;
+  wrap.style.display = selector.value === "Yes" ? "block" : "none";
+  recalcTotal();
 }
 
 function toggleAdditionalServices(){
@@ -6224,8 +6243,14 @@ async function saveTxn(id, isAdmin){
   const paymentMode = document.getElementById("f-payment").value.trim();
   const cashAmount = Number(document.getElementById("f-cash-amount")?.value || 0);
   const eWalletAmount = Number(document.getElementById("f-ewallet-amount")?.value || 0);
+  const discountedClient = document.getElementById("f-discounted-client").value;
+  const discountRaw = document.getElementById("f-discount")?.value.trim() || "";
+  const discountAmount = discountedClient === "Yes" ? (discountRaw === "" ? NaN : Number(discountRaw)) : 0;
   const clientTipRaw = document.getElementById("f-client-tip").value.trim();
   const clientTip = clientTipRaw === "" ? 0 : Number(clientTipRaw);
+  if(discountedClient === "Yes" && (!Number.isFinite(discountAmount) || discountAmount < 0)){
+    showToast("Enter a valid discount amount"); return;
+  }
   if(!Number.isFinite(clientTip) || clientTip < 0){ showToast("Enter a valid Client Tip amount"); return; }
   recalcTotal();
   const fee = Number(document.getElementById("f-fee").value || 0);
@@ -6291,7 +6316,7 @@ async function saveTxn(id, isAdmin){
     if(existing){
       const confirmed = confirm("Request owner approval before revising this job?");
       if(!confirmed) return;
-      const proposedChanges = {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip};
+      const proposedChanges = {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, discountedClient, discountAmount, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip};
       await requestOwnerAction({
         type: "job-revision",
         title: "Job revision request",
@@ -6309,7 +6334,7 @@ async function saveTxn(id, isAdmin){
 
   if(id){
     const t = state.transactions.find(x=>x.id===id);
-    Object.assign(t, {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip});
+    Object.assign(t, {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, discountedClient, discountAmount, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip});
     if(Object.prototype.hasOwnProperty.call(t,"customerEmail")) delete t.customerEmail;
   } else {
     // Real jobs use the persistent 3-digit sequence. Trial jobs are clearly
@@ -6333,7 +6358,7 @@ async function saveTxn(id, isAdmin){
       ? trialTrackingNo("RCPT")
       : serviceNo.replace(/^SVC-/, "RCPT-");
     if(!trialJob) state.nextSeq = seq + 1;
-    const newJob = {id:newId, ts:Date.now(), date, branch, tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, customerName, customerPhone, appointmentAt, jobStatus, invoiceStatus, amountPaid, balance, description, quantity, amount, paymentMode, cashAmount, eWalletAmount, clientTip, serviceNo, receiptNo, isTrial:trialJob, statusToken: makeRepairStatusToken()};
+    const newJob = {id:newId, ts:Date.now(), date, branch, tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, discountedClient, discountAmount, customerName, customerPhone, appointmentAt, jobStatus, invoiceStatus, amountPaid, balance, description, quantity, amount, paymentMode, cashAmount, eWalletAmount, clientTip, serviceNo, receiptNo, isTrial:trialJob, statusToken: makeRepairStatusToken()};
     state.transactions.push(newJob);
     // Must run BEFORE the Firestore write below — otherwise the write
     // captures the old (pre-increment) used-count, so the cloud copy of
