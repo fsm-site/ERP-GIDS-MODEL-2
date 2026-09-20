@@ -2037,6 +2037,7 @@
      data, and Firestore access rules. */
 const BRANCHES = ["San Antonio","Bataan"];
 const ACTIVE_BRANCHES = ["San Antonio", "Bataan"];
+const ATTENDANCE_START_DATE = "2026-09-20";
 let ENTITLED_BRANCHES = [...ACTIVE_BRANCHES];
 let technicianDirectoryLoaded = false;
 const DEFAULT_BRANCH = ACTIVE_BRANCHES[0] || BRANCHES[0];
@@ -5845,7 +5846,7 @@ function renderAttendanceManagement(){
   const search = (ui.attMgmtSearch || "").trim().toLowerCase();
 
   const employeesByTech = new Map(allActiveEmployees().map(e => [e.technician, e]));
-  let rows = (state.attendance || []).filter(r => inDateRange(r.date, range));
+  let rows = (state.attendance || []).filter(r => r.status !== "dismissed" && inDateRange(r.date, range));
   if(branchFilter) rows = rows.filter(r => (r.branchId === branchIdForName(branchFilter)) || employeesByTech.get(r.tech)?.branch === branchFilter);
   if(search) rows = rows.filter(r => String(r.tech||"").toLowerCase().includes(search));
   rows = rows.sort((a,b) => (b.date||"").localeCompare(a.date||""));
@@ -5923,7 +5924,8 @@ function renderAttendanceReports(){
   if(monthInput && !monthInput.value) monthInput.value = monthStr();
   const month = ui.attReportMonth || monthInput?.value || monthStr();
   const employees = allActiveEmployees();
-  const records = (state.attendance || []).filter(r => (r.date||"").slice(0,7) === month);
+  const records = (state.attendance || []).filter(r => r.status !== "dismissed" && (r.date||"").slice(0,7) === month);
+  const reportDayCount = attendanceReportDayCount(month);
 
   const byEmployeeBody = document.getElementById("att-report-employee-body");
   if(byEmployeeBody){
@@ -5931,8 +5933,7 @@ function renderAttendanceReports(){
       const empRecords = records.filter(r => r.tech === e.technician);
       const present = empRecords.filter(r => r.status !== "leave" && r.checkIn).length;
       const leave = empRecords.filter(r => r.status === "leave").length;
-      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
-      const absent = Math.max(0, daysInMonth - present - leave);
+      const absent = Math.max(0, reportDayCount - present - leave);
       return `<tr><td>${escapeHTML(e.name)}</td><td>${escapeHTML(e.branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td>
         <td><div class="attendance-report-actions"><button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(e.technician)}')">View</button><button class="pill-btn small danger" onclick="deleteEmployeeAttendanceMonth('${escapeHTML(e.technician)}','${month}')">Delete</button></div></td></tr>`;
     }).join("") || `<tr class="empty-row"><td colspan="6">No employees found.</td></tr>`;
@@ -5946,8 +5947,7 @@ function renderAttendanceReports(){
       const branchRecords = records.filter(r => techs.has(r.tech));
       const present = branchRecords.filter(r => r.status !== "leave" && r.checkIn).length;
       const leave = branchRecords.filter(r => r.status === "leave").length;
-      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
-      const absent = Math.max(0, (branchEmployees.length * daysInMonth) - present - leave);
+      const absent = Math.max(0, (branchEmployees.length * reportDayCount) - present - leave);
       return `<tr><td>${escapeHTML(branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td></tr>`;
     }).join("");
   }
@@ -5956,7 +5956,7 @@ function renderAttendanceReports(){
   if(absenceBody){
     const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
     const monthDates = Array.from({length:daysInMonth}, (_,i)=> `${month}-${String(i+1).padStart(2,"0")}`)
-      .filter(d => parseSiteDate(d) <= getToday());
+      .filter(d => d >= ATTENDANCE_START_DATE && parseSiteDate(d) <= getToday());
     const attendanceRows = [];
     employees.forEach(e => {
       monthDates.forEach(d => {
@@ -5981,6 +5981,15 @@ function renderAttendanceReports(){
       return `<tr><td>${escapeHTML(m)}</td><td>${present}</td><td>—</td><td>${leave}</td></tr>`;
     }).join("") : `<tr class="empty-row"><td colspan="4">No attendance history yet.</td></tr>`;
   }
+}
+
+function attendanceReportDayCount(month){
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate()).padStart(2,"0")}`;
+  const start = monthStart > ATTENDANCE_START_DATE ? monthStart : ATTENDANCE_START_DATE;
+  const end = monthEnd < todayStr() ? monthEnd : todayStr();
+  const startDate = parseSiteDate(start), endDate = parseSiteDate(end);
+  return startDate && endDate && startDate <= endDate ? Math.floor((endDate-startDate)/86400000)+1 : 0;
 }
 
 function renderAttendance(){
@@ -6120,12 +6129,27 @@ async function deleteAttendance(id){
   }
 }
 
-function deleteAttendanceReportDay(id, tech, date){
+async function deleteAttendanceReportDay(id, tech, date){
   if(!id){
-    showToast(`${tech} is already marked absent for ${formatSiteDate(date)}`);
+    if(!session.isAdmin || !confirm(`Delete the absent record for ${tech} on ${formatSiteDate(date)}?`)) return;
+    const employee = allActiveEmployees().find(item=>item.technician===tech);
+    const dismissed = {id:uid(), uid:"", branchId:employee?.branch ? branchIdForName(employee.branch) : currentBranchId(), tech, date, checkIn:"", checkOut:"", status:"dismissed"};
+    state.attendance.push(dismissed);
+    try{
+      await syncAttendanceToCollection();
+      writeLocal();
+      renderAttendance();
+      showToast("Absent record deleted");
+    }catch(error){
+      state.attendance = state.attendance.filter(item=>item.id!==dismissed.id);
+      writeLocal();
+      renderAttendance();
+      console.error("Could not delete derived absent record:", error);
+      showToast("Absent record could not be deleted");
+    }
     return;
   }
-  deleteAttendance(id);
+  await deleteAttendance(id);
 }
 
 async function deleteEmployeeAttendanceMonth(tech, month){
