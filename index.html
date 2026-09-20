@@ -1227,7 +1227,7 @@
                 <table><thead><tr><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th></tr></thead><tbody id="att-report-branch-body"></tbody></table>
               </div>
               <div id="att-report-absence" class="attendance-table-wrap" style="display:none;">
-                <table><thead><tr><th>Employee</th><th>Branch</th><th>Date</th></tr></thead><tbody id="att-report-absence-body"></tbody></table>
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Date</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody id="att-report-absence-body"></tbody></table>
               </div>
               <div id="att-report-summary" class="attendance-table-wrap" style="display:none;">
                 <table><thead><tr><th>Month</th><th>Total Present</th><th>Total Absent</th><th>Total Leave</th></tr></thead><tbody id="att-report-summary-body"></tbody></table>
@@ -1593,6 +1593,16 @@
     <div id="fin-revenue-vs-opex" class="finance-comparison"></div>
   </div>
 
+<div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Sales by Branch</h3>
+        <div class="desc">Total collected revenue, all-time, per branch</div>
+      </div>
+    </div>
+    <div id="fin-sales-by-branch" class="finance-branch-chart"></div>
+  </div>
+
   <div class="panel" style="margin-top:16px;">
     <div class="panel-head"><div><h3>OPEX</h3><div class="desc">Operating expenses across all branches</div></div><button class="pill-btn primary" onclick="openExpenseModal()">+ Add OPEX</button></div>
     <div class="finance-grid" style="margin-top:6px;">
@@ -1604,15 +1614,7 @@
     <div class="table-wrap" style="margin-top:12px;"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Branch</th><th style="text-align:right">Amount</th><th style="text-align:right">Action</th></tr></thead><tbody id="fin-opex-body"></tbody></table></div>
   </div>
 
-  <div class="panel" style="margin-top:16px;">
-    <div class="panel-head">
-      <div>
-        <h3>Sales by Branch</h3>
-        <div class="desc">Total collected revenue, all-time, per branch</div>
-      </div>
-    </div>
-    <div id="fin-sales-by-branch" class="finance-branch-chart"></div>
-  </div>
+  
 
   </div>
 
@@ -5880,13 +5882,13 @@ function viewEmployeeAttendanceHistory(tech){
   const emp = allActiveEmployees().find(e => e.technician === tech);
   const records = (state.attendance || []).filter(r => r.tech === tech).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   const rows = records.slice(0,60).map(r => `
-    <tr><td>${escapeHTML(formatSiteDate(r.date))}</td><td>${formatAttendanceTime(r.checkIn)}</td><td>${formatAttendanceTime(r.checkOut)}</td><td>${attendanceStatusBadge(r)}</td></tr>
+    <tr><td>${escapeHTML(formatSiteDate(r.date))}</td><td>${formatAttendanceTime(r.checkIn)}</td><td>${formatAttendanceTime(r.checkOut)}</td><td>${attendanceStatusBadge(r)}</td><td style="text-align:right;white-space:nowrap;"><button class="pill-btn small ghost" onclick="openAttendanceEditModal('${r.id}')">Edit</button> <button class="pill-btn small danger" onclick="deleteAttendance('${r.id}'); closeOverlay();">Delete</button></td></tr>
   `).join("");
   openOverlay(`
     <h3>${escapeHTML(emp?.name || tech)} — Attendance history</h3>
     <div class="sub">${escapeHTML(emp?.branch || "")} · last 60 records</div>
     <div class="attendance-table-wrap" style="margin-top:12px;max-height:400px;overflow-y:auto;">
-      <table><thead><tr><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No records yet.</td></tr>'}</tbody></table>
+      <table><thead><tr><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No records yet.</td></tr>'}</tbody></table>
     </div>
     <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
   `, "modal-light");
@@ -5931,16 +5933,17 @@ function renderAttendanceReports(){
     const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
     const monthDates = Array.from({length:daysInMonth}, (_,i)=> `${month}-${String(i+1).padStart(2,"0")}`)
       .filter(d => parseSiteDate(d) <= getToday());
-    const absenceRows = [];
+    const attendanceRows = [];
     employees.forEach(e => {
       monthDates.forEach(d => {
-        const hasRecord = records.some(r => r.tech === e.technician && r.date === d);
-        if(!hasRecord) absenceRows.push({ name:e.name, branch:e.branch, date:d });
+        const record = records.find(r => r.tech === e.technician && r.date === d);
+        const status = record?.status === "leave" ? "Leave" : record?.checkIn ? "Present" : "Absent";
+        attendanceRows.push({ name:e.name, technician:e.technician, branch:e.branch, date:d, status, recordId:record?.id || "" });
       });
     });
-    absenceBody.innerHTML = absenceRows.length
-      ? absenceRows.slice(0,200).map(a => `<tr><td>${escapeHTML(a.name)}</td><td>${escapeHTML(a.branch)}</td><td>${escapeHTML(formatSiteDate(a.date))}</td></tr>`).join("")
-      : `<tr class="empty-row"><td colspan="3">No absences recorded for this month.</td></tr>`;
+    absenceBody.innerHTML = attendanceRows.length
+      ? attendanceRows.slice(0,300).map(a => `<tr><td>${escapeHTML(a.name)}</td><td>${escapeHTML(a.branch)}</td><td>${escapeHTML(formatSiteDate(a.date))}</td><td>${attendanceStatusBadge(a.status==="Present" ? {checkIn:true} : a.status==="Leave" ? {status:"leave"} : null)}</td><td style="text-align:right;white-space:nowrap;"><button class="pill-btn small ghost" onclick="openAttendanceEditModal('${a.recordId}','${escapeHTML(a.technician)}','${a.date}')">Edit</button>${a.recordId ? ` <button class="pill-btn small danger" onclick="deleteAttendance('${a.recordId}')">Delete</button>` : ""}</td></tr>`).join("")
+      : `<tr class="empty-row"><td colspan="5">No attendance dates available for this month.</td></tr>`;
   }
 
   const summaryBody = document.getElementById("att-report-summary-body");
@@ -6013,37 +6016,52 @@ function renderAttendance(){
   </tr>`).join("") : `<tr class="empty-row"><td colspan="${session.isAdmin ? 6 : 5}">No attendance recorded today.</td></tr>`;
 }
 
-function openAttendanceEditModal(id){
+function toggleAttendanceEditStatus(){
+  const status = document.getElementById("attendance-edit-status")?.value;
+  const inField = document.getElementById("attendance-edit-in-wrap");
+  const outField = document.getElementById("attendance-edit-out-wrap");
+  if(inField) inField.style.display = status === "present" ? "block" : "none";
+  if(outField) outField.style.display = status === "present" ? "block" : "none";
+}
+
+function openAttendanceEditModal(id, reportTech="", reportDate=""){
   if(!session.isAdmin) return;
-  const record = state.attendance.find(item=>item.id===id);
-  if(!record) return;
-  const techOptions = TECHS.map(tech=>`<option value="${escapeHTML(tech)}" ${tech===record.tech ? "selected" : ""}>${escapeHTML(tech)}</option>`).join("");
+  const record = state.attendance.find(item=>item.id===id) || {id:"", tech:reportTech, date:reportDate, checkIn:"", checkOut:"", status:"absent"};
+  const techOptions = allActiveEmployees().map(employee=>employee.technician).filter(Boolean).map(tech=>`<option value="${escapeHTML(tech)}" ${tech===record.tech ? "selected" : ""}>${escapeHTML(tech)}</option>`).join("");
+  const status = record.status === "leave" ? "leave" : record.checkIn ? "present" : "absent";
   openOverlay(`
     <h3>Edit attendance</h3>
-    <div class="sub">Correct the technician or shift times for this attendance record.</div>
+    <div class="sub">Set the employee status and attendance details.</div>
     <div class="field"><label>Technician</label><select id="attendance-edit-tech">${techOptions}</select></div>
     <div class="field"><label>Date</label><input id="attendance-edit-date" type="date" value="${escapeHTML(record.date)}"></div>
-    <div class="field"><label>Check in</label><input id="attendance-edit-in" type="datetime-local" value="${attendanceDateTimeValue(record.checkIn)}"></div>
-    <div class="field"><label>Check out</label><input id="attendance-edit-out" type="datetime-local" value="${attendanceDateTimeValue(record.checkOut)}"></div>
+    <div class="field"><label>Status</label><select id="attendance-edit-status" onchange="toggleAttendanceEditStatus()"><option value="present" ${status==="present"?"selected":""}>Present</option><option value="absent" ${status==="absent"?"selected":""}>Absent</option><option value="leave" ${status==="leave"?"selected":""}>Leave</option></select></div>
+    <div class="field" id="attendance-edit-in-wrap"><label>Check in</label><input id="attendance-edit-in" type="datetime-local" value="${attendanceDateTimeValue(record.checkIn)}"></div>
+    <div class="field" id="attendance-edit-out-wrap"><label>Check out</label><input id="attendance-edit-out" type="datetime-local" value="${attendanceDateTimeValue(record.checkOut)}"></div>
     <div class="login-error" id="attendance-edit-error"></div>
     <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveAttendanceEdit('${record.id}')">Save changes</button></div>
   `);
+  toggleAttendanceEditStatus();
 }
 
-function saveAttendanceEdit(id){
+async function saveAttendanceEdit(id){
   if(!session.isAdmin) return;
-  const record = state.attendance.find(item=>item.id===id);
-  if(!record) return;
+  let record = state.attendance.find(item=>item.id===id);
   const tech = document.getElementById("attendance-edit-tech").value;
   const date = document.getElementById("attendance-edit-date").value;
+  const status = document.getElementById("attendance-edit-status").value;
   const checkIn = document.getElementById("attendance-edit-in").value;
   const checkOut = document.getElementById("attendance-edit-out").value;
   const error = document.getElementById("attendance-edit-error");
-  if(!tech || !date || !checkIn){ error.textContent = "Technician, date, and check-in are required."; return; }
+  if(!tech || !date){ error.textContent = "Technician and date are required."; return; }
+  if(status === "present" && !checkIn){ error.textContent = "Check-in is required for Present."; return; }
   const duplicate = state.attendance.some(item=>item.id!==id && item.tech===tech && item.date===date);
   if(duplicate){ error.textContent = "This technician already has an attendance record for that date."; return; }
-  Object.assign(record, {tech, date, checkIn:new Date(checkIn).toISOString(), checkOut:checkOut ? new Date(checkOut).toISOString() : ""});
-  saveState();
+  const employee = allActiveEmployees().find(item=>item.technician===tech);
+  const values = {tech, date, branchId:employee?.branch ? branchIdForName(employee.branch) : currentBranchId(), status:status === "leave" ? "leave" : status === "absent" ? "absent" : "", checkIn:status === "present" ? new Date(checkIn).toISOString() : "", checkOut:status === "present" && checkOut ? new Date(checkOut).toISOString() : ""};
+  if(record) Object.assign(record, values);
+  else { record = {id:uid(), uid:"", ...values}; state.attendance.push(record); }
+  await syncAttendanceToCollection();
+  writeLocal();
   closeOverlay();
   renderAttendance();
   showToast("Attendance updated");
