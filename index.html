@@ -1604,6 +1604,36 @@
   </div>
 
   <div class="panel" style="margin-top:16px;">
+    <div class="panel-head"><div><h3>Financial Summary</h3><div class="desc">All branches · collected sales and operating expenses</div></div></div>
+    <div class="finance-grid" style="margin-top:6px;">
+      <div class="finance-card"><div class="stat-label">Month-to-date · Total Capital</div><div class="stat-value" id="fin-mtd-capital">₱0</div></div>
+      <div class="finance-card"><div class="stat-label">Month-to-date · Total Gross Sales</div><div class="stat-value" id="fin-mtd-gross-sales">₱0</div></div>
+      <div class="finance-card"><div class="stat-label">Month-to-date · Total Net Sales</div><div class="stat-value" id="fin-mtd-net-sales">₱0</div></div>
+      <div class="finance-card"><div class="stat-label">Month-to-date · OPEX</div><div class="stat-value" id="fin-mtd-opex">₱0</div></div>
+      <div class="finance-card"><div class="stat-label">Year-to-date · Total Capital</div><div class="stat-value" id="fin-ytd-capital">₱0</div></div>
+      <div class="finance-card"><div class="stat-label">Year-to-date · Total Gross Sales</div><div class="stat-value" id="fin-ytd-gross-sales">₱0</div></div>
+      <div class="finance-card"><div class="stat-label">Year-to-date · Total Net Sales</div><div class="stat-value" id="fin-ytd-net-sales">₱0</div></div>
+      <div class="finance-card"><div class="stat-label">Year-to-date · OPEX</div><div class="stat-value" id="fin-ytd-opex">₱0</div></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head"><div><h3>Revenue Vs Expenses (OPEX)</h3><div class="desc">Month-to-date and year-to-date comparison</div></div></div>
+    <div id="fin-revenue-vs-opex" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head"><div><h3>OPEX</h3><div class="desc">Operating expenses across all branches</div></div><button class="pill-btn primary" onclick="openExpenseModal()">+ Add OPEX</button></div>
+    <div class="finance-grid" style="margin-top:6px;">
+      <div class="finance-card"><div class="stat-label">Salary Per Staff</div><div class="stat-value" id="fin-opex-salary-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-salary-ytd">₱0</span></div></div>
+      <div class="finance-card"><div class="stat-label">Branch Expenses</div><div class="stat-value" id="fin-opex-branch-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-branch-ytd">₱0</span></div></div>
+      <div class="finance-card"><div class="stat-label">Added Parts &amp; Accessories</div><div class="stat-value" id="fin-opex-parts-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-parts-ytd">₱0</span></div></div>
+      <div class="finance-card"><div class="stat-label">Miscellaneous</div><div class="stat-value" id="fin-opex-misc-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-misc-ytd">₱0</span></div></div>
+    </div>
+    <div class="table-wrap" style="margin-top:12px;"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Branch</th><th style="text-align:right">Amount</th><th style="text-align:right">Action</th></tr></thead><tbody id="fin-opex-body"></tbody></table></div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
     <div class="panel-head">
       <div>
         <h3>Sales by Branch</h3>
@@ -2619,6 +2649,7 @@ function defaultState(){
     staffAccounts: [],
     adminAccounts: [],
     purchaseOrders: [],
+    expenses: [],
     commissionRates: {},
     payrollPeriods: [],
     payrollRecords: [],
@@ -2716,6 +2747,7 @@ function finishStateMigration(){
   }
   if(!Array.isArray(state.suppliers)){ state.suppliers = []; migrated = true; }
   if(!Array.isArray(state.stockMovements)){ state.stockMovements = []; migrated = true; }
+  if(!Array.isArray(state.expenses)){ state.expenses = []; migrated = true; }
   if(!Array.isArray(state.staffProfiles)){ state.staffProfiles = []; migrated = true; }
   if(!state.commissionRates || typeof state.commissionRates !== "object" || Array.isArray(state.commissionRates)){ state.commissionRates = {}; migrated = true; }
   if(!Array.isArray(state.attendance)){ state.attendance = []; migrated = true; }
@@ -4404,6 +4436,7 @@ function switchView(key){
       `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
       `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
     renderFinanceDashboard();
+    ensurePayrollLoaded().then(()=>renderFinanceDashboard());
   } else if(key==="security-access"){
     if(!hasSecurityAccess()){
       switchView(session.staffUnlocked ? "employee" : "role-select");
@@ -6753,7 +6786,9 @@ function renderFinanceDashboard(){
   if(!session.isOwner) return;
   const all = state.transactions || [];
   const month = monthStr();
+  const year = String(getToday().getFullYear());
   const monthly = all.filter(t => (t.date||"").slice(0,7) === month);
+  const yearly = all.filter(t => (t.date||"").slice(0,4) === year);
 
   const totalRevenue = all.reduce((s,t)=>s+collectedAmount(t), 0);
   const monthSales = monthly.reduce((s,t)=>s+collectedAmount(t), 0);
@@ -6763,6 +6798,29 @@ function renderFinanceDashboard(){
   const receivable = unpaid.reduce((s,t)=>s+balanceAmount(t), 0);
 
   const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+  const periodOpex = period => opexTotals(period).total;
+  const mtdOpex = periodOpex("month");
+  const ytdOpex = periodOpex("year");
+  const mtdCapital = capitalAddedForPeriod("month");
+  const ytdCapital = capitalAddedForPeriod("year");
+  const ytdCategoryOpex = opexTotals("year");
+  set("fin-mtd-capital", peso(mtdCapital));
+  set("fin-mtd-gross-sales", peso(monthSales));
+  set("fin-mtd-net-sales", peso(monthSales - mtdOpex));
+  set("fin-mtd-opex", peso(mtdOpex));
+  set("fin-ytd-capital", peso(ytdCapital));
+  set("fin-ytd-gross-sales", peso(yearly.reduce((s,t)=>s+collectedAmount(t), 0)));
+  set("fin-ytd-net-sales", peso(yearly.reduce((s,t)=>s+collectedAmount(t), 0) - ytdOpex));
+  set("fin-ytd-opex", peso(ytdOpex));
+  const currentOpex = opexTotals("month");
+  set("fin-opex-salary-mtd", peso(currentOpex.salary));
+  set("fin-opex-salary-ytd", peso(ytdCategoryOpex.salary));
+  set("fin-opex-branch-mtd", peso(currentOpex.branch));
+  set("fin-opex-branch-ytd", peso(ytdCategoryOpex.branch));
+  set("fin-opex-parts-mtd", peso(currentOpex.parts));
+  set("fin-opex-parts-ytd", peso(ytdCategoryOpex.parts));
+  set("fin-opex-misc-mtd", peso(currentOpex.misc));
+  set("fin-opex-misc-ytd", peso(ytdCategoryOpex.misc));
   set("fin-total-revenue", peso(totalRevenue));
   set("fin-month-sales", peso(monthSales));
   set("fin-gross-profit", peso(grossProfit));
@@ -6781,6 +6839,84 @@ function renderFinanceDashboard(){
       <div class="bar-track"><div class="bar-fill" style="width:${Math.round(b.total/maxBranch*100)}%"></div></div>
       <b style="text-align:right">${peso(b.total)}</b></div>`).join("");
   }
+  const revenueChart = document.getElementById("fin-revenue-vs-opex");
+  if(revenueChart){
+    const comparisons = [{label:"Month-to-date", revenue:monthSales, opex:mtdOpex},{label:"Year-to-date", revenue:yearly.reduce((s,t)=>s+collectedAmount(t), 0), opex:ytdOpex}];
+    const max = Math.max(...comparisons.flatMap(item=>[item.revenue,item.opex]), 1);
+    revenueChart.innerHTML = comparisons.map(item=>`
+      <div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-weight:700;font-size:12px;margin-bottom:5px;"><span>${item.label}</span><span>${peso(item.revenue)} revenue · ${peso(item.opex)} OPEX</span></div>
+      <div class="bar-row"><span style="width:58px;color:var(--good);">Revenue</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(item.revenue/max*100)}%;background:var(--good);"></div></div></div>
+      <div class="bar-row"><span style="width:58px;color:var(--warn);">OPEX</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(item.opex/max*100)}%;background:var(--warn);"></div></div></div></div>`).join("");
+  }
+  const expenseBody = document.getElementById("fin-opex-body");
+  if(expenseBody){
+    const recent = (state.expenses||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,50);
+    expenseBody.innerHTML = recent.length ? recent.map(expense=>`<tr><td>${escapeHTML(formatSiteDate(expense.date))}</td><td>${escapeHTML(expense.category)}</td><td>${escapeHTML(expense.description||"—")}</td><td>${escapeHTML(expense.branch||"All branches")}</td><td style="text-align:right" class="fee">${peso(expense.amount)}</td><td style="text-align:right"><button class="pill-btn small danger" onclick="deleteExpense('${expense.id}')">Delete</button></td></tr>`).join("") : `<tr class="empty-row"><td colspan="6">No OPEX entries yet.</td></tr>`;
+  }
+}
+
+function expensePeriodMatches(expense, period){
+  const date = String(expense.date||"");
+  return period === "month" ? date.slice(0,7) === monthStr() : date.slice(0,4) === String(getToday().getFullYear());
+}
+
+function payrollSalaryForPeriod(period){
+  const records = state.payrollRecords || [];
+  const periods = state.payrollPeriods || [];
+  return records.filter(record=>{
+    const payrollPeriod = periods.find(item=>item.id===record.periodId);
+    return payrollPeriod && expensePeriodMatches({date:payrollPeriod.payDate}, period);
+  }).reduce((sum,record)=>sum + Number(record.netPay || record.grossPay || 0), 0);
+}
+
+function opexTotals(period){
+  const entries = (state.expenses||[]).filter(expense=>expensePeriodMatches(expense, period));
+  const totals = {salary:payrollSalaryForPeriod(period), branch:0, parts:capitalAddedForPeriod(period), misc:0};
+  entries.forEach(expense=>{
+    if(expense.category === "Branch Expenses") totals.branch += Number(expense.amount||0);
+    else if(expense.category === "Miscellaneous") totals.misc += Number(expense.amount||0);
+    else if(expense.category === "Salary Per Staff") totals.salary += Number(expense.amount||0);
+  });
+  totals.total = totals.salary + totals.branch + totals.parts + totals.misc;
+  return totals;
+}
+
+function capitalAddedForPeriod(period){
+  return (state.stockMovements||[]).filter(movement=>movement.type === "Purchase" && expensePeriodMatches({date:movement.date || todayStr()}, period)).reduce((sum,movement)=>{
+    const item = state.inventory.find(entry=>entry.id===movement.itemId);
+    return sum + Math.max(0, Number(movement.qty||0)) * Number(item?.cost||0);
+  }, 0);
+}
+
+function openExpenseModal(){
+  if(!session.isOwner) return;
+  openOverlay(`<h3>Add OPEX</h3><div class="sub">Record an operating expense for the financial summary.</div>
+    <div class="field"><label>Date</label><input id="expense-date" type="date" value="${todayStr()}"></div>
+    <div class="field"><label>Category</label><select id="expense-category"><option>Branch Expenses</option><option>Added Parts &amp; Accessories</option><option>Miscellaneous</option><option>Salary Per Staff</option></select></div>
+    <div class="field"><label>Branch</label><select id="expense-branch"><option>All branches</option>${BRANCHES.map(branch=>`<option>${escapeHTML(branch)}</option>`).join("")}</select></div>
+    <div class="field"><label>Description</label><input id="expense-description" placeholder="e.g. rent, utilities, parts purchase"></div>
+    <div class="field"><label>Amount (₱)</label><input id="expense-amount" type="number" min="0" step="0.01" placeholder="0"></div>
+    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveExpense()">Add OPEX</button></div>`);
+}
+
+function saveExpense(){
+  const date = document.getElementById("expense-date")?.value || todayStr();
+  const category = document.getElementById("expense-category")?.value || "Miscellaneous";
+  const amount = Number(document.getElementById("expense-amount")?.value || 0);
+  if(!Number.isFinite(amount) || amount <= 0){ showToast("Enter a valid OPEX amount"); return; }
+  state.expenses = [{id:uid(), date, category, branch:document.getElementById("expense-branch")?.value || "All branches", description:document.getElementById("expense-description")?.value.trim() || "", amount}, ...(state.expenses||[])];
+  writeLocal();
+  closeOverlay();
+  renderFinanceDashboard();
+  showToast("OPEX added");
+}
+
+function deleteExpense(id){
+  if(!session.isOwner || !confirm("Delete this OPEX entry?")) return;
+  state.expenses = (state.expenses||[]).filter(expense=>expense.id!==id);
+  writeLocal();
+  renderFinanceDashboard();
+  showToast("OPEX deleted");
 }
 
 /* ======================= PAYROLL ======================= */
