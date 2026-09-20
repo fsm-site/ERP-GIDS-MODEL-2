@@ -996,7 +996,7 @@
               </div>
             </div>
             <table>
-              <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
+              <thead><tr id="public-inv-head"><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
               <tbody id="public-inv-body"></tbody>
             </table>
           </div>
@@ -1177,7 +1177,7 @@
         <div class="subtabs">
           <div class="subtab active" data-sub="overview">OVERVIEW &amp; JOBS</div>
           <div class="subtab" data-sub="operations">OPERATIONS</div>
-          <div class="subtab" data-sub="inventory">INVENTORY</div>
+          <div class="subtab" data-sub="inventory">LABOR</div>
           <div class="subtab" data-sub="reports">REPORTS</div>
         </div>
 
@@ -1275,72 +1275,26 @@
 
         </div>
 
-        <!-- Inventory subtab -->
+        <!-- Labor subtab (Parts & Accessories moved to the dedicated Inventory sidebar page) -->
         <div id="admin-sub-inventory" style="display:none;">
-          <div class="subtabs">
-            <div class="subtab active" data-invsub="parts">Parts &amp; Accessories</div>
-            <div class="subtab" data-invsub="labor">Labor</div>
-          </div>
-
-          <div id="admin-inv-parts">
-            <div class="stat-row">
-              <div class="stat-card" id="admin-inventory-capital-card" style="display:none;">
-                <div class="stat-label">Total capital (cost basis)</div>
-                <div class="stat-value blue" id="inv-total-capital">₱0</div>
-                <div class="stat-sub">Owner-only stock cost view</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Total SRP value</div>
-                <div class="stat-value" id="inv-total-srp">₱0</div>
-                <div class="stat-sub">Sum of SRP × quantity across all stock</div>
-              </div>
-            </div>
-            <div class="panel">
-              <div class="panel-head">
-                <div>
-                  <h3>Parts &amp; accessories — branch view</h3>
-                  <div class="desc">SRP, quantity and stock availability for this branch</div>
-                </div>
-                <div style="display:flex; gap:10px; align-items:center;">
-                  <input id="inv-search" type="text" placeholder="Search items…" value="" oninput="onInvSearch(this.value)"
-                    style="border:1px solid var(--line-strong); border-radius:8px; padding:8px 12px; font-size:12.5px; width:170px;">
-                  <button id="admin-inv-add-btn" class="pill-btn primary" onclick="openInvModal()">+ Add item</button>
-                  <button id="admin-inv-supplier-btn" class="pill-btn ghost" onclick="manageSuppliers()" style="display:none;">Suppliers</button>
-                  <button id="admin-inv-po-btn" class="pill-btn ghost" onclick="createPurchaseOrder()" style="display:none;">Purchase order</button>
-                </div>
-              </div>
-              <div id="low-stock-banner"></div>
-              <table>
-                <thead id="admin-inv-head"><tr><th>Item / SKU</th><th>Quantity</th><th>Available</th><th>Price (SRP)</th><th>Total price</th><th style="text-align:right">Actions</th></tr></thead>
-                <tbody id="admin-inv-body"></tbody>
-              </table>
-            </div>
-            <div class="panel">
-              <div class="panel-head"><div><h3>Recent stock movements</h3><div class="desc">Purchases, adjustments and job usage</div></div></div>
-              <table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Reference</th><th style="text-align:right">Actions</th></tr></thead><tbody id="stock-movements-body"></tbody></table>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-label">Total sales</div>
+              <div class="stat-value blue" id="admin-labor-total-sales">₱0</div>
+              <div class="stat-sub">Collected sales from all logged Labor jobs</div>
             </div>
           </div>
-
-          <div id="admin-inv-labor" style="display:none;">
-            <div class="stat-row">
-              <div class="stat-card">
-                <div class="stat-label">Total sales</div>
-                <div class="stat-value blue" id="admin-labor-total-sales">₱0</div>
-                <div class="stat-sub">Collected sales from all logged Labor jobs</div>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Labor</h3>
+                <div class="desc">Auto-calculated from logged Labor jobs · not editable</div>
               </div>
             </div>
-            <div class="panel">
-              <div class="panel-head">
-                <div>
-                  <h3>Labor</h3>
-                  <div class="desc">Auto-calculated from logged Labor jobs · not editable</div>
-                </div>
-              </div>
-              <table>
-                <thead><tr><th>Name of labor</th><th>Jobs</th><th style="text-align:right">Collected sales</th></tr></thead>
-                <tbody id="admin-labor-body"></tbody>
-              </table>
-            </div>
+            <table>
+              <thead><tr><th>Name of labor</th><th>Jobs</th><th style="text-align:right">Collected sales</th></tr></thead>
+              <tbody id="admin-labor-body"></tbody>
+            </table>
           </div>
         </div>
 
@@ -3507,8 +3461,7 @@ if("serviceWorker" in navigator){
 }
 
 function goToInventoryFromOverview(){
-  const target = document.querySelector('.subtab[data-sub="inventory"]');
-  if(target) target.click();
+  switchView("inventory-public");
 }
 
 /* ======================= NAV ======================= */
@@ -3572,7 +3525,7 @@ function updateNavForRole(role){
     const visible = role === "owner"
       ? ["admin", "employee", "inventory-public", "customer-status", "staff-directory", "attendance"].includes(view)
       : role === "admin"
-        ? !["staff-gate", "employee", "inventory-public", "customer-status"].includes(view)
+        ? !["staff-gate", "employee", "customer-status"].includes(view)
         : role === "staff"
           ? ["employee", "inventory-public", "customer-status", "staff-directory", "attendance"].includes(view)
           : false;
@@ -4391,8 +4344,6 @@ function renderAll(){
   renderLaborSummary("public-labor-body", null);
   if(session.isAdmin){
     renderAdminOverview();
-    renderAdminInventory();
-    renderStockMovements();
     renderOperations();
     renderTechSales("admin-tech-sales-body", ui.adminBranch);
     renderLaborSummary("admin-labor-body", null);
@@ -5505,21 +5456,34 @@ function renderEmployeeDashboard(){
 function renderPublicInventory(){
   const body = document.getElementById("public-inv-body");
   if(!body) return;
+  const head = document.getElementById("public-inv-head");
+  const canEdit = session.isAdmin; // Staff stays read-only; Admin's Edit/Delete
+                                    // route through owner-approval (see saveInv/deleteInv).
+  if(head){
+    head.innerHTML = canEdit
+      ? '<th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th><th style="text-align:right">Actions</th>'
+      : '<th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th>';
+  }
   const selectedBranch = session.isOwner ? (ui.adminBranch || DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
   if(session.isOwner && !isBranchActive(selectedBranch)){
-    body.innerHTML = `<tr><td colspan="5"><div style="padding:18px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">Not Yet Active. Contact your Site Administrator</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="6"><div style="padding:18px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">Not Yet Active. Contact your Site Administrator</div></td></tr>`;
     return;
   }
   body.innerHTML = state.inventory.length ? state.inventory.map(i=>{
     const avail = Number(i.quantity) - Number(i.used||0);
+    const actionsCell = canEdit ? `<td style="text-align:right;white-space:nowrap;">
+        <button class="pill-btn small ghost" onclick="openInvModal('${i.id}')">Edit</button>
+        <button class="pill-btn small ghost" onclick="deleteInv('${i.id}')">Delete</button>
+      </td>` : "";
     return `<tr>
       <td>${escapeHTML(i.itemName)}</td>
       <td>${i.quantity}</td>
       <td>${Number(i.used||0)}</td>
       <td>${peso(Number(i.price || 0))}</td>
       <td>${avail}</td>
+      ${actionsCell}
     </tr>`;
-  }).join("") : `<tr class="empty-row"><td colspan="5">No inventory items yet.</td></tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="${canEdit?6:5}">No inventory items yet.</td></tr>`;
 }
 
 function availTag(avail, threshold=LOW_STOCK_THRESHOLD){
