@@ -538,6 +538,19 @@
   .bar-row{ display:grid; grid-template-columns:150px 1fr 72px; gap:10px; align-items:center; margin:10px 0; font-size:12px; }
   .bar-track{ height:9px; border-radius:8px; background:rgba(157,190,226,.14); overflow:hidden; }
   .bar-fill{ height:100%; border-radius:8px; background:linear-gradient(90deg,var(--blue-light),var(--blue)); }
+  .finance-comparison{ display:grid; gap:18px; padding:4px 2px 2px; }
+  .finance-comparison-period{ padding:14px 16px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); }
+  .finance-comparison-head{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:10px; font-size:12px; }
+  .finance-comparison-values{ color:var(--muted); font-size:11px; text-align:right; }
+  .finance-comparison-row{ display:grid; grid-template-columns:78px minmax(0,1fr); gap:10px; align-items:center; margin-top:8px; font-size:11px; }
+  .finance-comparison-label{ font-weight:800; }
+  .finance-comparison .bar-track{ height:10px; }
+  .expense-form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .expense-form-grid .field{ margin-bottom:0; }
+  .expense-form-grid .field-wide{ grid-column:1 / -1; }
+  .expense-modal-actions{ justify-content:flex-end; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); }
+  @media (max-width:620px){ .finance-comparison-head{ align-items:flex-start; flex-direction:column; gap:4px; } .finance-comparison-values{ text-align:left; } }
+  @media (max-width:520px){ .expense-form-grid{ grid-template-columns:1fr; } .expense-form-grid .field-wide{ grid-column:auto; } .expense-modal-actions{ justify-content:stretch; } .expense-modal-actions .pill-btn{ flex:1; } }
   .status-select{ font-size:11px; padding:4px 7px; border:1px solid var(--line-strong); border-radius:12px; background:var(--panel-2); color:var(--text); }
   .portal-card{ max-width:720px; margin:0 auto 22px; }
   .portal-result{ padding:18px 20px; border-top:1px solid var(--line); }
@@ -1552,57 +1565,6 @@
   </div>
 
   <div id="fin-sub-overview">
-  <div class="panel">
-    <div class="panel-head">
-      <div>
-        <h3>Finance Dashboard</h3>
-        <div class="desc">Business-wide financial summary across all branches</div>
-      </div>
-    </div>
-    <div class="finance-grid" style="margin-top:6px;">
-      <div class="finance-card">
-        <div class="stat-label">Total Revenue</div>
-        <div class="stat-value" id="fin-total-revenue">₱0</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">Total Expenses</div>
-        <div class="stat-value" id="fin-total-expenses">Not tracked yet</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">Gross Profit</div>
-        <div class="stat-value" id="fin-gross-profit">₱0</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">Net Profit</div>
-        <div class="stat-value" id="fin-net-profit">Not tracked yet</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">Cash on Hand</div>
-        <div class="stat-value" id="fin-cash-on-hand">Not tracked yet</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">Accounts Receivable</div>
-        <div class="stat-value" id="fin-receivable">₱0</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">Accounts Payable</div>
-        <div class="stat-value" id="fin-payable">Not tracked yet</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">Pending Payments</div>
-        <div class="stat-value" id="fin-pending-payments">₱0</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">This Month's Sales</div>
-        <div class="stat-value" id="fin-month-sales">₱0</div>
-      </div>
-      <div class="finance-card">
-        <div class="stat-label">This Month's Expenses</div>
-        <div class="stat-value" id="fin-month-expenses">Not tracked yet</div>
-      </div>
-    </div>
-  </div>
-
   <div class="panel" style="margin-top:16px;">
     <div class="panel-head"><div><h3>Financial Summary</h3><div class="desc">All branches · collected sales and operating expenses</div></div></div>
     <div class="finance-grid" style="margin-top:6px;">
@@ -1619,13 +1581,13 @@
 
   <div class="panel" style="margin-top:16px;">
     <div class="panel-head"><div><h3>Revenue Vs Expenses (OPEX)</h3><div class="desc">Month-to-date and year-to-date comparison</div></div></div>
-    <div id="fin-revenue-vs-opex" style="margin-top:8px;"></div>
+    <div id="fin-revenue-vs-opex" class="finance-comparison"></div>
   </div>
 
   <div class="panel" style="margin-top:16px;">
     <div class="panel-head"><div><h3>OPEX</h3><div class="desc">Operating expenses across all branches</div></div><button class="pill-btn primary" onclick="openExpenseModal()">+ Add OPEX</button></div>
     <div class="finance-grid" style="margin-top:6px;">
-      <div class="finance-card"><div class="stat-label">Salary Per Staff</div><div class="stat-value" id="fin-opex-salary-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-salary-ytd">₱0</span></div></div>
+      <div class="finance-card"><div class="stat-label">Total Salary of Staff</div><div class="stat-value" id="fin-opex-salary-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-salary-ytd">₱0</span></div></div>
       <div class="finance-card"><div class="stat-label">Branch Expenses</div><div class="stat-value" id="fin-opex-branch-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-branch-ytd">₱0</span></div></div>
       <div class="finance-card"><div class="stat-label">Added Parts &amp; Accessories</div><div class="stat-value" id="fin-opex-parts-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-parts-ytd">₱0</span></div></div>
       <div class="finance-card"><div class="stat-label">Miscellaneous</div><div class="stat-value" id="fin-opex-misc-mtd">₱0</div><div class="stat-sub">YTD: <span id="fin-opex-misc-ytd">₱0</span></div></div>
@@ -1643,45 +1605,6 @@
     <div id="fin-sales-by-branch" style="margin-top:8px;"></div>
   </div>
 
-  <div class="panel" style="margin-top:16px;">
-    <div class="panel-head">
-      <div>
-        <h3>Revenue vs Expenses</h3>
-        <div class="desc">Not available yet — requires expense tracking</div>
-      </div>
-    </div>
-    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
-  </div>
-
-  <div class="panel" style="margin-top:16px;">
-    <div class="panel-head">
-      <div>
-        <h3>Profit Trend</h3>
-        <div class="desc">Not available yet — requires expense tracking</div>
-      </div>
-    </div>
-    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
-  </div>
-
-  <div class="panel" style="margin-top:16px;">
-    <div class="panel-head">
-      <div>
-        <h3>Expenses by Category</h3>
-        <div class="desc">Not available yet — requires expense tracking</div>
-      </div>
-    </div>
-    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
-  </div>
-
-  <div class="panel" style="margin-top:16px;">
-    <div class="panel-head">
-      <div>
-        <h3>Cash Flow</h3>
-        <div class="desc">Not available yet — requires cash/expense tracking</div>
-      </div>
-    </div>
-    <div class="muted-box" style="margin-top:8px;">This chart needs cash and expense tracking, which hasn't been built yet.</div>
-  </div>
   </div>
 
   <div id="fin-sub-payroll" style="display:none;">
@@ -6844,9 +6767,9 @@ function renderFinanceDashboard(){
     const comparisons = [{label:"Month-to-date", revenue:monthSales, opex:mtdOpex},{label:"Year-to-date", revenue:yearly.reduce((s,t)=>s+collectedAmount(t), 0), opex:ytdOpex}];
     const max = Math.max(...comparisons.flatMap(item=>[item.revenue,item.opex]), 1);
     revenueChart.innerHTML = comparisons.map(item=>`
-      <div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-weight:700;font-size:12px;margin-bottom:5px;"><span>${item.label}</span><span>${peso(item.revenue)} revenue · ${peso(item.opex)} OPEX</span></div>
-      <div class="bar-row"><span style="width:58px;color:var(--good);">Revenue</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(item.revenue/max*100)}%;background:var(--good);"></div></div></div>
-      <div class="bar-row"><span style="width:58px;color:var(--warn);">OPEX</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(item.opex/max*100)}%;background:var(--warn);"></div></div></div></div>`).join("");
+      <div class="finance-comparison-period"><div class="finance-comparison-head"><strong>${item.label}</strong><span class="finance-comparison-values">${peso(item.revenue)} revenue · ${peso(item.opex)} OPEX</span></div>
+      <div class="finance-comparison-row"><span class="finance-comparison-label" style="color:var(--good);">Revenue</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(item.revenue/max*100)}%;background:var(--good);"></div></div></div>
+      <div class="finance-comparison-row"><span class="finance-comparison-label" style="color:var(--warn);">OPEX</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(item.opex/max*100)}%;background:var(--warn);"></div></div></div></div>`).join("");
   }
   const expenseBody = document.getElementById("fin-opex-body");
   if(expenseBody){
@@ -6875,7 +6798,7 @@ function opexTotals(period){
   entries.forEach(expense=>{
     if(expense.category === "Branch Expenses") totals.branch += Number(expense.amount||0);
     else if(expense.category === "Miscellaneous") totals.misc += Number(expense.amount||0);
-    else if(expense.category === "Salary Per Staff") totals.salary += Number(expense.amount||0);
+    else if(expense.category === "Total Salary of Staff" || expense.category === "Salary Per Staff") totals.salary += Number(expense.amount||0);
   });
   totals.total = totals.salary + totals.branch + totals.parts + totals.misc;
   return totals;
@@ -6891,12 +6814,14 @@ function capitalAddedForPeriod(period){
 function openExpenseModal(){
   if(!session.isOwner) return;
   openOverlay(`<h3>Add OPEX</h3><div class="sub">Record an operating expense for the financial summary.</div>
-    <div class="field"><label>Date</label><input id="expense-date" type="date" value="${todayStr()}"></div>
-    <div class="field"><label>Category</label><select id="expense-category"><option>Branch Expenses</option><option>Added Parts &amp; Accessories</option><option>Miscellaneous</option><option>Salary Per Staff</option></select></div>
-    <div class="field"><label>Branch</label><select id="expense-branch"><option>All branches</option>${BRANCHES.map(branch=>`<option>${escapeHTML(branch)}</option>`).join("")}</select></div>
-    <div class="field"><label>Description</label><input id="expense-description" placeholder="e.g. rent, utilities, parts purchase"></div>
-    <div class="field"><label>Amount (₱)</label><input id="expense-amount" type="number" min="0" step="0.01" placeholder="0"></div>
-    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveExpense()">Add OPEX</button></div>`);
+    <div class="expense-form-grid">
+      <div class="field"><label>Date</label><input id="expense-date" type="date" value="${todayStr()}"></div>
+      <div class="field"><label>Category</label><select id="expense-category"><option>Branch Expenses</option><option>Miscellaneous</option><option>Total Salary of Staff</option></select></div>
+      <div class="field"><label>Branch</label><select id="expense-branch"><option>All branches</option>${BRANCHES.map(branch=>`<option>${escapeHTML(branch)}</option>`).join("")}</select></div>
+      <div class="field"><label>Amount (₱)</label><input id="expense-amount" type="number" min="0" step="0.01" placeholder="0"></div>
+      <div class="field field-wide"><label>Description</label><input id="expense-description" placeholder="e.g. rent, utilities, office supplies"></div>
+    </div>
+    <div class="modal-actions expense-modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveExpense()">Add OPEX</button></div>`);
 }
 
 function saveExpense(){
