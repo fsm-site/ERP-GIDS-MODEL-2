@@ -950,6 +950,15 @@
           </div>
         </div>
 
+        <div class="panel" id="my-sales-panel" style="display:none; background:linear-gradient(135deg, rgba(76,141,255,.10), rgba(76,141,255,.02)); border:1px solid var(--line-strong);">
+          <div style="padding:20px 22px;">
+            <div style="font-size:16px; font-weight:800;" id="my-sales-greeting">Hey there!</div>
+            <div style="font-size:12.5px; color:var(--muted); margin-top:2px;">This is your sales today</div>
+            <div style="font-size:34px; font-weight:800; color:var(--blue); margin-top:10px;" id="my-sales-amount">₱0</div>
+            <div style="font-size:13px; font-weight:600; margin-top:8px;" id="my-sales-motivation"></div>
+          </div>
+        </div>
+
         <div class="panel">
           <div class="panel-head">
             <div>
@@ -5400,6 +5409,14 @@ async function requestOwnerAction({type, title, details, branch, entityId, entit
 
 
 
+function motivationForSales(amount){
+  if(amount <= 0) return "No sales logged yet — let's make today a good one! 💪";
+  if(amount < 1000) return "Nice start! Keep the momentum going. 🔥";
+  if(amount < 3000) return "Great work today! You're on a roll. 🚀";
+  if(amount < 6000) return "Excellent! You're crushing it today! 🌟";
+  return "Outstanding! Top performer today! 🏆";
+}
+
 function renderEmployeeDashboard(){
   const today = todayStr();
   const branch = (session.isOwner || session.isAdmin) ? (ui.adminBranch || DEFAULT_BRANCH) : ui.branch;
@@ -5409,6 +5426,22 @@ function renderEmployeeDashboard(){
   document.getElementById("stat-clients").textContent = rows.length;
   document.getElementById("stat-clients-branch").textContent = branch + " branch";
   document.getElementById("stat-sales").textContent = peso(rows.reduce((s,t)=>s+collectedAmount(t),0));
+
+  // Personal sales card — shows the logged-in Staff/Admin their own sales
+  // today, separate from the branch-wide "Total sales today" above.
+  const mySalesPanel = document.getElementById("my-sales-panel");
+  const myTechId = session.isAdmin ? session.adminUsername : session.staffTechnician;
+  if(mySalesPanel){
+    if(myTechId){
+      const mySales = rows.filter(t => t.tech === myTechId).reduce((s,t)=>s+collectedAmount(t),0);
+      document.getElementById("my-sales-greeting").textContent = `Hey, ${currentUserName()}!`;
+      document.getElementById("my-sales-amount").textContent = peso(mySales);
+      document.getElementById("my-sales-motivation").textContent = motivationForSales(mySales);
+      mySalesPanel.style.display = "block";
+    } else {
+      mySalesPanel.style.display = "none";
+    }
+  }
 
   const body = document.getElementById("employee-txn-body");
   body.innerHTML = rows.length ? rows.map((t,index)=>`
