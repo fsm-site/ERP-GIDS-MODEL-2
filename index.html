@@ -973,7 +973,7 @@
             <button class="pill-btn primary" onclick="openTxnModal()">+ Add job</button>
           </div>
           <table>
-            <thead><tr><th>No. / Encoded</th><th>Service type</th><th>Phone</th><th>Item used</th><th>Payment</th><th style="text-align:right">Paid / fee</th><th style="text-align:right">Receipt</th></tr></thead>
+            <thead><tr><th>No. / Encoded</th><th>Service type</th><th>Phone</th><th>Item used</th><th>Payment</th><th style="text-align:right">Paid / fee</th><th style="text-align:right">Receipt / Actions</th></tr></thead>
             <tbody id="employee-txn-body"></tbody>
           </table>
         </div>
@@ -6670,6 +6670,7 @@ function renderEmployeeDashboard(){
         <div class="row-actions" style="justify-content:flex-end;">
           <button onclick="openReceiptModal('${t.id}')" title="Receipt">${receiptIconSVG()}</button>
           ${balanceAmount(t)>0 ? `<button onclick="collectBalance('${t.id}')" title="Collect balance">${collectIconSVG()}</button>` : ""}
+          ${session.isAdmin ? `<button class="pill-btn small ghost" onclick="openTxnModal(true,'${t.id}')" title="Edit job">Edit</button><button class="pill-btn small danger" onclick="deleteTxn('${t.id}')" title="Delete job">Delete</button>` : ""}
         </div>
       </td>
     </tr>`).join("") : `<tr class="empty-row"><td colspan="7">No jobs logged yet today for ${branch}. Tap "Add job" to log one.</td></tr>`;
