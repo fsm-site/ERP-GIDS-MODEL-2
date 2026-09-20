@@ -1177,7 +1177,6 @@
         <div class="subtabs">
           <div class="subtab active" data-sub="overview">OVERVIEW &amp; JOBS</div>
           <div class="subtab" data-sub="operations">OPERATIONS</div>
-          <div class="subtab" data-sub="inventory">LABOR</div>
           <div class="subtab" data-sub="reports">REPORTS</div>
         </div>
 
@@ -1273,29 +1272,6 @@
             </table>
           </div>
 
-        </div>
-
-        <!-- Labor subtab (Parts & Accessories moved to the dedicated Inventory sidebar page) -->
-        <div id="admin-sub-inventory" style="display:none;">
-          <div class="stat-row">
-            <div class="stat-card">
-              <div class="stat-label">Total sales</div>
-              <div class="stat-value blue" id="admin-labor-total-sales">₱0</div>
-              <div class="stat-sub">Collected sales from all logged Labor jobs</div>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-head">
-              <div>
-                <h3>Labor</h3>
-                <div class="desc">Auto-calculated from logged Labor jobs · not editable</div>
-              </div>
-            </div>
-            <table>
-              <thead><tr><th>Name of labor</th><th>Jobs</th><th style="text-align:right">Collected sales</th></tr></thead>
-              <tbody id="admin-labor-body"></tbody>
-            </table>
-          </div>
         </div>
 
         <!-- Operations subtab -->
@@ -3476,7 +3452,6 @@ function bindNav(){
       el.classList.add("active");
       document.getElementById("admin-sub-overview").style.display = ui.subtab==="overview" ? "block":"none";
       document.getElementById("admin-sub-operations").style.display = ui.subtab==="operations" ? "block":"none";
-      document.getElementById("admin-sub-inventory").style.display = ui.subtab==="inventory" ? "block":"none";
       document.getElementById("admin-sub-reports").style.display = ui.subtab==="reports" ? "block":"none";
     });
   });
@@ -4346,7 +4321,6 @@ function renderAll(){
     renderAdminOverview();
     renderOperations();
     renderTechSales("admin-tech-sales-body", ui.adminBranch);
-    renderLaborSummary("admin-labor-body", null);
     renderAttendanceReport();
   }
   if(hasSecurityAccess()){
