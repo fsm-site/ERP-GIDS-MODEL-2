@@ -545,6 +545,15 @@
   .finance-comparison-row{ display:grid; grid-template-columns:78px minmax(0,1fr); gap:10px; align-items:center; margin-top:8px; font-size:11px; }
   .finance-comparison-label{ font-weight:800; }
   .finance-comparison .bar-track{ height:10px; }
+  .finance-branch-chart{ display:grid; gap:12px; padding:6px 2px 2px; }
+  .finance-branch-row{ display:grid; grid-template-columns:150px minmax(0,1fr) 88px; gap:12px; align-items:center; font-size:12px; }
+  .finance-branch-name{ font-weight:800; overflow-wrap:anywhere; }
+  .finance-branch-total{ text-align:right; font-weight:800; white-space:nowrap; }
+  .finance-branch-row .bar-track{ height:11px; }
+  .payroll-deduction-cell{ min-width:180px; }
+  .payroll-deduction-cell select,.payroll-deduction-cell input{ width:100%; margin-top:4px; }
+  .payroll-deduction-meta{ color:var(--muted); font-size:10px; line-height:1.35; margin-top:4px; }
+  @media (max-width:620px){ .finance-branch-row{ grid-template-columns:105px minmax(0,1fr) 68px; gap:8px; } .finance-branch-total{ font-size:11px; } }
   .expense-form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .expense-form-grid .field{ margin-bottom:0; }
   .expense-form-grid .field-wide{ grid-column:1 / -1; }
@@ -1602,7 +1611,7 @@
         <div class="desc">Total collected revenue, all-time, per branch</div>
       </div>
     </div>
-    <div id="fin-sales-by-branch" style="margin-top:8px;"></div>
+    <div id="fin-sales-by-branch" class="finance-branch-chart"></div>
   </div>
 
   </div>
@@ -1640,7 +1649,7 @@
         </div>
       </div>
       <div class="attendance-table-wrap">
-        <table><thead><tr><th>Employee</th><th>Branch</th><th>Basic Salary</th><th>Commission</th><th>Bonus</th><th>Deductions</th><th>Gross Pay</th><th>Net Pay</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody id="pr-calc-body"></tbody></table>
+        <table><thead><tr><th>Employee</th><th>Branch</th><th>Total Sales</th><th>Basic Salary</th><th>Commission</th><th>Bonus</th><th>Deductions</th><th>Gross Pay</th><th>Net Pay</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody id="pr-calc-body"></tbody></table>
       </div>
     </div>
 
@@ -6758,9 +6767,9 @@ function renderFinanceDashboard(){
   const branchChart = document.getElementById("fin-sales-by-branch");
   if(branchChart){
     branchChart.innerHTML = branchTotals.map(b => `
-      <div class="bar-row"><span>${escapeHTML(b.name)}</span>
+      <div class="finance-branch-row"><span class="finance-branch-name">${escapeHTML(b.name)}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${Math.round(b.total/maxBranch*100)}%"></div></div>
-      <b style="text-align:right">${peso(b.total)}</b></div>`).join("");
+      <b class="finance-branch-total">${peso(b.total)}</b></div>`).join("");
   }
   const revenueChart = document.getElementById("fin-revenue-vs-opex");
   if(revenueChart){
@@ -6898,11 +6907,52 @@ async function createPayrollPeriod(){
 }
 
 function commissionForEmployee(emp, startDate, endDate){
-  if(!emp.commissionRate) return 0;
-  const sales = (state.transactions||[])
+  return employeeSalesForPeriod(emp, startDate, endDate) * (Number(emp.commissionRate||0)/100);
+}
+
+function employeeSalesForPeriod(emp, startDate, endDate){
+  return (state.transactions||[])
     .filter(t => t.tech === emp.technician && t.date >= startDate && t.date <= endDate)
-    .reduce((s,t)=>s+collectedAmount(t), 0);
-  return sales * (emp.commissionRate/100);
+    .reduce((s,t)=>s+Number(t.fee||0), 0);
+}
+
+function payrollRecordSales(record){
+  if(record.totalSales != null) return Number(record.totalSales||0);
+  const period = (state.payrollPeriods||[]).find(item=>item.id===record.periodId);
+  const employee = allActiveEmployees().find(item=>item.id===record.employeeId) || {technician:record.employeeName};
+  return employeeSalesForPeriod(employee, period?.startDate, period?.endDate);
+}
+
+function payrollPeriodDays(startDate, endDate){
+  const start = parseSiteDate(startDate), end = parseSiteDate(endDate);
+  if(!start || !end) return 1;
+  return Math.max(1, Math.round((end-start) / 86400000) + 1);
+}
+
+function attendanceCountsForEmployee(emp, startDate, endDate){
+  const records = (state.attendance||[]).filter(record => record.tech === emp.technician && record.date >= startDate && record.date <= endDate);
+  const recordByDate = new Map(records.map(record=>[record.date, record]));
+  let absentDays = 0, leaveDays = 0;
+  const periodEnd = parseSiteDate(endDate), today = getToday();
+  const end = periodEnd && periodEnd < today ? periodEnd : today;
+  for(let cursor=parseSiteDate(startDate); cursor && end && cursor<=end; cursor.setDate(cursor.getDate()+1)){
+    const date = todayStr(cursor);
+    const record = recordByDate.get(date);
+    if(record?.status === "leave") leaveDays++;
+    else if(!record || !record.checkIn) absentDays++;
+  }
+  return {absentDays, leaveDays};
+}
+
+function payrollDeductionDetails(record, emp, startDate, endDate){
+  const counts = attendanceCountsForEmployee(emp, startDate, endDate);
+  const deductionType = record?.deductionType || "Miscellaneous";
+  const miscellaneousDeduction = Number(record?.miscellaneousDeduction || (deductionType === "Miscellaneous" ? record?.deductions : 0) || 0);
+  const dailySalary = Number(emp.basicSalary||record?.basicSalary||0) / payrollPeriodDays(startDate, endDate);
+  const deductions = deductionType === "Absent"
+    ? Number((dailySalary * (counts.absentDays + counts.leaveDays)).toFixed(2))
+    : Number(miscellaneousDeduction.toFixed(2));
+  return {...counts, deductionType, miscellaneousDeduction, deductions};
 }
 
 async function calculatePayroll(){
@@ -6917,10 +6967,12 @@ async function calculatePayroll(){
 
   for(const emp of employees){
     const existing = existingRecords.get(emp.id);
+    const totalSales = employeeSalesForPeriod(emp, cutoff.startDate, cutoff.endDate);
     const commission = commissionForEmployee(emp, cutoff.startDate, cutoff.endDate);
     const bonus = existing ? Number(existing.bonus||0) : 0;
-    const deductions = existing ? Number(existing.deductions||0) : 0;
     const basicSalary = Number(emp.basicSalary||0);
+    const deductionDetails = payrollDeductionDetails(existing, {...emp, basicSalary}, cutoff.startDate, cutoff.endDate);
+    const deductions = deductionDetails.deductions;
     const grossPay = basicSalary + commission + bonus;
     const netPay = grossPay - deductions;
     const record = {
@@ -6930,7 +6982,11 @@ async function calculatePayroll(){
       employeeName: emp.name,
       role: emp.role,
       branch: emp.branch,
-      basicSalary, commission, bonus, deductions, grossPay, netPay,
+      totalSales, basicSalary, commission, bonus, deductions, grossPay, netPay,
+      deductionType: deductionDetails.deductionType,
+      miscellaneousDeduction: deductionDetails.miscellaneousDeduction,
+      absentDays: deductionDetails.absentDays,
+      leaveDays: deductionDetails.leaveDays,
       status: existing?.status || "pending"
     };
     state.payrollRecords = [...(state.payrollRecords||[]).filter(r=>!(r.periodId===cutoff.id && r.employeeId===emp.id)), record];
@@ -6956,6 +7012,91 @@ async function updatePayrollField(recordId, field, value){
   }catch(e){ console.error("Could not update payroll record:", e); }
   writeLocal();
   renderPayrollDashboard();
+}
+
+async function updatePayrollDeductionType(recordId, deductionType){
+  const record = (state.payrollRecords||[]).find(item=>item.id===recordId);
+  if(!record) return;
+  const period = (state.payrollPeriods||[]).find(item=>item.id===record.periodId);
+  const employee = allActiveEmployees().find(item=>item.id===record.employeeId) || {basicSalary:record.basicSalary, technician:record.employeeName};
+  const details = payrollDeductionDetails({...record, deductionType}, employee, period?.startDate, period?.endDate);
+  record.deductionType = deductionType;
+  record.absentDays = details.absentDays;
+  record.leaveDays = details.leaveDays;
+  record.deductions = details.deductions;
+  record.grossPay = Number(record.basicSalary||0) + Number(record.commission||0) + Number(record.bonus||0);
+  record.netPay = record.grossPay - record.deductions;
+  try{ await db.collection("payrollRecords").doc(record.id).set({deductionType, absentDays:record.absentDays, leaveDays:record.leaveDays, deductions:record.deductions, grossPay:record.grossPay, netPay:record.netPay}, {merge:true}); }catch(e){ console.error("Could not update payroll deduction type:", e); }
+  writeLocal();
+  renderPayrollDashboard();
+}
+
+async function updatePayrollMiscDeduction(recordId, value){
+  const record = (state.payrollRecords||[]).find(item=>item.id===recordId);
+  if(!record) return;
+  record.deductionType = "Miscellaneous";
+  record.miscellaneousDeduction = Math.max(0, Number(value||0));
+  record.deductions = record.miscellaneousDeduction;
+  record.grossPay = Number(record.basicSalary||0) + Number(record.commission||0) + Number(record.bonus||0);
+  record.netPay = record.grossPay - record.deductions;
+  try{ await db.collection("payrollRecords").doc(record.id).set({deductionType:record.deductionType, miscellaneousDeduction:record.miscellaneousDeduction, deductions:record.deductions, grossPay:record.grossPay, netPay:record.netPay}, {merge:true}); }catch(e){ console.error("Could not update miscellaneous deduction:", e); }
+  writeLocal();
+  renderPayrollDashboard();
+}
+
+function togglePayrollDeductionInput(){
+  const type = document.getElementById("payroll-edit-deduction-type")?.value;
+  const amountWrap = document.getElementById("payroll-edit-misc-wrap");
+  if(amountWrap) amountWrap.style.display = type === "Miscellaneous" ? "block" : "none";
+}
+
+function openPayrollEditModal(recordId){
+  const record = (state.payrollRecords||[]).find(item=>item.id===recordId);
+  if(!record) return;
+  const period = (state.payrollPeriods||[]).find(item=>item.id===record.periodId);
+  const employee = allActiveEmployees().find(item=>item.id===record.employeeId) || {basicSalary:record.basicSalary, technician:record.employeeName};
+  const details = payrollDeductionDetails(record, employee, period?.startDate, period?.endDate);
+  openOverlay(`<h3>Edit payroll record</h3><div class="sub">${escapeHTML(record.employeeName)} · ${escapeHTML(period?.label || record.periodId)}</div>
+    <div class="field"><label>Bonus (₱)</label><input id="payroll-edit-bonus" type="number" min="0" step="0.01" value="${Number(record.bonus||0)}"></div>
+    <div class="field"><label>Deduction type</label><select id="payroll-edit-deduction-type" onchange="togglePayrollDeductionInput()"><option value="Absent" ${details.deductionType==="Absent"?"selected":""}>Absent</option><option value="Miscellaneous" ${details.deductionType!=="Absent"?"selected":""}>Miscellaneous</option></select></div>
+    <div class="field" id="payroll-edit-misc-wrap"><label>Miscellaneous deduction (₱)</label><input id="payroll-edit-misc" type="number" min="0" step="0.01" value="${details.miscellaneousDeduction}"></div>
+    <div class="muted-box">Attendance in this period: ${details.absentDays} absent day${details.absentDays===1?"":"s"}, ${details.leaveDays} leave day${details.leaveDays===1?"":"s"}. Absent deductions include both.</div>
+    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="savePayrollEdit('${record.id}')">Save changes</button></div>`);
+  togglePayrollDeductionInput();
+}
+
+async function savePayrollEdit(recordId){
+  const record = (state.payrollRecords||[]).find(item=>item.id===recordId);
+  if(!record) return;
+  const period = (state.payrollPeriods||[]).find(item=>item.id===record.periodId);
+  const employee = allActiveEmployees().find(item=>item.id===record.employeeId) || {basicSalary:record.basicSalary, technician:record.employeeName};
+  const deductionType = document.getElementById("payroll-edit-deduction-type")?.value || "Miscellaneous";
+  const bonus = Math.max(0, Number(document.getElementById("payroll-edit-bonus")?.value || 0));
+  const miscellaneousDeduction = Math.max(0, Number(document.getElementById("payroll-edit-misc")?.value || 0));
+  const deductionDetails = payrollDeductionDetails({deductionType, miscellaneousDeduction, basicSalary:record.basicSalary}, employee, period?.startDate, period?.endDate);
+  record.bonus = bonus;
+  record.deductionType = deductionType;
+  record.miscellaneousDeduction = miscellaneousDeduction;
+  record.absentDays = deductionDetails.absentDays;
+  record.leaveDays = deductionDetails.leaveDays;
+  record.deductions = deductionDetails.deductions;
+  record.grossPay = Number(record.basicSalary||0) + Number(record.commission||0) + bonus;
+  record.netPay = record.grossPay - record.deductions;
+  try{ await db.collection("payrollRecords").doc(record.id).set(record, {merge:true}); }catch(e){ console.error("Could not save payroll edit:", e); }
+  writeLocal();
+  closeOverlay();
+  renderPayrollDashboard();
+  showToast("Payroll record updated");
+}
+
+async function deletePayrollRecord(recordId){
+  const record = (state.payrollRecords||[]).find(item=>item.id===recordId);
+  if(!record || !confirm(`Delete payroll record for ${record.employeeName}?`)) return;
+  state.payrollRecords = state.payrollRecords.filter(item=>item.id!==recordId);
+  try{ await db.collection("payrollRecords").doc(recordId).delete(); }catch(e){ console.error("Could not delete payroll record:", e); }
+  writeLocal();
+  renderPayrollDashboard();
+  showToast("Payroll record deleted");
 }
 
 async function markPayrollRecordPaid(recordId){
@@ -7026,19 +7167,22 @@ async function renderPayrollDashboard(){
       <tr>
         <td>${escapeHTML(r.employeeName)}</td>
         <td>${escapeHTML(r.branch)}</td>
+        <td>${peso(payrollRecordSales(r))}</td>
         <td>${peso(r.basicSalary)}</td>
         <td>${peso(r.commission)}</td>
         <td><input type="number" min="0" step="0.01" value="${Number(r.bonus||0)}" style="width:90px;" onchange="updatePayrollField('${r.id}','bonus',this.value)"></td>
-        <td><input type="number" min="0" step="0.01" value="${Number(r.deductions||0)}" style="width:90px;" onchange="updatePayrollField('${r.id}','deductions',this.value)"></td>
+        <td class="payroll-deduction-cell"><select onchange="updatePayrollDeductionType('${r.id}',this.value)"><option value="Absent" ${r.deductionType==="Absent"?"selected":""}>Absent</option><option value="Miscellaneous" ${r.deductionType!=="Absent"?"selected":""}>Miscellaneous</option></select>${r.deductionType==="Absent" ? `<div class="payroll-deduction-meta">${Number(r.absentDays||0)} absent · ${Number(r.leaveDays||0)} leave<br>${peso(r.deductions)}</div>` : `<input type="number" min="0" step="0.01" value="${Number(r.miscellaneousDeduction||r.deductions||0)}" onchange="updatePayrollMiscDeduction('${r.id}',this.value)">`}</td>
         <td>${peso(r.grossPay)}</td>
         <td><b>${peso(r.netPay)}</b></td>
         <td>${r.status==="paid" ? '<span class="tag good">Paid</span>' : '<span class="tag low">Pending</span>'}</td>
         <td style="text-align:right;white-space:nowrap;">
           <button class="pill-btn small ghost" onclick="viewPayslip('${r.id}')">View</button>
+          <button class="pill-btn small ghost" onclick="openPayrollEditModal('${r.id}')">Edit</button>
+          <button class="pill-btn small danger" onclick="deletePayrollRecord('${r.id}')">Delete</button>
           ${r.status!=="paid" ? `<button class="pill-btn small primary" onclick="markPayrollRecordPaid('${r.id}')">Mark Paid</button>` : ""}
         </td>
       </tr>
-    `).join("") : `<tr class="empty-row"><td colspan="10">No payroll calculated yet for this period. Click "Calculate Payroll" to generate it.</td></tr>`;
+    `).join("") : `<tr class="empty-row"><td colspan="11">No payroll calculated yet for this period. Click "Calculate Payroll" to generate it.</td></tr>`;
   }
 
   const historyBody = document.getElementById("pr-history-body");
