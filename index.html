@@ -360,12 +360,22 @@
 
   @media (max-width:820px){
     .rail{ width:72px; }
-    .brand-name, .nav-item span.label, .rail-foot{ display:none; }
+    .brand-name, .nav-item span.label, .rail-foot, .rail-controls{ display:none; }
     .nav-item{ justify-content:center; }
     .content{ padding:20px 16px; }
     .finance-grid{ grid-template-columns:1fr; }
     table{ font-size:12px; }
     th,td{ padding:10px 12px; }
+    /* The sidebar collapses to an icon-only rail at this width — no room for
+       full-text buttons (Change Password, Refresh, Log out) or a branch
+       dropdown. Show the topbar versions instead, which already have their
+       own responsive handling below. */
+    .topbar-right select.branch-select,
+    .topbar-right button[onclick*="openChangePasswordModal"],
+    .topbar-right button[onclick*="switchView('security-access')"],
+    .topbar-right [data-logout-action],
+    .topbar-right button[onclick*="logout()"],
+    .topbar-right #refresh-app-btn{ display:inline-flex !important; }
     /* iOS Safari zooms the page in on focus when a field's font-size is under 16px */
     input, select, textarea{ font-size:16px !important; }
   }
@@ -710,7 +720,7 @@
     #admin-inv-body td:nth-child(5)::before{ content:"SRP"; }
     #admin-inv-body td:nth-child(6)::before{ content:"Total"; }
     #admin-inv-body td:nth-child(7)::before{ content:"Available"; }
-    #employee-txn-body td:nth-child(2)::before{ content:"Technician"; }
+    #employee-txn-body td:nth-child(2)::before{ content:"Staff"; }
     #employee-txn-body td:nth-child(3)::before{ content:"Service"; }
     #employee-txn-body td:nth-child(4)::before{ content:"Phone"; }
     #employee-txn-body td:nth-child(5)::before{ content:"Item"; }
