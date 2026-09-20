@@ -1221,7 +1221,7 @@
                 <div class="subtab" data-report-sub="summary">MONTHLY SUMMARY</div>
               </div>
               <div id="att-report-employee" class="attendance-table-wrap">
-                <table><thead><tr><th>Employee</th><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th><th style="text-align:right">Action</th></tr></thead><tbody id="att-report-employee-body"></tbody></table>
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th><th style="text-align:right">Actions</th></tr></thead><tbody id="att-report-employee-body"></tbody></table>
               </div>
               <div id="att-report-branch" class="attendance-table-wrap" style="display:none;">
                 <table><thead><tr><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th></tr></thead><tbody id="att-report-branch-body"></tbody></table>
@@ -5910,7 +5910,7 @@ function renderAttendanceReports(){
       const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
       const absent = Math.max(0, daysInMonth - present - leave);
       return `<tr><td>${escapeHTML(e.name)}</td><td>${escapeHTML(e.branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td>
-        <td style="text-align:right"><button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(e.technician)}')">View</button></td></tr>`;
+        <td style="text-align:right;white-space:nowrap"><button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(e.technician)}')">View</button> <button class="pill-btn small danger" onclick="deleteEmployeeAttendanceMonth('${escapeHTML(e.technician)}','${month}')">Delete</button></td></tr>`;
     }).join("") || `<tr class="empty-row"><td colspan="6">No employees found.</td></tr>`;
   }
 
@@ -6093,6 +6093,33 @@ async function deleteAttendance(id){
       renderAttendance();
     }
     showToast("Attendance deletion failed — cloud record was kept");
+  }
+}
+
+async function deleteEmployeeAttendanceMonth(tech, month){
+  if(!session.isAdmin) return;
+  const records = (state.attendance||[]).filter(record=>record.tech===tech && String(record.date||"").slice(0,7)===month);
+  if(!records.length){ showToast("No saved attendance records for this employee and month"); return; }
+  if(!confirm(`Delete ${records.length} attendance record${records.length===1?"":"s"} for ${tech} in ${month}?`)) return;
+  state.attendance = (state.attendance||[]).filter(record=>!(record.tech===tech && String(record.date||"").slice(0,7)===month));
+  records.forEach(record=>markDeleted("attendance", record.id));
+  try{
+    const user = firebase.auth().currentUser;
+    if(user && !user.isAnonymous){
+      const batch = db.batch();
+      records.forEach(record=>batch.delete(db.collection("attendance").doc(record.id)));
+      await withTimeout(batch.commit(), 10000);
+      await syncAppMeta();
+    }
+    writeLocal();
+    renderAttendance();
+    showToast("Attendance records deleted");
+  }catch(e){
+    console.error("Attendance report deletion failed:", e);
+    state.attendance.push(...records);
+    writeLocal();
+    renderAttendance();
+    showToast("Attendance deletion failed — records were restored");
   }
 }
 
