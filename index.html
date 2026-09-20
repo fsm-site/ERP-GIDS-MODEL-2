@@ -887,6 +887,10 @@
       <span class="label" id="admin-nav-label">OWNER</span>
       <span id="owner-nav-badge" class="notif-dot" style="display:none;"></span>
     </div>
+    <div class="nav-item" data-view="owner-security-shortcut">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 3v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      <span class="label">SECURITY &amp; ACCESS</span>
+    </div>
     <div class="nav-item" data-view="finances">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
       <span class="label">FINANCES</span>
@@ -894,7 +898,6 @@
 
     <div class="rail-controls">
       <select class="branch-select" id="branch-select" style="width:100%;"></select>
-      <button class="pill-btn ghost" id="sidebar-security-btn" type="button" onclick="switchView('security-access')" style="width:100%;display:none;">Security and Access</button>
       <button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()" style="width:100%;">Change Password</button>
       <button class="pill-btn ghost" type="button" onclick="hardRefreshApp()" style="width:100%;" title="Reload the app and re-sync your data">Refresh</button>
       <button class="pill-btn danger" data-shared-logout data-logout-action type="button" style="width:100%;">Log out</button>
@@ -1375,7 +1378,7 @@
 <div class="view" id="view-owner-dashboard">
   <div class="subtabs">
     <div class="subtab active" data-owner-sub="overview">OVERVIEW</div>
-    <div class="subtab" data-owner-sub="access">ACCESS</div>
+    <div class="subtab" data-owner-sub="access" style="display:none;">ACCESS</div>
     <div class="subtab" data-owner-sub="requests">REQUESTS <span id="owner-requests-badge" class="notif-dot" style="display:none;"></span></div>
     <div class="subtab" data-owner-sub="tech-requests">TECH REQUESTS</div>
     <div class="subtab" data-owner-sub="branches">BRANCHES</div>
@@ -1386,17 +1389,29 @@
       <div class="stat-card">
         <div class="stat-label">Business clients today</div>
         <div class="stat-value" id="owner-stat-clients">0</div>
-        <div class="stat-sub">Across the active business branch</div>
+        <div class="stat-sub">Across all active branches</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Business sales today</div>
         <div class="stat-value blue" id="owner-stat-sales">₱0</div>
-        <div class="stat-sub">Revenue from the active branch</div>
+        <div class="stat-sub">Revenue across all active branches</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Open access</div>
-        <div class="stat-value" id="owner-stat-access">2</div>
-        <div class="stat-sub">Current active user roles</div>
+        <div class="stat-label">Top branch</div>
+        <div class="stat-value" id="owner-stat-top-branch" style="font-size:20px;">—</div>
+        <div class="stat-sub">All-time, by total sales</div>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Total completed jobs</div>
+        <div class="stat-value" id="owner-stat-completed">0</div>
+        <div class="stat-sub">All-time, all branches</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total in repair</div>
+        <div class="stat-value" id="owner-stat-inrepair">0</div>
+        <div class="stat-sub">Currently in progress, all branches</div>
       </div>
     </div>
 
@@ -1404,7 +1419,7 @@
       <div class="panel-head">
         <div>
           <h3>Owner dashboard</h3>
-          <div class="desc">Business-level summary for the active branch</div>
+          <div class="desc">Business-level summary across all active branches</div>
         </div>
         <button class="pill-btn primary" onclick="switchView('admin')">Open admin dashboard</button>
       </div>
@@ -4101,7 +4116,7 @@ function updateNavForRole(role){
   document.querySelectorAll(".nav-item").forEach(nav => {
     const view = nav.dataset.view;
     const visible = role === "owner"
-      ? ["admin", "employee", "inventory-public", "customer-status", "staff-directory", "attendance", "finances"].includes(view)
+      ? ["admin", "owner-security-shortcut", "employee", "inventory-public", "customer-status", "staff-directory", "attendance", "finances"].includes(view)
       : role === "admin"
         ? view !== "staff-gate"
         : role === "staff"
@@ -4288,6 +4303,15 @@ function switchView(key){
     // Firestore is authoritative, including an empty result, so a stale
     // local Staff/Admin cache cannot remain visible after deletion.
     loadAttendanceFromCollection().then(()=>renderAttendance()).catch(()=>{});
+  } else if(key==="owner-security-shortcut"){
+    if(!session.isOwner){
+      switchView("role-select");
+      return;
+    }
+    switchView("owner-dashboard");
+    const accessTab = document.querySelector('.subtab[data-owner-sub="access"]');
+    if(accessTab) accessTab.click();
+    return;
   } else if(key==="owner-dashboard"){
     if(!session.isOwner){
       switchView("role-select");
@@ -5005,8 +5029,6 @@ function renderSidebarControls(){
     if(select.innerHTML !== optionsHtml) select.innerHTML = optionsHtml;
   }
   bindBranchSelector((session.isOwner || session.isAdmin) ? "admin" : "employee");
-  const securityBtn = document.getElementById("sidebar-security-btn");
-  if(securityBtn) securityBtn.style.display = hasSecurityAccess() ? "block" : "none";
 }
 
 function renderAll(){
