@@ -1002,6 +1002,20 @@
             <button id="pub-inv-recalc-btn" class="pill-btn ghost" style="display:none;" onclick="recalculateInventoryUsage()">Recalculate Usage</button>
             <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
           </div>
+          <div class="stat-row" id="pub-inv-finance-cards" style="display:none;">
+            <div class="stat-card">
+              <div class="stat-label">Total Capital</div>
+              <div class="stat-value blue" id="pub-inv-total-capital">₱0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total SRP</div>
+              <div class="stat-value" id="pub-inv-total-srp">₱0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Net Profit</div>
+              <div class="stat-value" id="pub-inv-net-profit">₱0</div>
+            </div>
+          </div>
           <div class="panel" id="pub-inv-single-panel">
             <div class="panel-head">
               <div>
@@ -1034,6 +1048,13 @@
         </div>
 
         <div id="pub-sub-labor" style="display:none;">
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-label">Total Amount of Labor</div>
+              <div class="stat-value blue" id="public-labor-total-sales">₱0</div>
+              <div class="stat-sub">Collected sales from all logged Labor jobs</div>
+            </div>
+          </div>
           <div class="panel">
             <div class="panel-head">
               <div>
@@ -1803,6 +1824,11 @@
                 <div class="stat-label">Total SRP value</div>
                 <div class="stat-value" id="inv-total-srp">₱0</div>
                 <div class="stat-sub">Sum of SRP × quantity across all stock</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Net Profit</div>
+                <div class="stat-value" id="inv-net-profit">₱0</div>
+                <div class="stat-sub">Total SRP value less total capital across all stock</div>
               </div>
             </div>
             <div class="panel">
@@ -3326,6 +3352,12 @@ async function loadAdminCollections(){
       const snap = await withTimeout(db.collection(name).where("branchIds","array-contains",branchName).get(), 10000);
       return snap.docs.map(doc=>({id:doc.id, ...doc.data()}));
     };
+    const readInventory = session.isOwner
+      ? async () => {
+          const snap = await withTimeout(db.collection("inventoryPrivate").get(), 10000);
+          return snap.docs.map(doc=>({id:doc.id, ...doc.data()}));
+        }
+      : () => readBranch("inventoryPrivate");
     const [jobs, salesPrivate, staffProfiles, suppliers, stockMovements, staffAccounts, adminAccounts, purchaseOrders, commissionDocs, inventoryPrivate] = await Promise.all([
       readBranch("jobs"),
       readBranch("salesPrivate"),
@@ -3336,7 +3368,7 @@ async function loadAdminCollections(){
       readAccountsBranch("adminAccounts"),
       readBranch("purchaseOrders"),
       readBranch("commissionRates"),
-      readBranch("inventoryPrivate")
+      readInventory()
     ]);
 
     // Dedicated collections are the Admin source. Empty collections remain empty;
@@ -4317,6 +4349,8 @@ function switchView(key){
       switchView("role-select");
       return;
     }
+    const ownerOverviewTab = document.querySelector('.subtab[data-owner-sub="overview"]');
+    if(ownerOverviewTab) ownerOverviewTab.click();
     document.getElementById("view-owner-dashboard").classList.add("active");
     titleEl.innerHTML = `Hi, <span class="hi">${escapeHTML(currentUserName())}!</span>`;
     subEl.innerHTML = "Owner overview · business access and branch health";
@@ -6278,7 +6312,11 @@ function renderLaborSummary(bodyId, branch){
     byLabor[key].jobs += 1;
     byLabor[key].total += collected;
   });
-  const totalEl = bodyId === "admin-labor-body" ? document.getElementById("admin-labor-total-sales") : null;
+  const totalEl = bodyId === "admin-labor-body"
+    ? document.getElementById("admin-labor-total-sales")
+    : bodyId === "public-labor-body"
+      ? document.getElementById("public-labor-total-sales")
+      : null;
   if(totalEl) totalEl.textContent = peso(totalSales);
   const entries = Object.entries(byLabor).sort((a,b)=> b[1].total - a[1].total);
   body.innerHTML = entries.length ? entries.map(([name,v])=>`
@@ -6637,6 +6675,16 @@ function renderEmployeeDashboard(){
 function renderPublicInventory(){
   const addBtn = document.getElementById("pub-inv-add-btn");
   if(addBtn) addBtn.style.display = session.isOwner ? "inline-flex" : "none";
+  const financeCards = document.getElementById("pub-inv-finance-cards");
+  if(financeCards) financeCards.style.display = session.isOwner ? "flex" : "none";
+  if(session.isOwner){
+    const capitalEl = document.getElementById("pub-inv-total-capital");
+    const srpEl = document.getElementById("pub-inv-total-srp");
+    const netProfitEl = document.getElementById("pub-inv-net-profit");
+    if(capitalEl) capitalEl.textContent = peso(totalCapital());
+    if(srpEl) srpEl.textContent = peso(totalSrpValue());
+    if(netProfitEl) netProfitEl.textContent = peso(totalNetProfit());
+  }
   const recalcBtn = document.getElementById("pub-inv-recalc-btn");
   if(recalcBtn) recalcBtn.style.display = session.isOwner ? "inline-flex" : "none";
   const singlePanel = document.getElementById("pub-inv-single-panel");
@@ -7376,6 +7424,9 @@ function totalCapital(){
 function totalSrpValue(){
   return state.inventory.reduce((s,i)=> s + Number(i.price||0)*Number(i.quantity||0), 0);
 }
+function totalNetProfit(){
+  return totalSrpValue() - totalCapital();
+}
 
 /* Items at or below this available quantity are flagged as low stock (see availTag) */
 
@@ -7405,6 +7456,8 @@ function renderAdminInventory(){
   if(capitalEl) capitalEl.textContent = ownerView ? peso(totalCapital()) : "—";
   const srpEl = document.getElementById("inv-total-srp");
   if(srpEl) srpEl.textContent = peso(totalSrpValue());
+  const netProfitEl = document.getElementById("inv-net-profit");
+  if(netProfitEl) netProfitEl.textContent = peso(totalNetProfit());
   const supplierBtn = document.getElementById("admin-inv-supplier-btn");
   const purchaseBtn = document.getElementById("admin-inv-po-btn");
   if(supplierBtn) supplierBtn.style.display = ownerView ? "inline-flex" : "none";
