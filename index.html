@@ -968,7 +968,7 @@
             <button class="pill-btn primary" onclick="openTxnModal()">+ Add job</button>
           </div>
           <table>
-            <thead><tr><th>No. / Encoded</th><th>Service type</th><th>Phone</th><th>Item used</th><th>Payment</th><th style="text-align:right">Paid / fee</th><th style="text-align:right">Receipt</th></tr></thead>
+            <thead><tr><th>No. / Encoded</th><th>Staff</th><th>Service type</th><th>Phone</th><th>Item used</th><th>Payment</th><th style="text-align:right">Paid / fee</th><th style="text-align:right">Receipt</th></tr></thead>
             <tbody id="employee-txn-body"></tbody>
           </table>
         </div>
@@ -1190,6 +1190,15 @@
 
         <!-- Overview subtab -->
         <div id="admin-sub-overview">
+          <div class="panel" id="admin-my-sales-panel" style="display:none; background:linear-gradient(135deg, rgba(76,141,255,.10), rgba(76,141,255,.02)); border:1px solid var(--line-strong); margin-bottom:16px;">
+            <div style="padding:20px 22px;">
+              <div style="font-size:16px; font-weight:800;" id="admin-my-sales-greeting">Hey there!</div>
+              <div style="font-size:12.5px; color:var(--muted); margin-top:2px;">This is your sales today</div>
+              <div style="font-size:34px; font-weight:800; color:var(--blue); margin-top:10px;" id="admin-my-sales-amount">₱0</div>
+              <div style="font-size:13px; font-weight:600; margin-top:8px;" id="admin-my-sales-motivation"></div>
+            </div>
+          </div>
+
           <div class="finance-grid">
             <div class="finance-card">
               <div class="stat-label">Gross sales (this month)</div>
@@ -5447,6 +5456,7 @@ function renderEmployeeDashboard(){
   body.innerHTML = rows.length ? rows.map((t,index)=>`
     <tr>
       <td><b>#${index+1}</b><div class="encoded-stamp">${escapeHTML(encodedStamp(t))}</div></td>
+      <td>${escapeHTML(attendanceRosterLabel(t.tech))}</td>
       <td>${escapeHTML(serviceLabel(t))}</td>
       <td>${escapeHTML(phoneLabel(t))}</td>
       <td>${escapeHTML(itemNameById(t.itemUsed))}</td>
@@ -5458,7 +5468,7 @@ function renderEmployeeDashboard(){
           ${balanceAmount(t)>0 ? `<button onclick="collectBalance('${t.id}')" title="Collect balance">${collectIconSVG()}</button>` : ""}
         </div>
       </td>
-    </tr>`).join("") : `<tr class="empty-row"><td colspan="7">No jobs logged yet today for ${branch}. Tap "Add job" to log one.</td></tr>`;
+    </tr>`).join("") : `<tr class="empty-row"><td colspan="8">No jobs logged yet today for ${branch}. Tap "Add job" to log one.</td></tr>`;
 }
 
 function renderPublicInventory(){
@@ -5524,6 +5534,23 @@ function renderAdminOverview(){
   if(tipEl) tipEl.textContent = peso(tipTotal);
   const lowStockCount = state.inventory.filter(i => (Number(i.quantity)-Number(i.used||0)) <= Number(i.reorderLevel ?? LOW_STOCK_THRESHOLD)).length;
   document.getElementById("admin-stat-lowstock").textContent = lowStockCount;
+
+  // Personal sales card — shows the logged-in Admin their own sales today,
+  // same feature as Staff's Dashboard, since Admin no longer has a separate
+  // Dashboard page to see this on.
+  const myTechId = session.adminUsername;
+  const myPanel = document.getElementById("admin-my-sales-panel");
+  if(myPanel){
+    if(myTechId){
+      const mySales = todays.filter(t => t.tech === myTechId).reduce((s,t)=>s+collectedAmount(t),0);
+      document.getElementById("admin-my-sales-greeting").textContent = `Hey, ${currentUserName()}!`;
+      document.getElementById("admin-my-sales-amount").textContent = peso(mySales);
+      document.getElementById("admin-my-sales-motivation").textContent = motivationForSales(mySales);
+      myPanel.style.display = "block";
+    } else {
+      myPanel.style.display = "none";
+    }
+  }
 
   const gross = monthly.reduce((s,t)=>s+collectedAmount(t),0);
   const grossEl = document.getElementById("fin-gross");
