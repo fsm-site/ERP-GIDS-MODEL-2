@@ -3936,7 +3936,12 @@ async function init(){
   enforceClientRole();
 
   const finishInit = () => {
-    const activeRole = restoredRole || (session.isAdmin ? "admin" : session.staffUnlocked ? "staff" : null);
+    // session.isOwner must win regardless of restoredRole — restoreAuthenticatedSession()
+    // sets session.isOwner=true but still literally returns "admin" as the role
+    // string (owner accounts are stored/verified via the adminAccounts path).
+    // Falling back to restoredRole first would misidentify every Owner session
+    // as "admin", showing the wrong nav label and wrong default screen.
+    const activeRole = session.isOwner ? "owner" : (restoredRole || (session.isAdmin ? "admin" : session.staffUnlocked ? "staff" : null));
     const titleEl = document.getElementById("topbar-title");
     const subEl = document.getElementById("topbar-sub");
     const rightEl = document.getElementById("topbar-right");
@@ -3956,7 +3961,11 @@ async function init(){
 
     if(activeRole && activeRole !== "developer" && !subscriptionIsActive()){ applySubscriptionAccess(); return; }
     updateNavForRole(activeRole);
-    const allowedView = activeRole === "admin" ? (restoredView || "admin") : activeRole === "staff" ? (restoredView || "employee") : "role-select";
+    // Defends against a browser that already has the stale, transient
+    // "owner-security-shortcut" value stuck in sessionStorage from before
+    // this was excluded from being saved (see switchView).
+    const safeRestoredView = restoredView === "owner-security-shortcut" ? null : restoredView;
+    const allowedView = activeRole === "owner" ? (safeRestoredView || "owner-dashboard") : activeRole === "admin" ? (safeRestoredView || "admin") : activeRole === "staff" ? (safeRestoredView || "employee") : "role-select";
     switchView(allowedView);
     applyThemeToggleUI(document.documentElement.getAttribute("data-theme")==="dark" ? "dark" : "light");
     if(restoredRole) setInterval(async ()=>{ await loadSubscription(); applySubscriptionAccess(); }, 60000);
@@ -4218,7 +4227,11 @@ function switchView(key){
     return target;
   };
 
-  if(key !== "role-select" && (session.isAdmin || session.staffUnlocked)) saveBrowserSession(key);
+  // "owner-security-shortcut" is a one-time redirect (it immediately jumps to
+  // owner-dashboard's Access subtab and returns) — saving it as the restorable
+  // view would replay that redirect on every future reload, effectively
+  // trapping Owner on the Access tab instead of their real last screen.
+  if(!["role-select", "owner-security-shortcut"].includes(key) && (session.isAdmin || session.staffUnlocked)) saveBrowserSession(key);
 
   if(key === "admin" && session.isOwner && !session.isDeveloper){
     key = "owner-dashboard";
