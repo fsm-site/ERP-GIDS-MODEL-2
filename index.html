@@ -138,6 +138,30 @@
   .pill-btn.danger{ color:#ffd9d4 !important; border-color:rgba(255,101,82,.55) !important; background:linear-gradient(145deg,#8b3f45,#58252e) !important; }
   .pill-btn.danger:hover{ background:rgba(255,101,82,.16); }
   .pill-btn.small{ padding:5px 10px; font-size:11.5px; }
+  .attendance-report-actions{ display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap; min-width:max-content; }
+  .attendance-report-actions .pill-btn{ min-height:32px; white-space:nowrap; }
+  .attendance-table-wrap table{ min-width:620px; }
+  .attendance-table-wrap td:last-child{ min-width:150px; }
+  @media (max-width:600px){ .attendance-report-actions{ width:100%; justify-content:flex-start; } .attendance-report-actions .pill-btn{ min-height:36px; } }
+  @media (max-width:600px){
+    #att-report-employee table, #att-report-absence table{ min-width:0; table-layout:fixed; }
+    #att-report-employee table thead, #att-report-absence table thead{ display:none; }
+    #att-report-employee tbody, #att-report-absence tbody{ display:block; }
+    #att-report-employee tbody tr:not(.empty-row), #att-report-absence tbody tr:not(.empty-row){ display:grid; grid-template-columns:1fr 1fr; gap:0 12px; padding:10px 12px; border-bottom:1px solid var(--line); }
+    #att-report-employee tbody td, #att-report-absence tbody td{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; padding:6px 0; border:0; text-align:right; font-size:12px; overflow-wrap:anywhere; }
+    #att-report-employee tbody td::before, #att-report-absence tbody td::before{ color:var(--muted); font-size:9px; font-weight:800; letter-spacing:.45px; text-align:left; text-transform:uppercase; }
+    #att-report-employee tbody td:nth-child(1){ grid-column:1 / -1; display:block; text-align:left; font-weight:800; font-size:13px; }
+    #att-report-employee tbody td:nth-child(1)::before{ display:none; }
+    #att-report-employee tbody td:nth-child(2)::before{ content:"Branch"; }
+    #att-report-employee tbody td:nth-child(3)::before{ content:"Present"; }
+    #att-report-employee tbody td:nth-child(4)::before{ content:"Absent"; }
+    #att-report-employee tbody td:nth-child(5)::before{ content:"Leave"; }
+    #att-report-employee tbody td:nth-child(6), #att-report-absence tbody td:nth-child(5){ grid-column:1 / -1; display:block; padding-top:8px; }
+    #att-report-absence tbody td:nth-child(1)::before{ content:"Employee"; }
+    #att-report-absence tbody td:nth-child(2)::before{ content:"Branch"; }
+    #att-report-absence tbody td:nth-child(3)::before{ content:"Date"; }
+    #att-report-absence tbody td:nth-child(4)::before{ content:"Status"; }
+  }
 
   @keyframes glassShine{
     0%, 58%{ transform:translateX(-135%) rotate(18deg); opacity:0; }
@@ -5910,7 +5934,7 @@ function renderAttendanceReports(){
       const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
       const absent = Math.max(0, daysInMonth - present - leave);
       return `<tr><td>${escapeHTML(e.name)}</td><td>${escapeHTML(e.branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td>
-        <td style="text-align:right;white-space:nowrap"><button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(e.technician)}')">View</button> <button class="pill-btn small danger" onclick="deleteEmployeeAttendanceMonth('${escapeHTML(e.technician)}','${month}')">Delete</button></td></tr>`;
+        <td><div class="attendance-report-actions"><button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(e.technician)}')">View</button><button class="pill-btn small danger" onclick="deleteEmployeeAttendanceMonth('${escapeHTML(e.technician)}','${month}')">Delete</button></div></td></tr>`;
     }).join("") || `<tr class="empty-row"><td colspan="6">No employees found.</td></tr>`;
   }
 
@@ -5942,7 +5966,7 @@ function renderAttendanceReports(){
       });
     });
     absenceBody.innerHTML = attendanceRows.length
-      ? attendanceRows.slice(0,300).map(a => `<tr><td>${escapeHTML(a.name)}</td><td>${escapeHTML(a.branch)}</td><td>${escapeHTML(formatSiteDate(a.date))}</td><td>${attendanceStatusBadge(a.status==="Present" ? {checkIn:true} : a.status==="Leave" ? {status:"leave"} : null)}</td><td style="text-align:right;white-space:nowrap;"><button class="pill-btn small ghost" onclick="openAttendanceEditModal('${a.recordId}','${escapeHTML(a.technician)}','${a.date}')">Edit</button>${a.recordId ? ` <button class="pill-btn small danger" onclick="deleteAttendance('${a.recordId}')">Delete</button>` : ""}</td></tr>`).join("")
+      ? attendanceRows.slice(0,300).map(a => `<tr><td>${escapeHTML(a.name)}</td><td>${escapeHTML(a.branch)}</td><td>${escapeHTML(formatSiteDate(a.date))}</td><td>${attendanceStatusBadge(a.status==="Present" ? {checkIn:true} : a.status==="Leave" ? {status:"leave"} : null)}</td><td><div class="attendance-report-actions"><button class="pill-btn small ghost" onclick="openAttendanceEditModal('${a.recordId}','${escapeHTML(a.technician)}','${a.date}')">Edit</button><button class="pill-btn small danger" onclick="deleteAttendanceReportDay('${a.recordId}','${escapeHTML(a.technician)}','${a.date}')">Delete</button></div></td></tr>`).join("")
       : `<tr class="empty-row"><td colspan="5">No attendance dates available for this month.</td></tr>`;
   }
 
@@ -6094,6 +6118,14 @@ async function deleteAttendance(id){
     }
     showToast("Attendance deletion failed — cloud record was kept");
   }
+}
+
+function deleteAttendanceReportDay(id, tech, date){
+  if(!id){
+    showToast(`${tech} is already marked absent for ${formatSiteDate(date)}`);
+    return;
+  }
+  deleteAttendance(id);
 }
 
 async function deleteEmployeeAttendanceMonth(tech, month){
