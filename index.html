@@ -887,7 +887,6 @@
 
     <div class="rail-controls">
       <select class="branch-select" id="branch-select" style="width:100%;"></select>
-      <button class="pill-btn ghost" id="sidebar-security-btn" type="button" onclick="switchView('security-access')" style="width:100%;display:none;">Security and Access</button>
       <button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()" style="width:100%;">Change Password</button>
       <button class="pill-btn ghost" type="button" onclick="hardRefreshApp()" style="width:100%;" title="Reload the app and re-sync your data">Refresh</button>
       <button class="pill-btn danger" data-shared-logout data-logout-action type="button" style="width:100%;">Log out</button>
@@ -4297,8 +4296,6 @@ function renderSidebarControls(){
     if(select.innerHTML !== optionsHtml) select.innerHTML = optionsHtml;
   }
   bindBranchSelector((session.isOwner || session.isAdmin) ? "admin" : "employee");
-  const securityBtn = document.getElementById("sidebar-security-btn");
-  if(securityBtn) securityBtn.style.display = hasSecurityAccess() ? "block" : "none";
 }
 
 function renderAll(){
