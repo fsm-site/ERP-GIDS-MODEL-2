@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#07111f" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="GIDS Staff" />
+<meta name="apple-mobile-web-app-title" content="GIDS Owner" />
 <link rel="apple-touch-icon" href="gd2.png" />
 <meta name="description" content="GIDS AYPHONE TECH Operations Dashboard" />
 <link rel="manifest" href="manifest.json" />
@@ -210,6 +210,7 @@
   .tag{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; }
   .tag.good{ background:rgba(46,204,145,.14); color:var(--good); }
   .tag.low{ background:rgba(255,101,82,.14); color:var(--warn); }
+  .notif-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#ff4d4f; margin-left:6px; vertical-align:middle; box-shadow:0 0 0 2px rgba(255,77,79,.25); }
   .row-actions{ display:flex; gap:6px; }
   .row-actions button{ border:none; background:none; cursor:pointer; padding:5px; border-radius:6px; color:var(--muted); }
   .row-actions button:hover{ background:var(--blue-pale); color:var(--blue-light); }
@@ -238,6 +239,7 @@
   .login-card .field label, .login-card .remember-choice{ color:#e7f3ff; }
   .login-error{ color:var(--warn); font-size:12px; font-weight:600; margin-top:4px; min-height:16px; }
   .role-choice{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:22px; }
+  #login-role-choice{ display:flex; justify-content:center; }
   .role-choice .pill-btn{ min-height:52px; }
 
   /* ---------- Subtabs (admin) ---------- */
@@ -261,6 +263,10 @@
   .overlay{ position:fixed; inset:0; background:rgba(12,30,56,.48); display:none; align-items:center; justify-content:center; z-index:50; padding:16px; box-sizing:border-box; backdrop-filter:blur(12px) saturate(125%); overflow:hidden; overscroll-behavior:contain; }
   .overlay.active{ display:flex; }
   .modal{ background:linear-gradient(145deg,rgba(18,42,67,.98),rgba(6,18,34,.98)); border:1px solid var(--line-strong); border-radius:18px; width:min(420px,100%); max-width:420px; max-height:calc(100dvh - 32px); overflow-y:auto; overscroll-behavior:contain; padding:22px 24px 18px; box-sizing:border-box; box-shadow:0 24px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter:blur(24px) saturate(145%); }
+  .modal.modal-light{ background:#ffffff; color:#14213d; }
+  .modal.modal-light h3{ color:#14213d; }
+  .modal.modal-light .sub{ color:#4a5a72; }
+  .modal.modal-light table td{ color:#14213d; border-bottom:1px solid #e4e9f1; padding:8px 4px; }
   .modal.job-modal{ background:linear-gradient(145deg,#ffffff,#f2f7fc); color:#14213d; border-color:#b8d3eb; box-shadow:0 24px 70px rgba(17,48,82,.28), inset 0 1px 0 rgba(255,255,255,.9); }
   .modal.job-modal h3{ color:#14213d; }
   .modal.job-modal .sub{ color:#5f7690; }
@@ -876,17 +882,19 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/></svg>
       <span class="label">ATTENDANCE</span>
     </div>
-    <div class="nav-item" data-view="staff-gate">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 4.7-3.2 7.9-8 9-4.8-1.1-8-4.3-8-9V7l8-4z"/><path d="M9 12h6M12 9v6"/></svg>
-      <span class="label">STAFF SIGN IN</span>
-    </div>
     <div class="nav-item" data-view="admin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 3v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V5l8-3z"/></svg>
-      <span class="label" id="admin-nav-label">ADMIN</span>
+      <span class="label" id="admin-nav-label">OWNER</span>
+      <span id="owner-nav-badge" class="notif-dot" style="display:none;"></span>
+    </div>
+    <div class="nav-item" data-view="finances">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      <span class="label">FINANCES</span>
     </div>
 
     <div class="rail-controls">
       <select class="branch-select" id="branch-select" style="width:100%;"></select>
+      <button class="pill-btn ghost" id="sidebar-security-btn" type="button" onclick="switchView('security-access')" style="width:100%;display:none;">Security and Access</button>
       <button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()" style="width:100%;">Change Password</button>
       <button class="pill-btn ghost" type="button" onclick="hardRefreshApp()" style="width:100%;" title="Reload the app and re-sync your data">Refresh</button>
       <button class="pill-btn danger" data-shared-logout data-logout-action type="button" style="width:100%;">Log out</button>
@@ -987,7 +995,11 @@
         </div>
 
         <div id="pub-sub-parts">
-          <div class="panel">
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
+            <button id="pub-inv-recalc-btn" class="pill-btn ghost" style="display:none;" onclick="recalculateInventoryUsage()">Recalculate Usage</button>
+            <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
+          </div>
+          <div class="panel" id="pub-inv-single-panel">
             <div class="panel-head">
               <div>
                 <h3>Parts &amp; accessories inventory</h3>
@@ -995,9 +1007,25 @@
               </div>
             </div>
             <table>
-              <thead><tr id="public-inv-head"><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
+              <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th></tr></thead>
               <tbody id="public-inv-body"></tbody>
             </table>
+          </div>
+          <div id="pub-inv-branch-panels" style="display:none;">
+            <div class="panel">
+              <div class="panel-head"><div><h3>San Antonio</h3><div class="desc">Inventory for this branch</div></div></div>
+              <table>
+                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th><th style="text-align:right">Actions</th></tr></thead>
+                <tbody id="public-inv-body-branch1"></tbody>
+              </table>
+            </div>
+            <div class="panel" style="margin-top:16px;">
+              <div class="panel-head"><div><h3>Bataan</h3><div class="desc">Inventory for this branch</div></div></div>
+              <table>
+                <thead><tr><th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th><th style="text-align:right">Actions</th></tr></thead>
+                <tbody id="public-inv-body-branch2"></tbody>
+              </table>
+            </div>
           </div>
           <div class="public-note">This inventory is public view — pricing and edit access are admin-only.</div>
         </div>
@@ -1060,29 +1088,101 @@
 
       <!-- ================= TECHNICIAN ATTENDANCE ================= -->
       <div class="view" id="view-attendance">
-        <div class="staff-intro">
-          <div>
-            <div class="hero-eyebrow">TEAM TIMEKEEPING</div>
-            <h2>Technician Attendance</h2>
-            <p>Record who is on shift and keep a clear daily attendance history.</p>
+        <div id="attendance-staff-view">
+          <div class="staff-intro">
+            <div>
+              <div class="hero-eyebrow">TEAM TIMEKEEPING</div>
+              <h2>Technician Attendance</h2>
+              <p>Record who is on shift and keep a clear daily attendance history.</p>
+            </div>
+          </div>
+          <div class="attendance-grid">
+            <div class="panel attendance-summary">
+              <div class="panel-head" style="padding:0 0 14px;">
+                <div><h3>Today's shift</h3><div class="desc" id="attendance-date-label"></div></div>
+              </div>
+              <div class="field"><label>Technician</label><select id="attendance-tech"></select><div id="attendance-self-note" class="desc" style="margin-top:7px;display:none;">You can check in or check out only your own attendance.</div></div>
+              <div class="attendance-status" id="attendance-status"><span class="dot"></span><span>Not checked in</span></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="pill-btn primary" onclick="checkInTechnician()">Check in</button>
+                <button class="pill-btn ghost" onclick="checkOutTechnician()">Check out</button>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div><h3>Attendance log</h3><div class="desc">Today's check-in and check-out records</div></div></div>
+              <div class="attendance-table-wrap">
+                <table><thead><tr><th>Technician</th><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th><th id="attendance-actions-head" style="text-align:right">Actions</th></tr></thead><tbody id="attendance-body"></tbody></table>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="attendance-grid">
-          <div class="panel attendance-summary">
-            <div class="panel-head" style="padding:0 0 14px;">
-              <div><h3>Today's shift</h3><div class="desc" id="attendance-date-label"></div></div>
-            </div>
-            <div class="field"><label>Technician</label><select id="attendance-tech"></select><div id="attendance-self-note" class="desc" style="margin-top:7px;display:none;">You can check in or check out only your own attendance.</div></div>
-            <div class="attendance-status" id="attendance-status"><span class="dot"></span><span>Not checked in</span></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="pill-btn primary" onclick="checkInTechnician()">Check in</button>
-              <button class="pill-btn ghost" onclick="checkOutTechnician()">Check out</button>
+
+        <div id="attendance-owner-view" style="display:none;">
+          <div class="subtabs">
+            <div class="subtab active" data-attendance-sub="dashboard">DASHBOARD</div>
+            <div class="subtab" data-attendance-sub="management">MANAGEMENT</div>
+            <div class="subtab" data-attendance-sub="reports">REPORTS</div>
+          </div>
+
+          <div id="attendance-sub-dashboard">
+            <div class="panel">
+              <div class="panel-head"><div><h3>Attendance Dashboard</h3><div class="desc">Business-wide, today, across all branches</div></div></div>
+              <div class="finance-grid" style="margin-top:6px;">
+                <div class="finance-card"><div class="stat-label">Total Employees</div><div class="stat-value" id="att-total-employees">0</div></div>
+                <div class="finance-card"><div class="stat-label">Present Today</div><div class="stat-value" id="att-present-today">0</div></div>
+                <div class="finance-card"><div class="stat-label">Absent Today</div><div class="stat-value" id="att-absent-today">0</div></div>
+                <div class="finance-card"><div class="stat-label">On Leave</div><div class="stat-value" id="att-on-leave">0</div></div>
+              </div>
             </div>
           </div>
-          <div class="panel">
-            <div class="panel-head"><div><h3>Attendance log</h3><div class="desc">Today's check-in and check-out records</div></div></div>
-            <div class="attendance-table-wrap">
-              <table><thead><tr><th>Technician</th><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th><th id="attendance-actions-head" style="text-align:right">Actions</th></tr></thead><tbody id="attendance-body"></tbody></table>
+
+          <div id="attendance-sub-management" style="display:none;">
+            <div class="panel">
+              <div class="panel-head">
+                <div><h3>Attendance Management</h3><div class="desc">All branches · Time-In / Time-Out · corrections · leave</div></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <select id="att-mgmt-branch" onchange="ui.attMgmtBranch=this.value; renderAttendanceManagement();">
+                    <option value="">All Branches</option>
+                  </select>
+                  <select id="att-mgmt-range" onchange="ui.attMgmtRange=this.value; renderAttendanceManagement();">
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                  </select>
+                  <input type="text" id="att-mgmt-search" placeholder="Search employee..." oninput="ui.attMgmtSearch=this.value; renderAttendanceManagement();">
+                  <button class="pill-btn primary" onclick="openMarkLeaveModal()">Mark Leave</button>
+                </div>
+              </div>
+              <div class="attendance-table-wrap">
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody id="att-mgmt-body"></tbody></table>
+              </div>
+            </div>
+          </div>
+
+          <div id="attendance-sub-reports" style="display:none;">
+            <div class="panel">
+              <div class="panel-head">
+                <div><h3>Attendance Reports</h3><div class="desc">Monthly rollups across the business</div></div>
+                <input type="month" id="att-report-month" onchange="ui.attReportMonth=this.value; renderAttendanceReports();">
+              </div>
+              <div class="subtabs" style="margin-top:12px;">
+                <div class="subtab active" data-report-sub="employee">BY EMPLOYEE</div>
+                <div class="subtab" data-report-sub="branch">BY BRANCH</div>
+                <div class="subtab" data-report-sub="absence">ABSENCE REPORT</div>
+                <div class="subtab" data-report-sub="summary">MONTHLY SUMMARY</div>
+              </div>
+              <div id="att-report-employee" class="attendance-table-wrap">
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th><th style="text-align:right">Action</th></tr></thead><tbody id="att-report-employee-body"></tbody></table>
+              </div>
+              <div id="att-report-branch" class="attendance-table-wrap" style="display:none;">
+                <table><thead><tr><th>Branch</th><th>Present</th><th>Absent</th><th>Leave</th></tr></thead><tbody id="att-report-branch-body"></tbody></table>
+              </div>
+              <div id="att-report-absence" class="attendance-table-wrap" style="display:none;">
+                <table><thead><tr><th>Employee</th><th>Branch</th><th>Date</th></tr></thead><tbody id="att-report-absence-body"></tbody></table>
+              </div>
+              <div id="att-report-summary" class="attendance-table-wrap" style="display:none;">
+                <table><thead><tr><th>Month</th><th>Total Present</th><th>Total Absent</th><th>Total Leave</th></tr></thead><tbody id="att-report-summary-body"></tbody></table>
+              </div>
             </div>
           </div>
         </div>
@@ -1096,8 +1196,7 @@
             <h2>LOGIN ACCESS</h2>
             <p class="hint">Choose Your Assigned Access Level</p>
             <div class="role-choice" id="login-role-choice">
-  <button class="pill-btn primary" type="button" onclick="chooseRole('admin')">Admin</button>
-  <button class="pill-btn ghost" type="button" onclick="chooseRole('staff')">Staff</button>
+  <button class="pill-btn primary" type="button" onclick="chooseRole('owner')">Owner</button>
 
 </div>
           </div>
@@ -1105,77 +1204,475 @@
       </div>
 
       <!-- ================= ADMIN LOGIN ================= -->
-      <div class="view" id="view-admin-login">
-        <div class="login-wrap">
-          <div class="login-card">
-            <div class="logo-badge">
-              </div>
-            <h2>ADMIN LOGIN</h2>
-            <p class="hint">Manage jobs, inventory and branch sales</p>
-            <div class="field">
-              <label>Username</label>
-              <input type="text" id="login-user" placeholder="Enter admin username" autocomplete="username">
-            </div>
-            <div class="field">
-              <label>Password</label>
-              <div class="pw-field">
-                <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
-                <button type="button" class="pw-eye" data-toggle-password="login-pass" aria-label="Show password">👁</button>
-              </div>
-            </div>
-            <label class="remember-choice"><input type="checkbox" id="remember-admin" checked> Remember me on this device</label>
-            <div class="login-error" id="login-error"></div>
-            <button class="pill-btn primary login-submit" id="admin-login-btn" style="width:100%; padding:11px;" onclick="attemptLogin()">Log in</button>
-            <button class="pill-btn ghost" type="button" style="margin-top:10px;width:100%;" onclick="switchView('role-select')">Back to login access</button>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- ================= DEVELOPER LOGIN REMOVED: only Owner, Admin, Staff can sign in ================= -->
 
       <!-- ================= STAFF ACCESS GATE ================= -->
-<div class="view" id="view-staff-gate">
+
+
+
+<!-- ================= OWNER LOGIN ================= -->
+<div class="view" id="view-owner-login">
   <div class="login-wrap">
     <div class="login-card">
-      <div class="logo-badge">
-      </div>
-      <h2>STAFF ACCESS</h2>
-      <p class="hint">Enter the staff password to open the dashboard</p>
+      <div class="logo-badge"></div>
+
+      <h2>OWNER LOGIN</h2>
+      <p class="hint">Sign in or create your business owner account</p>
+
       <div class="field">
-        <label>Username</label>
-        <input type="text" id="staff-user" placeholder="Enter staff username" autocomplete="username">
+        <label>Email</label>
+        <input type="email" id="owner-user" placeholder="Enter owner email" autocomplete="username">
       </div>
+
       <div class="field">
         <label>Password</label>
         <div class="pw-field">
-          <input type="password" id="staff-pass" placeholder="Enter staff password" autocomplete="current-password">
-          <button type="button" class="pw-eye" data-toggle-password="staff-pass" aria-label="Show password">👁</button>
+          <input type="password" id="owner-pass" placeholder="Enter password" autocomplete="current-password">
+          <button type="button" class="pw-eye" data-toggle-password="owner-pass" aria-label="Show password">👁</button>
         </div>
       </div>
+
       <label class="remember-choice">
-        <input type="checkbox" id="remember-staff" checked> Remember me on this device
+        <input type="checkbox" id="remember-owner" checked>
+        Remember me on this device
       </label>
-      <div class="login-error" id="staff-error"></div>
-      <button class="pill-btn primary login-submit" id="staff-login-btn" style="width:100%; padding:11px;" onclick="attemptStaffLogin()">Unlock</button>
-      <button class="pill-btn ghost" type="button" style="margin-top:10px;width:100%;" onclick="switchView('role-select')">Back to login access</button>
+
+      <div class="login-error" id="owner-error"></div>
+
+      <button
+        class="pill-btn primary login-submit"
+        id="owner-login-btn"
+        style="width:100%; padding:11px;"
+        onclick="attemptOwnerLogin()">
+        Log in
+      </button>
+
+      <div class="or-divider" style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted,#6d849d);">or</div>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="width:100%;"
+        onclick="continueWithGoogleOwner()">
+        Continue with Gmail
+      </button>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="margin-top:10px;width:100%;"
+        onclick="showOwnerRegister()">
+        Create Owner Account
+      </button>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="margin-top:10px;width:100%;"
+        onclick="switchView('role-select')">
+        Back to login access
+      </button>
+    </div>
+  </div>
+</div>
+<!-- ================= OWNER REGISTER ================= -->
+<div class="view" id="view-owner-register">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="logo-badge"></div>
+
+      <h2>CREATE OWNER ACCOUNT</h2>
+      <p class="hint">Create the main account for this business</p>
+
+      <div class="field">
+        <label>Business Name</label>
+        <input
+          type="text"
+          id="owner-business-name"
+          placeholder="Enter business name"
+        >
+      </div>
+
+      <div class="field">
+        <label>Owner Name</label>
+        <input
+          type="text"
+          id="owner-name"
+          placeholder="Enter owner name"
+        >
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input
+          type="email"
+          id="owner-register-email"
+          placeholder="Enter owner email"
+          autocomplete="email"
+        >
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="pw-field">
+          <input
+            type="password"
+            id="owner-register-pass"
+            placeholder="Create a password"
+            autocomplete="new-password"
+          >
+          <button type="button" class="pw-eye" data-toggle-password="owner-register-pass" aria-label="Show password">👁</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Confirm Password</label>
+        <div class="pw-field">
+          <input
+            type="password"
+            id="owner-register-confirm"
+            placeholder="Confirm password"
+            autocomplete="new-password"
+          >
+          <button type="button" class="pw-eye" data-toggle-password="owner-register-confirm" aria-label="Show password">👁</button>
+        </div>
+      </div>
+
+      <div class="login-error" id="owner-register-error"></div>
+
+      <button
+        class="pill-btn primary login-submit"
+        id="owner-register-btn"
+        style="width:100%; padding:11px;"
+        onclick="createOwnerAccount()">
+        Create Owner Account
+      </button>
+
+      <div class="or-divider" style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted,#6d849d);">or</div>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="width:100%;"
+        onclick="continueWithGoogleOwner()">
+        Continue with Gmail
+      </button>
+
+      <button
+        class="pill-btn ghost"
+        type="button"
+        style="margin-top:10px;width:100%;"
+        onclick="switchView('owner-login')">
+        Back to Owner Login
+      </button>
     </div>
   </div>
 </div>
 
-
-<!-- ================= OWNER LOGIN ================= -->
-
-<!-- ================= OWNER REGISTER ================= -->
-
-
 <!-- ================= OWNER DASHBOARD ================= -->
+<div class="view" id="view-owner-dashboard">
+  <div class="subtabs">
+    <div class="subtab active" data-owner-sub="overview">OVERVIEW</div>
+    <div class="subtab" data-owner-sub="access">ACCESS</div>
+    <div class="subtab" data-owner-sub="requests">REQUESTS <span id="owner-requests-badge" class="notif-dot" style="display:none;"></span></div>
+    <div class="subtab" data-owner-sub="tech-requests">TECH REQUESTS</div>
+    <div class="subtab" data-owner-sub="branches">BRANCHES</div>
+  </div>
 
+  <div id="owner-sub-overview">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Business clients today</div>
+        <div class="stat-value" id="owner-stat-clients">0</div>
+        <div class="stat-sub">Across the active business branch</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Business sales today</div>
+        <div class="stat-value blue" id="owner-stat-sales">₱0</div>
+        <div class="stat-sub">Revenue from the active branch</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open access</div>
+        <div class="stat-value" id="owner-stat-access">2</div>
+        <div class="stat-sub">Current active user roles</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Owner dashboard</h3>
+          <div class="desc">Business-level summary for the active branch</div>
+        </div>
+        <button class="pill-btn primary" onclick="switchView('admin')">Open admin dashboard</button>
+      </div>
+      <div style="padding:20px;">
+        <div class="muted-box" id="owner-dashboard-summary">
+          Review branch operations, financial activity, and access control from the business owner view.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="owner-sub-access" style="display:none;">
+    <div class="stat-row" style="margin:16px 16px 0;">
+      <div class="stat-card">
+        <div class="stat-label">Open access</div>
+        <div class="stat-value" id="owner-stat-access">0</div>
+        <div class="stat-sub">Current active user roles</div>
+      </div>
+    </div>
+    <div class="panel" style="margin:16px;">
+      <div class="panel-head">
+        <div>
+          <h3>Owner access controls</h3>
+          <div class="desc">Set and remove staff/admin credentials for each branch-managed role.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin:16px;">
+      <div class="panel-head">
+        <div><h3>Staff access</h3><div class="desc">Owner-managed Username and Password for staff accounts.</div></div>
+        <button class="pill-btn primary" onclick="openStaffAccountModal()">+ Add staff</button>
+      </div>
+      <table>
+        <thead><tr><th>Username</th><th>Password</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody id="owner-staff-access-body"></tbody>
+      </table>
+    </div>
+
+    <div class="panel" style="margin:16px;">
+      <div class="panel-head">
+        <div><h3>Admin access</h3><div class="desc">Owner-managed Name, Username, and Password for admin accounts.</div></div>
+        <button class="pill-btn primary" onclick="openAdminAccountModal()">+ Add admin</button>
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th>Username</th><th>Password</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody id="owner-admin-access-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="owner-sub-requests" style="display:none;">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Approval requests</h3>
+          <div class="desc">Pending admin actions awaiting owner approval or denial</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Type</th><th>Title</th><th>Target</th><th>Branch</th><th>Details</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
+        <tbody id="owner-requests-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="owner-sub-tech-requests" style="display:none;">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Technician assignment requests</h3>
+          <div class="desc">Owner-only approval for technician names and usernames requested by admin</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Request</th><th>Assigned name</th><th>Firebase email</th><th>Branch</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
+        <tbody id="owner-tech-requests-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="owner-sub-branches" style="display:none;">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Branch status</h3>
+          <div class="desc">Current branch activation and business rollout</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Branch</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>San Antonio</td><td><span class="tag good">Active</span></td><td>Primary business branch in operation.</td></tr>
+          <tr><td>Bataan</td><td><span class="tag good">Active</span></td><td>Second active business branch.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FINANCES ================= -->
+<div class="view" id="view-finances">
+  <div class="subtabs">
+    <div class="subtab active" data-fin-sub="overview">OVERVIEW</div>
+    <div class="subtab" data-fin-sub="payroll">PAYROLL</div>
+  </div>
+
+  <div id="fin-sub-overview">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>Finance Dashboard</h3>
+        <div class="desc">Business-wide financial summary across all branches</div>
+      </div>
+    </div>
+    <div class="finance-grid" style="margin-top:6px;">
+      <div class="finance-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value" id="fin-total-revenue">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value" id="fin-total-expenses">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Gross Profit</div>
+        <div class="stat-value" id="fin-gross-profit">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Net Profit</div>
+        <div class="stat-value" id="fin-net-profit">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Cash on Hand</div>
+        <div class="stat-value" id="fin-cash-on-hand">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Accounts Receivable</div>
+        <div class="stat-value" id="fin-receivable">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Accounts Payable</div>
+        <div class="stat-value" id="fin-payable">Not tracked yet</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">Pending Payments</div>
+        <div class="stat-value" id="fin-pending-payments">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">This Month's Sales</div>
+        <div class="stat-value" id="fin-month-sales">₱0</div>
+      </div>
+      <div class="finance-card">
+        <div class="stat-label">This Month's Expenses</div>
+        <div class="stat-value" id="fin-month-expenses">Not tracked yet</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Sales by Branch</h3>
+        <div class="desc">Total collected revenue, all-time, per branch</div>
+      </div>
+    </div>
+    <div id="fin-sales-by-branch" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Revenue vs Expenses</h3>
+        <div class="desc">Not available yet — requires expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Profit Trend</h3>
+        <div class="desc">Not available yet — requires expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Expenses by Category</h3>
+        <div class="desc">Not available yet — requires expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs an expense log, which hasn't been built yet.</div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div>
+        <h3>Cash Flow</h3>
+        <div class="desc">Not available yet — requires cash/expense tracking</div>
+      </div>
+    </div>
+    <div class="muted-box" style="margin-top:8px;">This chart needs cash and expense tracking, which hasn't been built yet.</div>
+  </div>
+  </div>
+
+  <div id="fin-sub-payroll" style="display:none;">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Payroll Dashboard</h3>
+          <div class="desc">Current semi-monthly period, business-wide</div>
+        </div>
+      </div>
+      <div class="finance-grid" style="margin-top:6px;">
+        <div class="finance-card"><div class="stat-label">Total Employees</div><div class="stat-value" id="pr-total-employees">0</div></div>
+        <div class="finance-card"><div class="stat-label">Current Payroll Period</div><div class="stat-value" id="pr-current-period" style="font-size:16px;">—</div></div>
+        <div class="finance-card"><div class="stat-label">Gross Payroll</div><div class="stat-value" id="pr-gross-payroll">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Total Deductions</div><div class="stat-value" id="pr-total-deductions">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Commissions</div><div class="stat-value" id="pr-total-commissions">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Bonuses</div><div class="stat-value" id="pr-total-bonuses">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Net Payroll</div><div class="stat-value" id="pr-net-payroll">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Paid Payroll</div><div class="stat-value" id="pr-paid-payroll">₱0</div></div>
+        <div class="finance-card"><div class="stat-label">Next Payroll Date</div><div class="stat-value" id="pr-next-date" style="font-size:16px;">—</div></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-head">
+        <div>
+          <h3>Payroll Management</h3>
+          <div class="desc" id="pr-period-desc">No payroll period created yet for this cutoff.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="pill-btn ghost" onclick="createPayrollPeriod()">Create Payroll Period</button>
+          <button class="pill-btn primary" onclick="calculatePayroll()">Calculate Payroll</button>
+        </div>
+      </div>
+      <div class="attendance-table-wrap">
+        <table><thead><tr><th>Employee</th><th>Branch</th><th>Basic Salary</th><th>Commission</th><th>Bonus</th><th>Deductions</th><th>Gross Pay</th><th>Net Pay</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody id="pr-calc-body"></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-head">
+        <div>
+          <h3>Payroll History</h3>
+          <div class="desc">Past payroll periods</div>
+        </div>
+      </div>
+      <div class="attendance-table-wrap">
+        <table><thead><tr><th>Period</th><th>Pay Date</th><th>Gross</th><th>Net</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody id="pr-history-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ================= ADMIN PANEL ================= -->
+
 <div class="view" id="view-admin-panel">
         <div class="subtabs">
           <div class="subtab active" data-sub="overview">OVERVIEW &amp; JOBS</div>
           <div class="subtab" data-sub="operations">OPERATIONS</div>
+          <div class="subtab" data-sub="inventory">INVENTORY</div>
           <div class="subtab" data-sub="reports">REPORTS</div>
         </div>
 
@@ -1273,6 +1770,75 @@
 
         </div>
 
+        <!-- Inventory subtab -->
+        <div id="admin-sub-inventory" style="display:none;">
+          <div class="subtabs">
+            <div class="subtab active" data-invsub="parts">Parts &amp; Accessories</div>
+            <div class="subtab" data-invsub="labor">Labor</div>
+          </div>
+
+          <div id="admin-inv-parts">
+            <div class="stat-row">
+              <div class="stat-card" id="admin-inventory-capital-card" style="display:none;">
+                <div class="stat-label">Total capital (cost basis)</div>
+                <div class="stat-value blue" id="inv-total-capital">₱0</div>
+                <div class="stat-sub">Owner-only stock cost view</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Total SRP value</div>
+                <div class="stat-value" id="inv-total-srp">₱0</div>
+                <div class="stat-sub">Sum of SRP × quantity across all stock</div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Parts &amp; accessories — branch view</h3>
+                  <div class="desc">SRP, quantity and stock availability for this branch</div>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <input id="inv-search" type="text" placeholder="Search items…" value="" oninput="onInvSearch(this.value)"
+                    style="border:1px solid var(--line-strong); border-radius:8px; padding:8px 12px; font-size:12.5px; width:170px;">
+                  <button id="admin-inv-add-btn" class="pill-btn primary" onclick="openInvModal()">+ Add item</button>
+                  <button id="admin-inv-supplier-btn" class="pill-btn ghost" onclick="manageSuppliers()" style="display:none;">Suppliers</button>
+                  <button id="admin-inv-po-btn" class="pill-btn ghost" onclick="createPurchaseOrder()" style="display:none;">Purchase order</button>
+                </div>
+              </div>
+              <div id="low-stock-banner"></div>
+              <table>
+                <thead id="admin-inv-head"><tr><th>Item / SKU</th><th>Quantity</th><th>Available</th><th>Price (SRP)</th><th>Total price</th><th style="text-align:right">Actions</th></tr></thead>
+                <tbody id="admin-inv-body"></tbody>
+              </table>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div><h3>Recent stock movements</h3><div class="desc">Purchases, adjustments and job usage</div></div></div>
+              <table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Reference</th><th style="text-align:right">Actions</th></tr></thead><tbody id="stock-movements-body"></tbody></table>
+            </div>
+          </div>
+
+          <div id="admin-inv-labor" style="display:none;">
+            <div class="stat-row">
+              <div class="stat-card">
+                <div class="stat-label">Total sales</div>
+                <div class="stat-value blue" id="admin-labor-total-sales">₱0</div>
+                <div class="stat-sub">Collected sales from all logged Labor jobs</div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Labor</h3>
+                  <div class="desc">Auto-calculated from logged Labor jobs · not editable</div>
+                </div>
+              </div>
+              <table>
+                <thead><tr><th>Name of labor</th><th>Jobs</th><th style="text-align:right">Collected sales</th></tr></thead>
+                <tbody id="admin-labor-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Operations subtab -->
         <div id="admin-sub-operations" style="display:none;">
           <div class="panel">
@@ -1318,14 +1884,20 @@
                 </div>
               </div>
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="pill-btn primary" onclick="requestDownloadReport()">
+                <button class="pill-btn primary" onclick="downloadExcelReport()">
                   <span style="display:inline-flex;align-items:center;gap:7px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
-                    Request Download Report
+                    Download Excel (.xlsx)
+                  </span>
+                </button>
+                <button class="pill-btn primary" onclick="downloadPdfReport()">
+                  <span style="display:inline-flex;align-items:center;gap:7px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+                    Download PDF
                   </span>
                 </button>
               </div>
-              <div class="public-note" style="text-align:left; margin-top:16px;">Leave From/To blank to include every job on record. Sends a request to the Owner for approval before the report is downloaded. Report covers jobs, phone/service details, item usage, total sales per tech, inventory and the gross / capital / net sales summary for the selected branch(es).</div>
+              <div class="public-note" style="text-align:left; margin-top:16px;">Leave From/To blank to include every job on record. Report covers jobs, phone/service details, item usage, total sales per tech, inventory and the gross / capital / net sales summary for the selected branch(es).</div>
             </div>
           </div>
           <div class="panel">
@@ -1441,6 +2013,7 @@ const BRANCH_CONFIG = {
   "Bataan": { id:"branch2", status:"pending" }
 };
 function branchIdForName(name){ return BRANCH_CONFIG[name]?.id || null; }
+function branchNameForId(id){ return BRANCHES.find(name => BRANCH_CONFIG[name]?.id === id) || null; }
 function activeBranches(){ return BRANCHES.filter(name=>ENTITLED_BRANCHES.includes(name)); }
 function isBranchActive(name){ return ACTIVE_BRANCHES.includes(name) || ENTITLED_BRANCHES.includes(name); }
 function branchStatusLabel(name){ return isBranchActive(name) ? "Active" : "Not Yet Active"; }
@@ -1835,6 +2408,14 @@ async function restoreAuthenticatedSession(){
       return "staff";
     }
 
+    if(role === "owner"){
+      session.isOwner = true;
+      session.isAdmin = true;
+      session.staffUnlocked = true;
+      session.adminUsername = (firebase.auth().currentUser?.displayName || firebase.auth().currentUser?.email || "Owner").trim() || "Owner";
+      return "admin";
+    }
+
     if(role === "admin"){
       const adminAccount = (state.adminAccounts || []).find(account =>
         (account.email || "").trim().toLowerCase() === email
@@ -1995,6 +2576,8 @@ function defaultState(){
     adminAccounts: [],
     purchaseOrders: [],
     commissionRates: {},
+    payrollPeriods: [],
+    payrollRecords: [],
     technicians: [...TECHS],
     deletedRecords: {},
     removedTechnicians: [],
@@ -2382,10 +2965,6 @@ async function createStaffJobInCollection(job){
     const item = state.inventory.find(i=>i.id===job.itemUsed);
     if(item){
       batch.set(db.collection("inventoryPublic").doc(item.id), {used:Number(item.used||0), branchId}, {merge:true});
-      // Staff can create this write but never read inventoryPrivate back
-      // (see Firestore rules) — this only ever updates the `used` count,
-      // never cost/supplier/other private-only fields.
-      batch.set(db.collection("inventoryPrivate").doc(item.id), {used:Number(item.used||0)}, {merge:true});
     }
   }
 
@@ -2728,11 +3307,6 @@ async function loadAdminCollections(){
       const snap = await withTimeout(db.collection(name).where("branchId","==",branchId).get(), 10000);
       return snap.docs.map(doc=>({id:doc.id, ...doc.data()}));
     };
-    // staffAccounts/adminAccounts store branchId/branchIds as branch NAMES
-    // (e.g. "San Antonio"), not the "branch1"-style IDs every other
-    // collection uses. Matching by array-contains on the name avoids the
-    // mismatch, and also correctly includes accounts assigned to multiple
-    // branches (not just their first/primary one).
     const readAccountsBranch = async (name) => {
       const snap = await withTimeout(db.collection(name).where("branchIds","array-contains",branchName).get(), 10000);
       return snap.docs.map(doc=>({id:doc.id, ...doc.data()}));
@@ -2924,14 +3498,13 @@ async function saveState(){
       // app-data document is retained only as a one-time migration source.
       // NOTE: syncOperationalCollections() (a blind full mirror of local
       // jobs/inventory to Firestore) is deliberately NOT called here. This
-      // function runs after almost every Admin action — if Admin's local
-      // cache is even briefly behind a change made independently elsewhere
-      // (e.g. Owner approving a revision), this would silently overwrite
-      // that correct cloud value with Admin's stale local copy. Every real
-      // mutation point already has its own targeted sync call
-      // (syncInventoryChange, syncAdminJobTransaction, etc.) — this broad
-      // mirror is only safe to run once, right after login (see
-      // attemptLogin), not on every save.
+      // function runs after almost every action — if local cache is even
+      // briefly behind a change made independently elsewhere, this would
+      // silently overwrite that correct cloud value with a stale local
+      // copy. Every real mutation point already has its own targeted sync
+      // call (syncInventoryChange, syncAdminJobTransaction, etc.) — this
+      // broad mirror is only safe to run once, right after login, not on
+      // every save.
       await syncAppMeta();
       await syncTechnicianDirectory();
       await syncAttendanceToCollection();
@@ -2950,7 +3523,7 @@ async function saveState(){
 async function syncInventoryChange(item, removed=false){
   const user = firebase.auth().currentUser;
   if(!user || user.isAnonymous || !session.isAdmin) throw new Error("Admin authentication required");
-  const branchId = currentBranchId();
+  const branchId = item.branchId || currentBranchId();
   const batch = db.batch();
   const privateRef = db.collection("inventoryPrivate").doc(item.id);
   const publicRef = db.collection("inventoryPublic").doc(item.id);
@@ -3014,6 +3587,7 @@ let realtimeUnsubs = [];
 function stopRealtimeSync(){
   realtimeUnsubs.forEach(unsub=>{ try{ unsub(); }catch(e){} });
   realtimeUnsubs = [];
+  if(ownerRequestsUnsub){ try{ ownerRequestsUnsub(); }catch(e){} ownerRequestsUnsub = null; }
 }
 function replaceCurrentBranchRecords(records, key){
   const branchId = currentBranchId();
@@ -3068,7 +3642,6 @@ function startRealtimeSync(){
   const user = firebase.auth().currentUser;
   if(!user || user.isAnonymous || !subscriptionIsActive()) return;
   const branchId = currentBranchId();
-  const branchName = currentBranchName();
   const role = session.isAdmin ? "admin" : (session.staffUnlocked ? "staff" : null);
   if(!role) return;
 
@@ -3076,20 +3649,6 @@ function startRealtimeSync(){
     try{
       const unsub = db.collection(collectionName)
         .where("branchId","==",branchId)
-        .onSnapshot(
-          snap => { callback(snap.docs.map(doc=>({id:doc.id,...doc.data()}))); },
-          err => console.error(`Realtime ${collectionName} sync failed:`, err)
-        );
-      realtimeUnsubs.push(unsub);
-    }catch(e){ console.error(`Could not start realtime ${collectionName} sync:`, e); }
-  };
-  // staffAccounts/adminAccounts store branch assignment as names in a
-  // branchIds array, not the "branch1"-style id every other collection
-  // uses — match accordingly, and pick up multi-branch accounts too.
-  const watchAccounts = (collectionName, callback) => {
-    try{
-      const unsub = db.collection(collectionName)
-        .where("branchIds","array-contains",branchName)
         .onSnapshot(
           snap => { callback(snap.docs.map(doc=>({id:doc.id,...doc.data()}))); },
           err => console.error(`Realtime ${collectionName} sync failed:`, err)
@@ -3112,26 +3671,49 @@ function startRealtimeSync(){
       writeLocal();
       renderAll();
     });
-    watch("inventoryPrivate", records=>{
-      state.inventory = records;
-      writeLocal();
-      renderAll();
-    });
+    // Unfiltered so Owner sees inventory across both branches at once
+    // (needed for the per-branch sections on the Inventory page), rather
+    // than only whichever branch happens to be currently selected.
+    try{
+      const unsubInv = db.collection("inventoryPrivate").onSnapshot(
+        snap => { state.inventory = snap.docs.map(doc=>({id:doc.id,...doc.data()})); writeLocal(); renderAll(); },
+        err => console.error("Realtime inventoryPrivate (owner) sync failed:", err)
+      );
+      realtimeUnsubs.push(unsubInv);
+    }catch(e){ console.error("Could not start owner inventory sync:", e); }
     watch("staffProfiles", records=>{
       state.staffProfiles = records;
       writeLocal();
       renderAll();
     });
-    watchAccounts("staffAccounts", records=>{
-      state.staffAccounts = records;
-      writeLocal();
-      renderAll();
-    });
-    watchAccounts("adminAccounts", records=>{
-      state.adminAccounts = normalizeAdminAccounts(records);
-      writeLocal();
-      renderAll();
-    });
+    if(session.isOwner){
+      try{
+        const unsubStaff = db.collection("staffAccounts").onSnapshot(
+          snap=>{ state.staffAccounts = snap.docs.map(doc=>({id:doc.id,...doc.data()})); writeLocal(); renderAll(); },
+          err=>console.error("Realtime staffAccounts (owner) sync failed:", err)
+        );
+        realtimeUnsubs.push(unsubStaff);
+        const unsubAdmin = db.collection("adminAccounts").onSnapshot(
+          snap=>{ state.adminAccounts = normalizeAdminAccounts(snap.docs.map(doc=>({id:doc.id,...doc.data()}))); writeLocal(); renderAll(); },
+          err=>console.error("Realtime adminAccounts (owner) sync failed:", err)
+        );
+        realtimeUnsubs.push(unsubAdmin);
+      }catch(e){ console.error("Could not start owner account sync:", e); }
+    }else{
+      const branchName = currentBranchName();
+      try{
+        const unsubStaff = db.collection("staffAccounts").where("branchIds","array-contains",branchName).onSnapshot(
+          snap=>{ state.staffAccounts = snap.docs.map(doc=>({id:doc.id,...doc.data()})); writeLocal(); renderAll(); },
+          err=>console.error("Realtime staffAccounts sync failed:", err)
+        );
+        realtimeUnsubs.push(unsubStaff);
+        const unsubAdmin = db.collection("adminAccounts").where("branchIds","array-contains",branchName).onSnapshot(
+          snap=>{ state.adminAccounts = normalizeAdminAccounts(snap.docs.map(doc=>({id:doc.id,...doc.data()}))); writeLocal(); renderAll(); },
+          err=>console.error("Realtime adminAccounts sync failed:", err)
+        );
+        realtimeUnsubs.push(unsubAdmin);
+      }catch(e){ console.error("Could not start account sync:", e); }
+    }
     watch("suppliers", records=>{
       state.suppliers = records;
       writeLocal();
@@ -3204,18 +3786,6 @@ function startRealtimeSync(){
     // can never overwrite the real Staff directory with zero records.
     watch("staffProfiles", records=>{
       state.staffProfiles = records;
-      writeLocal();
-      renderAll();
-    });
-    // Staff sees the same full Staff+Admin roster as Admin for the
-    // attendance dropdown, even though Staff can only check in themselves.
-    watchAccounts("staffAccounts", records=>{
-      state.staffAccounts = records;
-      writeLocal();
-      renderAll();
-    });
-    watchAccounts("adminAccounts", records=>{
-      state.adminAccounts = normalizeAdminAccounts(records);
       writeLocal();
       renderAll();
     });
@@ -3296,6 +3866,7 @@ async function init(){
     if(subscriptionIsActive()){
       if(restoredRole === "admin") {
         await loadAdminCollections();
+        if(session.isOwner) await loadOwnerAccessCollections();
         // Admin is authoritative from appMeta/dedicated collections. Publish
         // the current technician list for Staff after the Admin state is loaded.
         await syncTechnicianDirectory();
@@ -3315,9 +3886,9 @@ async function init(){
   const repBranch = document.getElementById("rep-branch");
   if(repBranch) repBranch.innerHTML = `<option value="__all__">All active branches</option>` + activeBranches().map(b=>`<option value="${escapeHTML(b)}">${escapeHTML(b)}</option>`).join("");
   bindNav();
-  document.getElementById("staff-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
-  document.getElementById("staff-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptStaffLogin(); });
-  document.getElementById("login-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptLogin(); });
+  document.getElementById("owner-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
+  document.getElementById("owner-user").addEventListener("keydown", e=>{ if(e.key==="Enter") attemptOwnerLogin(); });
+  document.getElementById("owner-register-confirm").addEventListener("keydown", e=>{ if(e.key==="Enter") createOwnerAccount(); });
   bindPasswordToggles();
   session.pendingView = null;
   // Firebase Authentication, not localStorage/sessionStorage, determines the role.
@@ -3436,7 +4007,8 @@ if("serviceWorker" in navigator){
 }
 
 function goToInventoryFromOverview(){
-  switchView("inventory-public");
+  const target = document.querySelector('.subtab[data-sub="inventory"]');
+  if(target) target.click();
 }
 
 /* ======================= NAV ======================= */
@@ -3451,6 +4023,7 @@ function bindNav(){
       el.classList.add("active");
       document.getElementById("admin-sub-overview").style.display = ui.subtab==="overview" ? "block":"none";
       document.getElementById("admin-sub-operations").style.display = ui.subtab==="operations" ? "block":"none";
+      document.getElementById("admin-sub-inventory").style.display = ui.subtab==="inventory" ? "block":"none";
       document.getElementById("admin-sub-reports").style.display = ui.subtab==="reports" ? "block":"none";
     });
   });
@@ -3462,6 +4035,37 @@ function bindNav(){
       document.getElementById("pub-sub-parts").style.display = ui.pubSub==="parts" ? "block":"none";
       document.getElementById("pub-sub-labor").style.display = ui.pubSub==="labor" ? "block":"none";
       if(ui.pubSub==="labor") renderLaborSummary("public-labor-body", null);
+    });
+  });
+  document.querySelectorAll(".subtab[data-fin-sub]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const next = el.dataset.finSub;
+      document.querySelectorAll(".subtab[data-fin-sub]").forEach(s=>s.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("fin-sub-overview").style.display = next==="overview" ? "block":"none";
+      document.getElementById("fin-sub-payroll").style.display = next==="payroll" ? "block":"none";
+      if(next==="payroll") renderPayrollDashboard();
+    });
+  });
+  document.querySelectorAll(".subtab[data-attendance-sub]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const next = el.dataset.attendanceSub;
+      document.querySelectorAll(".subtab[data-attendance-sub]").forEach(s=>s.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("attendance-sub-dashboard").style.display = next==="dashboard" ? "block":"none";
+      document.getElementById("attendance-sub-management").style.display = next==="management" ? "block":"none";
+      document.getElementById("attendance-sub-reports").style.display = next==="reports" ? "block":"none";
+    });
+  });
+  document.querySelectorAll(".subtab[data-report-sub]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const next = el.dataset.reportSub;
+      document.querySelectorAll(".subtab[data-report-sub]").forEach(s=>s.classList.remove("active"));
+      el.classList.add("active");
+      document.getElementById("att-report-employee").style.display = next==="employee" ? "block":"none";
+      document.getElementById("att-report-branch").style.display = next==="branch" ? "block":"none";
+      document.getElementById("att-report-absence").style.display = next==="absence" ? "block":"none";
+      document.getElementById("att-report-summary").style.display = next==="summary" ? "block":"none";
     });
   });
   document.querySelectorAll(".subtab[data-invsub]").forEach(el=>{
@@ -3497,9 +4101,9 @@ function updateNavForRole(role){
   document.querySelectorAll(".nav-item").forEach(nav => {
     const view = nav.dataset.view;
     const visible = role === "owner"
-      ? ["admin", "employee", "inventory-public", "customer-status", "staff-directory", "attendance"].includes(view)
+      ? ["admin", "employee", "inventory-public", "customer-status", "staff-directory", "attendance", "finances"].includes(view)
       : role === "admin"
-        ? !["staff-gate", "employee", "customer-status"].includes(view)
+        ? view !== "staff-gate"
         : role === "staff"
           ? ["employee", "inventory-public", "customer-status", "staff-directory", "attendance"].includes(view)
           : false;
@@ -3509,16 +4113,17 @@ function updateNavForRole(role){
 
 function chooseRole(role){
 
-  if(role === "admin"){
-    session.pendingView = null;
-    updateNavForRole("admin");
-    switchView("admin");
-    return;
-  }
+  if(role === "owner"){
 
-  session.pendingView = "employee";
-  updateNavForRole("staff");
-  switchView("employee");
+    session.pendingView = null;
+
+    updateNavForRole("owner");
+
+    switchView("owner-login");
+
+    return;
+
+  }
 
 }
 
@@ -3540,7 +4145,7 @@ document.addEventListener("click", event=>{
 });
 
 function ensureSharedTopbarActions(key, rightEl){
-  if(!rightEl || ["role-select", "admin-login", "staff-gate"].includes(key)) return;
+  if(!rightEl || ["role-select", "admin-login", "staff-gate", "owner-login", "owner-register"].includes(key)) return;
   if(!document.getElementById("refresh-app-btn")){
     rightEl.insertAdjacentHTML("afterbegin", `<button class="pill-btn ghost" id="refresh-app-btn" type="button" onclick="hardRefreshApp()" title="Reload the app and re-sync your data">Refresh</button>`);
   }
@@ -3587,8 +4192,7 @@ function switchView(key){
   }
 
   if(key==="role-select"){
-    if(session.isAdmin){ switchView("admin"); return; }
-    if(session.staffUnlocked){ switchView("employee"); return; }
+    if(session.isOwner){ switchView("owner-dashboard"); return; }
     document.getElementById("view-role-select").classList.add("active");
     titleEl.innerHTML = `GIDS AYPHONE TECH`;
     subEl.innerHTML = "Secure access portal";
@@ -3600,8 +4204,7 @@ function switchView(key){
   }
 
   if((key==="employee" || key==="inventory-public") && !session.staffUnlocked && !session.isAdmin){
-    session.pendingView = key;
-    switchView("staff-gate");
+    switchView("owner-login");
     return;
   }
 
@@ -3617,7 +4220,6 @@ function switchView(key){
       bindBranchSelector("admin");
     } else {
       rightEl.innerHTML = branchSelectorHTML("ui.branch") +
-        `<button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()">Change Password</button>` +
         `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
         `<button class="pill-btn danger" data-logout-action type="button">Sign out</button>`;
       bindBranchSelector("employee");
@@ -3686,14 +4288,20 @@ function switchView(key){
     // Firestore is authoritative, including an empty result, so a stale
     // local Staff/Admin cache cannot remain visible after deletion.
     loadAttendanceFromCollection().then(()=>renderAttendance()).catch(()=>{});
-  } else if(key==="staff-gate"){
-    if(session.isAdmin){ switchView("admin"); return; }
-    if(session.staffUnlocked){ switchView("employee"); return; }
-    session.pendingView = "employee";
-    document.getElementById("view-staff-gate").classList.add("active");
-    titleEl.innerHTML = `STAFF <span class="hi">ACCESS</span>`;
-    subEl.innerHTML = "Sign in to open the staff dashboard";
-    rightEl.innerHTML = "";
+  } else if(key==="owner-dashboard"){
+    if(!session.isOwner){
+      switchView("role-select");
+      return;
+    }
+    document.getElementById("view-owner-dashboard").classList.add("active");
+    titleEl.innerHTML = `Hi, <span class="hi">${escapeHTML(currentUserName())}!</span>`;
+    subEl.innerHTML = "Owner overview · business access and branch health";
+    rightEl.innerHTML = branchSelectorHTML("ui.adminBranch") +
+      `<div class="badge-role"><span class="dot"></span><span>Owner</span></div>` +
+      `<button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()">Change Password</button>` +
+      `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
+      `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
+    bindBranchSelector("admin");
   } else if(key==="admin"){
     if(session.staffUnlocked && !session.isAdmin){
       switchView("employee");
@@ -3705,17 +4313,36 @@ function switchView(key){
       subEl.innerHTML = `Full access · jobs, inventory and branch sales`;
       rightEl.innerHTML = branchSelectorHTML("ui.adminBranch") +
         `<div class="badge-role"><span class="dot"></span><span>Admin</span></div>` +
-        `<button class="pill-btn ghost" onclick="switchView('security-access')">Security and Access</button>` +
-        `<button class="pill-btn ghost" type="button" onclick="openChangePasswordModal()">Change Password</button>` +
         `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
         `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
       bindBranchSelector("admin");
     } else {
-      document.getElementById("view-admin-login").classList.add("active");
-      titleEl.innerHTML = `ADMIN`;
-      subEl.innerHTML = "Sign in to manage jobs and inventory";
-      rightEl.innerHTML = "";
+      switchView("role-select");
     }
+  } else if(key==="owner-login"){
+    if(session.isOwner){ switchView("owner-dashboard"); return; }
+    document.getElementById("view-owner-login").classList.add("active");
+    titleEl.innerHTML = `OWNER <span class="hi">ACCESS</span>`;
+    subEl.innerHTML = "Business owner sign-in";
+    rightEl.innerHTML = "";
+  } else if(key==="owner-register"){
+    if(session.isOwner){ switchView("owner-dashboard"); return; }
+    document.getElementById("view-owner-register").classList.add("active");
+    titleEl.innerHTML = `CREATE <span class="hi">OWNER</span>`;
+    subEl.innerHTML = "Create the business owner account";
+    rightEl.innerHTML = "";
+  } else if(key==="finances"){
+    if(!session.isOwner){
+      switchView("role-select");
+      return;
+    }
+    document.getElementById("view-finances").classList.add("active");
+    titleEl.innerHTML = `Hi, <span class="hi">${escapeHTML(currentUserName())}!</span>`;
+    subEl.innerHTML = "Finance overview across all branches";
+    rightEl.innerHTML = `<div class="badge-role"><span class="dot"></span><span>Owner</span></div>` +
+      `<button class="pill-btn ghost" data-shared-calculator type="button" onclick="openCalculatorModal()">Calculator</button>` +
+      `<button class="pill-btn ghost" data-logout-action type="button">Log out</button>`;
+    renderFinanceDashboard();
   } else if(key==="security-access"){
     if(!hasSecurityAccess()){
       switchView(session.staffUnlocked ? "employee" : "role-select");
@@ -3789,6 +4416,39 @@ async function loadCloudStateAfterLogin(){
     return false;
   }
 }
+async function loadOwnerAccessCollections(){
+  const user = firebase.auth().currentUser;
+  if(!user || !session.isOwner) return;
+  ensureStateReady();
+  try{
+    const [staffSnap, adminSnap, requestsSnap] = await Promise.all([
+      db.collection("staffAccounts").get(),
+      db.collection("adminAccounts").get(),
+      db.collection("ownerRequests").get()
+    ]);
+    state.staffAccounts = staffSnap.docs.map(doc=>({id:doc.id,...doc.data()}));
+    state.adminAccounts = normalizeAdminAccounts(adminSnap.docs.map(doc=>({id:doc.id,...doc.data()})));
+    state.ownerRequests = requestsSnap.docs.map(doc=>({id:doc.id,...doc.data()}));
+    writeLocal();
+    startOwnerRequestsSync();
+  }catch(e){
+    console.error("Could not load Owner access collections:", e);
+  }
+}
+let ownerRequestsUnsub = null;
+function startOwnerRequestsSync(){
+  if(ownerRequestsUnsub) return;
+  try{
+    ownerRequestsUnsub = db.collection("ownerRequests").onSnapshot(
+      snap=>{
+        state.ownerRequests = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
+        writeLocal();
+        renderOwnerRequests();
+      },
+      err=>console.error("Realtime ownerRequests sync failed:", err)
+    );
+  }catch(e){ console.error("Could not start owner requests sync:", e); }
+}
 async function loadSecurityCollections(){
   const user = firebase.auth().currentUser;
   if(!user || (!session.isAdmin && !session.isDeveloper)) return;
@@ -3833,237 +4493,287 @@ function describeFirebaseAuthError(error, label){
   if(error?.message) return `${label[0].toUpperCase()+label.slice(1)} login stopped: ${error.message}`;
   return `${label[0].toUpperCase()+label.slice(1)} login failed (${code || "unknown-auth-error"}).`;
 }
+function showOwnerRegister(){
 
-
-
-
-
-
-async function attemptLogin(){
   ensureStateReady();
-  const username = document.getElementById("login-user").value.trim();
-  const password = document.getElementById("login-pass").value;
-  const err = document.getElementById("login-error");
 
-  err.textContent = "";
+  document.getElementById("owner-business-name").value = "";
+  document.getElementById("owner-name").value = "";
+  document.getElementById("owner-register-email").value = "";
+  document.getElementById("owner-register-email").disabled = false;
+  document.getElementById("owner-register-pass").value = "";
+  document.getElementById("owner-register-confirm").value = "";
+  document.getElementById("owner-register-pass").closest(".field").style.display = "";
+  document.getElementById("owner-register-confirm").closest(".field").style.display = "";
 
-  if(!username || !password){
-    err.textContent = "Please enter your username and password.";
-    return;
-  }
+  const registerBtn = document.getElementById("owner-register-btn");
+  registerBtn.textContent = "Create Owner Account";
+  registerBtn.setAttribute("onclick", "createOwnerAccount()");
 
-  setLoginLoading("admin-login-btn", "Signing in...");
+  document.getElementById("owner-register-error").textContent = "";
 
+  switchView("owner-register");
+}
+async function ownerAccountExists(){
   try{
-    const remember = document.getElementById("remember-admin").checked;
-    await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
-
-    // Resolve the typed Username to the Firebase email Firebase Auth actually
-    // needs, via the public loginDirectory lookup (username -> email only).
-    let email;
-    try{
-      const lookup = await withTimeout(db.collection("loginDirectory").doc(username.toLowerCase()).get(), 8000);
-      if(!lookup.exists || !lookup.data()?.email){
-        err.textContent = "That username was not found. Check with your owner or admin.";
-        return;
-      }
-      email = lookup.data().email;
-    }catch(lookupError){
-      console.error("Could not resolve username:", lookupError);
-      err.textContent = "Could not verify that username right now. Please try again.";
-      return;
-    }
-
-    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-    const user = userCredential.user;
-
-    // Resolve the Firebase role BEFORE loading appMeta. appMeta is protected by
-    // role/subscription rules, so trying to read it before the role is known
-    // caused valid Admin/Staff users to be reported as having no role.
-    const roleDetails = await getFirebaseRoleDetails(user);
-    const role = roleDetails.role;
-
-    if(role === "staff"){
-      await firebase.auth().signOut();
-      err.textContent = "This email is assigned as Staff. Please use Staff Login.";
-      return;
-    }
-
-    if(role === "developer"){
-      await firebase.auth().signOut();
-      err.textContent = "This email is not assigned Admin access.";
-      return;
-    }
-
-    if(role !== "admin"){
-      await firebase.auth().signOut();
-      err.textContent = describeFirebaseRoleFailure(roleDetails, "Admin");
-      return;
-    }
-
-    // Establish the authenticated app role before any role-protected cloud reads.
-    session.isAdmin = true;
-    session.staffUnlocked = true;
-    await loadSubscription();
-    if(!subscriptionIsActive()){
-      applySubscriptionAccess();
-      err.textContent = "Subscription expired. Please contact the administrator to renew access.";
-      return;
-    }
-
-    // Match the signed-in Firebase email to the Admin Access profile so the
-    // greeting shows the admin's display name, not the Firebase email.
-    // Query by email only — an admin's own assigned branch determines their
-    // session, not whatever branch happened to be selected before login.
-    const adminEmail = (user.email || "").trim().toLowerCase();
-    let adminSnap;
-    try{
-      adminSnap = await withTimeout(
-        db.collection("adminAccounts")
-          .where("email","==",adminEmail)
-          .get(),
-        10000
-      );
-    }catch(accessError){
-      console.error("Could not read Admin Access during login:", accessError);
-      await firebase.auth().signOut();
-      err.textContent = accessError?.code === "permission-denied"
-        ? "Firebase role verified, but Firestore denied access to Admin Access. Check the deployed Firestore rules."
-        : `Firebase role verified, but Admin Access could not be read (${accessError?.code || "unknown error"}).`;
-      return;
-    }
-    const adminAccount = adminSnap.docs.length ? {id:adminSnap.docs[0].id, ...adminSnap.docs[0].data()} : null;
-    if(!adminAccount || String(adminAccount.status || "active").toLowerCase() === "revoked"){
-      await firebase.auth().signOut();
-      err.textContent = "This Firebase email is not currently active in Admin Access.";
-      return;
-    }
-    const adminBranches = accountAllowedBranches(adminAccount);
-    if(adminBranches.length) ui.adminBranch = adminBranches[0];
-    state.adminAccounts = normalizeAdminAccounts([...(state.adminAccounts || []).filter(a=>a.id!==adminAccount.id), adminAccount]);
-    const adminName = adminAccount.username || state.admin?.username || user.email || "Admin";
-
-    state.admin = {
-      uid: user.uid,
-      email: user.email,
-      username: adminName
-    };
-
-    session.adminUsername = adminName;
-    session.isAdmin = true;
-    session.staffUnlocked = true;
-    await loadCloudStateAfterLogin();
-    await loadAdminCollections();
-    await loadAttendanceFromCollection();
-    await syncOperationalCollections();
-    // Complete the one-time legacy -> dedicated source migration checkpoint.
-    await syncAppMeta();
-    startRealtimeSync();
-    // Refresh the admin display name after collection-backed profiles load.
-    const refreshedAdmin = (state.adminAccounts || []).find(item =>
-      (item.email || "").trim().toLowerCase() === (user.email || "").trim().toLowerCase()
-    );
-    if(refreshedAdmin?.username){
-      session.adminUsername = refreshedAdmin.username;
-      state.admin.username = refreshedAdmin.username;
-    }
-    startLicenseAlertTimer();
-    updateNavForRole("admin");
-
-    if(document.getElementById("remember-admin").checked) saveRememberedSession("admin");
-
-    err.textContent = "";
-    document.getElementById("login-user").value = "";
-    document.getElementById("login-pass").value = "";
-    switchView("admin");
-    showToast("Welcome back, admin");
-  }catch(error){
-    console.error("Firebase admin login error:", error);
-
-    err.textContent = describeFirebaseAuthError(error, "admin");
-  }finally{
-    setLoginLoading("admin-login-btn", null);
+    const snap = await withTimeout(db.collection("userRoles").where("role","==","owner").limit(1).get(), 8000);
+    return !snap.empty;
+  }catch(e){
+    console.error("Could not check for an existing owner account:", e);
+    // Fail closed: if we can't verify, block registration rather than risk a second owner.
+    return true;
   }
 }
-async function attemptStaffLogin(){
+async function createOwnerAccount(){
   ensureStateReady();
-  const username = document.getElementById("staff-user").value.trim();
-  const p = document.getElementById("staff-pass").value;
-  const err = document.getElementById("staff-error");
+  const businessName = document.getElementById("owner-business-name").value.trim();
+  const ownerName = document.getElementById("owner-name").value.trim();
+  const email = document.getElementById("owner-register-email").value.trim();
+  const password = document.getElementById("owner-register-pass").value;
+  const confirmPass = document.getElementById("owner-register-confirm").value;
+  const err = document.getElementById("owner-register-error");
   err.textContent = "";
 
-  if(!username || !p){
-    err.textContent = "Please enter your username and password.";
+  if(!businessName || !ownerName || !email || !password || !confirmPass){
+    err.textContent = "Please complete all owner account fields.";
+    return;
+  }
+  if(password.length < 6){
+    err.textContent = "Password must be at least 6 characters.";
+    return;
+  }
+  if(password !== confirmPass){
+    err.textContent = "Passwords do not match.";
     return;
   }
 
-  setLoginLoading("staff-login-btn", "Signing in...");
+  const button = document.getElementById("owner-register-btn");
+  if(button){
+    button.disabled = true;
+    button.classList.add("is-loading");
+    button.innerHTML = `<span class="login-spinner" aria-hidden="true"></span>Checking...`;
+  }
+
+  if(await ownerAccountExists()){
+    err.textContent = "An owner account already exists for this business. Please contact your developer for access.";
+    if(button){
+      button.disabled = false;
+      button.classList.remove("is-loading");
+      button.textContent = "Create Owner Account";
+    }
+    return;
+  }
+
+  if(button){
+    button.innerHTML = `<span class="login-spinner" aria-hidden="true"></span>Creating...`;
+  }
 
   try{
-    const remember = document.getElementById("remember-staff").checked;
-    await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
+    const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+    const user = userCredential.user;
 
-    let email;
-    try{
-      const lookup = await withTimeout(db.collection("loginDirectory").doc(username.toLowerCase()).get(), 8000);
-      if(!lookup.exists || !lookup.data()?.email){
-        err.textContent = "That username was not found. Check with your owner or admin.";
+    await withTimeout(db.collection("userRoles").doc(user.uid).set({ role: "owner" }, { merge: true }), 10000);
+
+    const ownerProfile = {
+      uid: user.uid,
+      email: user.email,
+      businessName,
+      ownerName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: "active"
+    };
+
+    await withTimeout(db.collection("ownerProfiles").doc(user.uid).set(ownerProfile, { merge: true }), 10000);
+
+    const roleDetails = await getFirebaseRoleDetails(user);
+    if(roleDetails.role !== "owner"){
+      await firebase.auth().currentUser?.delete().catch(()=>{});
+      throw new Error("Owner role was not saved to Firebase after account creation.");
+    }
+
+    err.textContent = "";
+    document.getElementById("owner-register-email").value = "";
+    document.getElementById("owner-register-pass").value = "";
+    document.getElementById("owner-register-confirm").value = "";
+    switchView("owner-login");
+    document.getElementById("owner-user").value = email;
+    document.getElementById("owner-pass").value = "";
+    showToast("Owner account created. You can sign in now.");
+  }catch(error){
+    console.error("Owner registration failed:", error);
+    err.textContent = error?.code === "auth/email-already-in-use"
+      ? "This owner email is already registered."
+      : describeFirebaseAuthError(error, "owner");
+  }finally{
+    if(button){
+      button.disabled = false;
+      button.classList.remove("is-loading");
+      button.textContent = "Create Owner Account";
+    }
+  }
+}
+async function continueWithGoogleOwner(){
+  ensureStateReady();
+  const loginErr = document.getElementById("owner-error");
+  const registerErr = document.getElementById("owner-register-error");
+  if(loginErr) loginErr.textContent = "";
+  if(registerErr) registerErr.textContent = "";
+
+  try{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result = await firebase.auth().signInWithPopup(provider);
+    const user = result.user;
+    const roleDetails = await getFirebaseRoleDetails(user);
+    const role = roleDetails.role;
+
+    if(role === "owner"){
+      session.isOwner = true;
+      session.isAdmin = true;
+      session.staffUnlocked = true;
+      session.adminUsername = (user.displayName || user.email || "Owner").trim() || "Owner";
+
+      await loadSubscription();
+      if(!subscriptionIsActive()){
+        applySubscriptionAccess();
+        showToast("Subscription expired. Please contact the administrator to renew access.");
         return;
       }
-      email = lookup.data().email;
-    }catch(lookupError){
-      console.error("Could not resolve username:", lookupError);
-      err.textContent = "Could not verify that username right now. Please try again.";
+
+      saveRememberedSession("owner");
+      await loadOwnerAccessCollections();
+      switchView("owner-dashboard");
+      showToast("Welcome, owner");
       return;
     }
 
-    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, p);
-    const user = userCredential.user;
+    if(role === "admin" || role === "staff"){
+      await firebase.auth().signOut();
+      const msg = `This Google account is already assigned as ${role === "admin" ? "Admin" : "Staff"}. Please use the ${role === "admin" ? "Admin" : "Staff"} login instead.`;
+      if(loginErr) loginErr.textContent = msg; else showToast(msg);
+      return;
+    }
 
-    // Resolve role first. Staff is intentionally not allowed to read appMeta.
+    // No owner role yet on this Google account: only proceed if no owner exists at all.
+    if(await ownerAccountExists()){
+      await firebase.auth().signOut();
+      const msg = "An owner account already exists for this business. Please contact your developer for access.";
+      if(loginErr) loginErr.textContent = msg; else showToast(msg);
+      return;
+    }
+
+    switchView("owner-register");
+    document.getElementById("owner-business-name").value = "";
+    document.getElementById("owner-name").value = user.displayName || "";
+    document.getElementById("owner-register-email").value = user.email || "";
+    document.getElementById("owner-register-email").disabled = true;
+    document.getElementById("owner-register-pass").closest(".field").style.display = "none";
+    document.getElementById("owner-register-confirm").closest(".field").style.display = "none";
+    const registerBtn = document.getElementById("owner-register-btn");
+    registerBtn.textContent = "Finish creating account";
+    registerBtn.setAttribute("onclick", "createOwnerAccountViaGoogle()");
+    showToast("Signed in with Google — finish setting up your business");
+  }catch(error){
+    if(error?.code === "auth/popup-closed-by-user") return;
+    console.error("Google owner sign-in error:", error);
+    const msg = describeFirebaseAuthError(error, "owner");
+    if(loginErr) loginErr.textContent = msg; else if(registerErr) registerErr.textContent = msg;
+  }
+}
+async function createOwnerAccountViaGoogle(){
+  ensureStateReady();
+  const businessName = document.getElementById("owner-business-name").value.trim();
+  const ownerName = document.getElementById("owner-name").value.trim();
+  const err = document.getElementById("owner-register-error");
+  err.textContent = "";
+
+  const user = firebase.auth().currentUser;
+  if(!user){
+    err.textContent = "Google sign-in expired. Please tap Continue with Gmail again.";
+    return;
+  }
+  if(!businessName || !ownerName){
+    err.textContent = "Please complete the business name and owner name.";
+    return;
+  }
+
+  const button = document.getElementById("owner-register-btn");
+  if(button){ button.disabled = true; button.textContent = "Checking..."; }
+
+  if(await ownerAccountExists()){
+    err.textContent = "An owner account already exists for this business. Please contact your developer for access.";
+    if(button){ button.disabled = false; button.textContent = "Finish creating account"; }
+    return;
+  }
+
+  if(button){ button.textContent = "Creating..."; }
+
+  try{
+    await withTimeout(db.collection("userRoles").doc(user.uid).set({ role: "owner" }, { merge: true }), 10000);
+
+    const ownerProfile = {
+      uid: user.uid,
+      email: user.email,
+      businessName,
+      ownerName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: "active"
+    };
+    await withTimeout(db.collection("ownerProfiles").doc(user.uid).set(ownerProfile, { merge: true }), 10000);
+
+    session.isOwner = true;
+    session.isAdmin = true;
+    session.staffUnlocked = true;
+    session.adminUsername = ownerName || user.displayName || user.email || "Owner";
+
+    await loadSubscription();
+    saveRememberedSession("owner");
+    switchView("owner-dashboard");
+    showToast("Owner account created with Google");
+  }catch(error){
+    console.error("Owner Google registration failed:", error);
+    err.textContent = describeFirebaseAuthError(error, "owner");
+  }finally{
+    if(button){
+      button.disabled = false;
+      button.textContent = "Finish creating account";
+    }
+  }
+}
+async function attemptOwnerLogin(){
+  ensureStateReady();
+  const email = document.getElementById("owner-user").value.trim();
+  const password = document.getElementById("owner-pass").value;
+  const err = document.getElementById("owner-error");
+  err.textContent = "";
+
+  if(!email || !password){
+    err.textContent = "Please enter your owner email and password.";
+    return;
+  }
+
+  setLoginLoading("owner-login-btn", "Signing in...");
+
+  try{
+    const remember = document.getElementById("remember-owner").checked;
+    await firebase.auth().setPersistence(remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
+    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+    const user = userCredential.user;
     const roleDetails = await getFirebaseRoleDetails(user);
     const role = roleDetails.role;
-    if(role !== "staff"){
+
+    if(role !== "owner"){
       await firebase.auth().signOut();
       err.textContent = role === "admin"
         ? "This email is assigned as Admin. Please use Admin Login."
-        : describeFirebaseRoleFailure(roleDetails, "Staff");
+        : describeFirebaseRoleFailure(roleDetails, "Owner");
       return;
     }
 
-    // Staff Access is also cloud-authoritative; query by email only — the
-    // account's own assigned branch determines their session, not whatever
-    // branch happened to be selected in the UI before login.
-    const staffEmail = (user.email || "").trim().toLowerCase();
-    const staffSnap = await withTimeout(
-      db.collection("staffAccounts")
-        .where("email","==",staffEmail)
-        .get(),
-      10000
-    );
-    const account = staffSnap.docs.length ? {id:staffSnap.docs[0].id, ...staffSnap.docs[0].data()} : null;
-    if(account){
-      const byId = new Map((state.staffAccounts || []).map(a=>[a.id,a]));
-      byId.set(account.id, account);
-      state.staffAccounts = [...byId.values()];
-    }
-    if(!account){
-      await firebase.auth().signOut();
-      err.textContent = "This staff email has not been assigned in the app yet.";
-      return;
-    }
-    if(String(account.status || "active").toLowerCase() === "revoked"){
-      await firebase.auth().signOut();
-      err.textContent = "This staff account has been suspended. Contact your owner or admin.";
-      return;
-    }
-
-    const staffBranches = accountAllowedBranches(account);
-    if(staffBranches.length) ui.branch = staffBranches[0];
-
-    // Establish Staff session state before loading Staff-authorized collections.
+    session.isOwner = true;
+    session.isAdmin = true;
     session.staffUnlocked = true;
-    session.isAdmin = false;
+    session.adminUsername = (user.displayName || user.email || "Owner").trim() || "Owner";
+
     await loadSubscription();
     if(!subscriptionIsActive()){
       applySubscriptionAccess();
@@ -4071,27 +4781,24 @@ async function attemptStaffLogin(){
       return;
     }
 
-    session.isAdmin = false;
-    session.staffUsername = account.username || user.email;
-    session.staffTechnician = canonicalStaffTechnicianName(account);
-    await loadStaffCollections();
-    await loadStaffOperationalCollections();
-    await loadAttendanceFromCollection();
-    startRealtimeSync();
-    updateNavForRole("staff");
-    if(document.getElementById("remember-staff").checked) saveRememberedSession("staff");
+    if(document.getElementById("remember-owner").checked) saveRememberedSession("owner");
+
+    await loadOwnerAccessCollections();
+
     err.textContent = "";
-    document.getElementById("staff-user").value = "";
-    document.getElementById("staff-pass").value = "";
-    switchView(session.pendingView || "employee");
-    showToast("Welcome");
+    document.getElementById("owner-user").value = "";
+    document.getElementById("owner-pass").value = "";
+    switchView("owner-dashboard");
+    showToast("Welcome, owner");
   }catch(error){
-    console.error("Firebase staff login error:", error);
-    err.textContent = describeFirebaseAuthError(error, "staff");
+    console.error("Firebase owner login error:", error);
+    err.textContent = describeFirebaseAuthError(error, "owner");
   }finally{
-    setLoginLoading("staff-login-btn", null);
+    setLoginLoading("owner-login-btn", null);
   }
 }
+
+
 function showLogoutLoading(){
   document.getElementById("logout-overlay")?.remove();
   const overlay = document.createElement("div");
@@ -4198,14 +4905,14 @@ function openRemoveTechnicianModal(){
   `);
 }
 
-async function submitTechNameRequest(){
+function submitTechNameRequest(){
   if(!session.isAdmin) return;
   const techName = document.getElementById("tech-request-name")?.value.trim();
   const email = document.getElementById("tech-request-email")?.value.trim().toLowerCase();
   const error = document.getElementById("tech-request-error");
   if(!techName || !email){ if(error) error.textContent = "Enter the technician name and Firebase email."; return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ if(error) error.textContent = "Enter a valid Firebase email."; return; }
-  await requestOwnerAction({
+  requestOwnerAction({
     type: "tech-name-request",
     title: "Technician access request",
     details: `${techName} requested for ${ui.adminBranch || DEFAULT_BRANCH}.`,
@@ -4224,7 +4931,9 @@ function removeTechnician(){
 function renderRepairStatus(){
   const body = document.getElementById("repair-status-body");
   if(!body) return;
-  const branch = session.isOwner ? ui.adminBranch : (session.isAdmin ? ui.adminBranch : ui.branch);
+  const branch = session.isOwner
+    ? (BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH)
+    : (session.isAdmin ? (BRANCHES.includes(ui.adminBranch) ? ui.adminBranch : DEFAULT_BRANCH) : ui.branch);
   const q = String(ui.repairSearch || "").trim().toLowerCase();
   const dateSelection = ui.repairDate || "today";
 
@@ -4291,11 +5000,13 @@ function renderSidebarControls(){
   const bindKey = (session.isOwner || session.isAdmin) ? "ui.adminBranch" : "ui.branch";
   const html = branchSelectorHTML(bindKey);
   const select = document.getElementById("branch-select");
-  if(select){
+  if(select && select.innerHTML !== html.replace(/^<select[^>]*>|<\/select>$/g, "")){
     const optionsHtml = html.replace(/^<select[^>]*>/, "").replace(/<\/select>$/, "");
     if(select.innerHTML !== optionsHtml) select.innerHTML = optionsHtml;
   }
   bindBranchSelector((session.isOwner || session.isAdmin) ? "admin" : "employee");
+  const securityBtn = document.getElementById("sidebar-security-btn");
+  if(securityBtn) securityBtn.style.display = hasSecurityAccess() ? "block" : "none";
 }
 
 function renderAll(){
@@ -4314,10 +5025,19 @@ function renderAll(){
   renderRepairStatus();
   renderTechSales("employee-tech-sales-body", ui.branch);
   renderLaborSummary("public-labor-body", null);
+  if(session.isOwner){
+    renderOwnerDashboard();
+    renderFinanceDashboard();
+    renderOwnerRequests();
+    renderOwnerAccessControls();
+  }
   if(session.isAdmin){
     renderAdminOverview();
+    renderAdminInventory();
+    renderStockMovements();
     renderOperations();
     renderTechSales("admin-tech-sales-body", ui.adminBranch);
+    renderLaborSummary("admin-labor-body", null);
     renderAttendanceReport();
   }
   if(hasSecurityAccess()){
@@ -4404,6 +5124,15 @@ async function sendAccountPasswordReset(type, id){
   }
 }
 
+function passwordStatusBadge(account){
+  if(account?.passwordUpdatedAt){
+    const d = account.passwordUpdatedAt.toDate ? account.passwordUpdatedAt.toDate() : new Date(account.passwordUpdatedAt);
+    const dateText = Number.isNaN(d?.getTime?.()) ? "" : ` (${formatSiteDate(d)})`;
+    return `<span class="tag good">Updated${dateText}</span>`;
+  }
+  return `<span class="tag low">Not yet changed</span>`;
+}
+
 function renderStaffAccess(){
   const body = document.getElementById("staff-access-body");
   if(!body || !hasSecurityAccess()) return;
@@ -4416,8 +5145,8 @@ function renderStaffAccess(){
     body.innerHTML = accounts.length ? accounts.map(account => {
       const status = String(account.status || "active").toLowerCase();
       const branches = accountAllowedBranches(account).join(", ");
-      return `<tr><td>${escapeHTML(account.name || account.technician || "—")}</td><td>${escapeHTML(account.username || account.email || "—")}</td><td>${escapeHTML(branches || "—")}</td><td><span class="tag ${status === "revoked" ? "low" : "good"}">${status === "revoked" ? "Revoked" : "Active"}</span></td><td style="text-align:right">${accessActionOptions(account,"staff")}</td></tr>`;
-    }).join("") : `<tr class="empty-row"><td colspan="5">No staff access assigned.</td></tr>`;
+      return `<tr><td>${escapeHTML(account.name || account.technician || "—")}</td><td>${escapeHTML(account.username || account.email || "—")}</td><td>${escapeHTML(branches || "—")}</td><td>${passwordStatusBadge(account)}</td><td><span class="tag ${status === "revoked" ? "low" : "good"}">${status === "revoked" ? "Revoked" : "Active"}</span></td><td style="text-align:right">${accessActionOptions(account,"staff")}</td></tr>`;
+    }).join("") : `<tr class="empty-row"><td colspan="6">No staff access assigned.</td></tr>`;
     return;
   }
 
@@ -4462,7 +5191,33 @@ function renderAdminAccess(){
   }).join("") : `<tr class="empty-row"><td colspan="6">No admin accounts available.</td></tr>`;
 }
 
+function renderOwnerAccessControls(){
+  const staffBody = document.getElementById("owner-staff-access-body");
+  const adminBody = document.getElementById("owner-admin-access-body");
+  if(!staffBody || !adminBody) return;
 
+  const accessSummary = document.getElementById("owner-stat-access");
+  if(accessSummary) accessSummary.textContent = String((state.adminAccounts || []).filter(a => String(a.status || "active").toLowerCase() !== "revoked").length + (state.staffAccounts || []).filter(a => String(a.status || "active").toLowerCase() !== "revoked").length);
+
+  const staffAccounts = Array.isArray(state.staffAccounts) ? state.staffAccounts : [];
+  staffBody.innerHTML = staffAccounts.length ? staffAccounts.map(account => {
+    const status = String(account.status || "active").toLowerCase();
+    const username = account.username || "—";
+    const passwordMask = account.password ? "••••••" : "—";
+    return `<tr><td>${escapeHTML(username)}</td><td>${escapeHTML(passwordMask)}</td><td><span class="tag ${status === "revoked" ? "low" : "good"}">${status === "revoked" ? "Revoked" : "Active"}</span></td><td style="text-align:right"><button class="pill-btn small ghost" onclick="openStaffAccountModal('${account.id}')">Edit</button> ${accessActionOptions(account,"staff")}</td></tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="4">No staff access assigned.</td></tr>`;
+
+  state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
+  const adminAccounts = state.adminAccounts || [];
+  adminBody.innerHTML = adminAccounts.length ? adminAccounts.map(account => {
+    const status = String(account.status || "active").toLowerCase();
+    const name = account.name || account.username || "—";
+    const username = account.username || "—";
+    const passwordMask = account.password ? "••••••" : "—";
+    const branches = accountAllowedBranches(account).join(", ") || "—";
+    return `<tr><td>${escapeHTML(name)}</td><td>${escapeHTML(username)}</td><td>${escapeHTML(passwordMask)}</td><td>${escapeHTML(branches)}</td><td><span class="tag ${status === "revoked" ? "low" : "good"}">${status === "revoked" ? "Revoked" : "Active"}</span></td><td style="text-align:right"><button class="pill-btn small ghost" onclick="openAdminAccountModal('${account.username}')">Edit</button> ${accessActionOptions(account,"admin")}</td></tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="6">No admin accounts available.</td></tr>`;
+}
 
 function renderDeveloperRoles(){
   const panel = document.getElementById("developer-roles-panel");
@@ -4587,6 +5342,8 @@ function openAdminAccountModal(username=""){
     <div class="field"><label>Email${editing ? "" : " (for Firebase sign-in & password reset)"}</label><input id="admin-account-email" type="email" value="${editing ? escapeHTML(editing.email || "") : ""}" autocomplete="off" placeholder="e.g. jaja@gidsayphonetech.com" ${editing ? "disabled" : ""}></div>
     ${editing ? "" : `<div class="field"><label>Password</label><div class="pw-field"><input id="admin-account-password" type="password" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="admin-account-password" aria-label="Show password">👁</button></div></div>`}
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
+    <div class="field"><label>Basic Salary (₱, per payroll period)</label><input id="admin-account-salary" type="number" min="0" step="0.01" value="${editing ? Number(editing.basicSalary||0) : 0}"></div>
+    <div class="field"><label>Commission Rate (% of their sales)</label><input id="admin-account-commission" type="number" min="0" step="0.01" value="${editing ? Number(editing.commissionRate||0) : 0}"></div>
     <div class="login-error" id="admin-account-error"></div>
     <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" id="admin-account-save-btn" onclick="saveAdminAccount('${editing ? escapeHTML(editing.username) : ""}')">Save profile</button></div>`);
 }
@@ -4597,6 +5354,8 @@ async function saveAdminAccount(oldUsername){
   const username = document.getElementById("admin-account-username").value.trim();
   const email = document.getElementById("admin-account-email").value.trim().toLowerCase();
   const selectedBranches = [...document.querySelectorAll('[data-branch-checkbox="admin"]')].filter(el => el.checked).map(el => el.value);
+  const basicSalary = Number(document.getElementById("admin-account-salary")?.value || 0);
+  const commissionRate = Number(document.getElementById("admin-account-commission")?.value || 0);
   const error = document.getElementById("admin-account-error");
   const branchIds = selectedBranches.filter(Boolean);
   error.textContent = "";
@@ -4622,12 +5381,15 @@ async function saveAdminAccount(oldUsername){
         role: "admin", name, username, email, password, branchIds
       });
       const uid = result.data.uid;
-      const account = {id:uid, firebaseUid:uid, username, name, email, status:"active", branchId:branchIds[0], branchIds};
+      // Cloud Function doesn't know about salary fields yet; add them here directly.
+      await db.collection("adminAccounts").doc(uid).set({basicSalary, commissionRate}, {merge:true});
+      const account = {id:uid, firebaseUid:uid, username, name, email, status:"active", branchId:branchIds[0], branchIds, basicSalary, commissionRate};
       state.adminAccounts.push(account);
       state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
       writeLocal();
       closeOverlay();
       renderAdminAccess();
+      renderOwnerAccessControls();
       showToast("Admin account created");
     }catch(err){
       console.error("Could not create admin account:", err);
@@ -4642,17 +5404,18 @@ async function saveAdminAccount(oldUsername){
   // Editing an existing account: profile fields only, no Auth changes.
   const account = state.adminAccounts.find(item=>item.username===oldUsername);
   if(!account){ error.textContent = "Admin account not found."; return; }
-  Object.assign(account,{name, username, branchIds, branchId:branchIds[0] || currentBranchId()});
+  Object.assign(account,{name, username, branchIds, branchId:branchIds[0] || currentBranchId(), basicSalary, commissionRate});
   state.adminAccounts = normalizeAdminAccounts(state.adminAccounts);
   try{
     const ref = db.collection("adminAccounts").doc(account.id || account.firebaseUid || stableAdminDocId(account));
-    await withTimeout(ref.set({name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await withTimeout(ref.set({name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId(), basicSalary, commissionRate}, {merge:true}), 10000);
     await syncLoginDirectoryEntry(oldUsername, username, email);
     writeLocal();
     if(session.adminUsername===oldUsername) session.adminUsername = username;
     state.admin = {uid:firebase.auth().currentUser?.uid || "", email:firebase.auth().currentUser?.email || "", username:session.adminUsername || username};
     closeOverlay();
     renderAdminAccess();
+    renderOwnerAccessControls();
     showToast("Admin access updated");
   }catch(e){
     console.error("Could not save admin access:", e);
@@ -4679,6 +5442,7 @@ async function revokeAdminAccount(username){
     account.status = "revoked";
     writeLocal();
     renderAdminAccess();
+    renderOwnerAccessControls();
     showToast("Admin access suspended");
   }catch(e){
     console.error("Could not suspend admin access:", e);
@@ -4696,6 +5460,7 @@ async function restoreAdminAccount(username){
     account.status = "active";
     writeLocal();
     renderAdminAccess();
+    renderOwnerAccessControls();
     showToast("Admin access restored");
   }catch(e){
     console.error("Could not restore admin access:", e);
@@ -4722,6 +5487,8 @@ function openStaffAccountModal(editId="", technician=""){
     <div class="field"><label>Email${editing ? "" : " (for Firebase sign-in & password reset)"}</label><input id="staff-account-email" type="email" value="${editing ? escapeHTML(editing.email || "") : ""}" autocomplete="off" placeholder="e.g. tristan@gidsayphonetech.com" ${editing ? "disabled" : ""}></div>
     ${editing ? "" : `<div class="field"><label>Password</label><div class="pw-field"><input id="staff-account-password" type="password" autocomplete="new-password" placeholder="Create password"><button type="button" class="pw-eye" data-toggle-password="staff-account-password" aria-label="Show password">👁</button></div></div>`}
     <div class="field" style="margin-bottom:0;"><label style="margin-bottom:10px;">Assigned branches</label><div style="display:flex;flex-direction:column;gap:4px;max-width:260px;">${branchCheckboxes}</div></div>
+    <div class="field"><label>Basic Salary (₱, per payroll period)</label><input id="staff-account-salary" type="number" min="0" step="0.01" value="${editing ? Number(editing.basicSalary||0) : 0}"></div>
+    <div class="field"><label>Commission Rate (% of their sales)</label><input id="staff-account-commission" type="number" min="0" step="0.01" value="${editing ? Number(editing.commissionRate||0) : 0}"></div>
     <div class="login-error" id="staff-account-error"></div>
     <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" id="staff-account-save-btn" onclick="saveStaffAccount('${editId}')">Save access</button></div>
   `);
@@ -4734,6 +5501,8 @@ async function saveStaffAccount(id){
   const username = document.getElementById("staff-account-username").value.trim();
   const email = document.getElementById("staff-account-email").value.trim().toLowerCase();
   const selectedBranches = [...document.querySelectorAll('[data-branch-checkbox="staff"]')].filter(el => el.checked).map(el => el.value);
+  const basicSalary = Number(document.getElementById("staff-account-salary")?.value || 0);
+  const commissionRate = Number(document.getElementById("staff-account-commission")?.value || 0);
   const error = document.getElementById("staff-account-error");
   const branchIds = selectedBranches.filter(Boolean);
   error.textContent = "";
@@ -4760,7 +5529,9 @@ async function saveStaffAccount(id){
         role: "staff", name, username, email, password, branchIds, technician
       });
       const uid = result.data.uid;
-      const account = {id:uid, firebaseUid:uid, technician, name, username, email, status:"active", branchId:branchIds[0], branchIds};
+      // Cloud Function doesn't know about salary fields yet; add them here directly.
+      await db.collection("staffAccounts").doc(uid).set({basicSalary, commissionRate}, {merge:true});
+      const account = {id:uid, firebaseUid:uid, technician, name, username, email, status:"active", branchId:branchIds[0], branchIds, basicSalary, commissionRate};
       state.staffAccounts.push(account);
       if(!TECHS.includes(technician)){
         TECHS.push(technician);
@@ -4770,6 +5541,7 @@ async function saveStaffAccount(id){
       writeLocal();
       renderAll();
       renderStaffAccess();
+      renderOwnerAccessControls();
       closeOverlay();
       showToast("Staff access assigned");
     }catch(err){
@@ -4786,11 +5558,11 @@ async function saveStaffAccount(id){
   if(!account){ error.textContent = "Staff account not found."; return; }
   const previousUsername = account.username || "";
   const previousTechnician = account.technician || "";
-  Object.assign(account, {technician, name, username, branchIds, branchId: branchIds[0] || account.branchId || currentBranchId()});
+  Object.assign(account, {technician, name, username, branchIds, branchId: branchIds[0] || account.branchId || currentBranchId(), basicSalary, commissionRate});
 
   try{
     const ref = db.collection("staffAccounts").doc(account.id);
-    await withTimeout(ref.set({technician, name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId()}, {merge:true}), 10000);
+    await withTimeout(ref.set({technician, name, username, branchIds, branchId:branchIds[0] || account.branchId || currentBranchId(), basicSalary, commissionRate}, {merge:true}), 10000);
     await syncLoginDirectoryEntry(previousUsername, username, email);
     if(previousTechnician !== technician){
       if(previousTechnician) TECHS.splice(0, TECHS.length, ...TECHS.filter(t=>t!==previousTechnician));
@@ -4801,6 +5573,7 @@ async function saveStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
+    renderOwnerAccessControls();
     closeOverlay();
     showToast("Staff access updated");
   }catch(e){
@@ -4827,6 +5600,7 @@ async function revokeStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
+    renderOwnerAccessControls();
     showToast(`${technician || "Staff"} access suspended`);
   }catch(e){
     console.error("Could not suspend staff access:", e);
@@ -4848,6 +5622,7 @@ async function restoreStaffAccount(id){
     writeLocal();
     renderAll();
     renderStaffAccess();
+    renderOwnerAccessControls();
     showToast(`${account.technician || "Staff"} access restored`);
   }catch(e){
     console.error("Could not restore staff access:", e);
@@ -4870,7 +5645,7 @@ async function deleteAdminAccount(username){
   try{
     await cloudFunctions.httpsCallable("deleteStaffOrAdminAccount")({ role:"admin", uid:uidToUse, username });
     state.adminAccounts = state.adminAccounts.filter(item=>item.username!==username);
-    writeLocal(); renderAdminAccess(); showToast("Admin access deleted");
+    writeLocal(); renderAdminAccess(); renderOwnerAccessControls(); showToast("Admin access deleted");
   }catch(e){ console.error("Could not delete admin access:",e); showToast(e?.message || "Could not delete Admin access"); }
 }
 
@@ -4889,7 +5664,7 @@ async function deleteStaffAccount(id){
       if(!Array.isArray(state.removedTechnicians)) state.removedTechnicians = [];
       if(!state.removedTechnicians.includes(account.technician)) state.removedTechnicians.push(account.technician);
     }
-    writeLocal(); renderAll(); renderStaffAccess(); showToast("Staff access deleted");
+    writeLocal(); renderAll(); renderStaffAccess(); renderOwnerAccessControls(); showToast("Staff access deleted");
   }catch(e){ console.error("Could not delete staff access:",e); showToast(e?.message || "Could not delete Staff access"); }
 }
 
@@ -4956,25 +5731,221 @@ function attendanceDateTimeValue(value){
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/* Combined Staff + Admin roster for attendance, synced with the accounts
-   created in Owner's Access tab. value = the underlying technician identifier
-   (Staff's technician name, or Admin's username) used to match attendance
-   records; label = the readable "Staff - Name" / "Admin - Name" display. */
-function attendanceRoster(){
+function allActiveEmployees(){
   const staff = (state.staffAccounts || [])
-    .filter(a => String(a.status||"active").toLowerCase() !== "revoked" && a.technician)
-    .map(a => ({ value:a.technician, label:`Staff - ${a.name || a.technician}` }));
+    .filter(a => String(a.status||"active").toLowerCase() !== "revoked")
+    .map(a => ({ id:a.id, name:a.name || a.technician || a.username || "Staff", branch: (a.branchIds && a.branchIds[0]) || a.branch || DEFAULT_BRANCH, role:"staff", technician:a.technician, basicSalary:Number(a.basicSalary||0), commissionRate:Number(a.commissionRate||0) }));
   const admin = (state.adminAccounts || [])
-    .filter(a => String(a.status||"active").toLowerCase() !== "revoked" && a.username)
-    .map(a => ({ value:a.username, label:`Admin - ${a.name || a.username}` }));
+    .filter(a => String(a.status||"active").toLowerCase() !== "revoked")
+    .map(a => ({ id:a.id || a.username, name:a.name || a.username || "Admin", branch: (a.branchIds && a.branchIds[0]) || a.branch || DEFAULT_BRANCH, role:"admin", technician:a.username, basicSalary:Number(a.basicSalary||0), commissionRate:Number(a.commissionRate||0) }));
   return [...staff, ...admin];
 }
-function attendanceRosterLabel(value){
-  const entry = attendanceRoster().find(r => r.value === value);
-  return entry ? entry.label : (value || "—");
+
+function inDateRange(dateStr, range){
+  if(!dateStr) return false;
+  const d = parseSiteDate(dateStr);
+  if(!d) return false;
+  const today = getToday();
+  if(range === "today") return dateStr === todayStr();
+  if(range === "week"){
+    const start = new Date(today);
+    start.setDate(start.getDate() - start.getDay());
+    return d >= start && d <= today;
+  }
+  if(range === "month"){
+    return dateStr.slice(0,7) === monthStr();
+  }
+  return true;
+}
+
+function attendanceStatusBadge(record){
+  if(!record) return `<span class="tag low">Absent</span>`;
+  if(record.status === "leave") return `<span class="tag">On Leave</span>`;
+  if(record.checkOut) return `<span class="tag good">Completed</span>`;
+  if(record.checkIn) return `<span class="tag good">Present</span>`;
+  return `<span class="tag low">Absent</span>`;
+}
+
+function renderAttendanceDashboard(){
+  const employees = allActiveEmployees();
+  const today = todayStr();
+  const todaysRecords = (state.attendance || []).filter(r => r.date === today);
+  const presentNames = new Set(todaysRecords.filter(r => r.status !== "leave" && r.checkIn).map(r => r.tech));
+  const leaveNames = new Set(todaysRecords.filter(r => r.status === "leave").map(r => r.tech));
+  const presentCount = employees.filter(e => presentNames.has(e.technician)).length;
+  const leaveCount = employees.filter(e => leaveNames.has(e.technician)).length;
+  const absentCount = Math.max(0, employees.length - presentCount - leaveCount);
+
+  const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+  set("att-total-employees", employees.length);
+  set("att-present-today", presentCount);
+  set("att-absent-today", absentCount);
+  set("att-on-leave", leaveCount);
+}
+
+function renderAttendanceManagement(){
+  const branchSelect = document.getElementById("att-mgmt-branch");
+  if(branchSelect && branchSelect.options.length <= 1){
+    branchSelect.innerHTML = `<option value="">All Branches</option>` + BRANCHES.map(b=>`<option value="${escapeHTML(b)}">${escapeHTML(b)}</option>`).join("");
+  }
+  const body = document.getElementById("att-mgmt-body");
+  if(!body) return;
+  const branchFilter = ui.attMgmtBranch || "";
+  const range = ui.attMgmtRange || "today";
+  const search = (ui.attMgmtSearch || "").trim().toLowerCase();
+
+  const employeesByTech = new Map(allActiveEmployees().map(e => [e.technician, e]));
+  let rows = (state.attendance || []).filter(r => inDateRange(r.date, range));
+  if(branchFilter) rows = rows.filter(r => (r.branchId === branchIdForName(branchFilter)) || employeesByTech.get(r.tech)?.branch === branchFilter);
+  if(search) rows = rows.filter(r => String(r.tech||"").toLowerCase().includes(search));
+  rows = rows.sort((a,b) => (b.date||"").localeCompare(a.date||""));
+
+  body.innerHTML = rows.length ? rows.map(r => {
+    const emp = employeesByTech.get(r.tech);
+    const branchName = emp?.branch || "—";
+    return `<tr>
+      <td>${escapeHTML(r.tech || "—")}</td>
+      <td>${escapeHTML(branchName)}</td>
+      <td>${escapeHTML(formatSiteDate(r.date))}</td>
+      <td>${formatAttendanceTime(r.checkIn)}</td>
+      <td>${formatAttendanceTime(r.checkOut)}</td>
+      <td>${attendanceStatusBadge(r)}</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(r.tech)}')">View</button>
+        <button class="pill-btn small ghost" onclick="openAttendanceEditModal('${r.id}')">Edit</button>
+        <button class="pill-btn small ghost" onclick="deleteAttendance('${r.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="7">No attendance records for this filter.</td></tr>`;
+}
+
+function openMarkLeaveModal(){
+  const employees = allActiveEmployees();
+  const options = employees.map(e => `<option value="${escapeHTML(e.technician)}">${escapeHTML(e.name)} (${escapeHTML(e.branch)})</option>`).join("");
+  openOverlay(`
+    <h3>Mark Leave</h3>
+    <div class="sub">Records a full-day leave for this employee.</div>
+    <div class="field"><label>Employee</label><select id="leave-employee">${options}</select></div>
+    <div class="field"><label>Date</label><input type="date" id="leave-date" value="${todayStr()}"></div>
+    <div class="login-error" id="leave-error"></div>
+    <div class="modal-actions"><button class="pill-btn ghost" onclick="closeOverlay()">Cancel</button><button class="pill-btn primary" onclick="saveMarkLeave()">Save</button></div>
+  `);
+}
+
+async function saveMarkLeave(){
+  const tech = document.getElementById("leave-employee").value;
+  const date = document.getElementById("leave-date").value;
+  const error = document.getElementById("leave-error");
+  if(!tech || !date){ error.textContent = "Select an employee and date."; return; }
+  const duplicate = (state.attendance || []).some(r => r.tech === tech && r.date === date);
+  if(duplicate){ error.textContent = "This employee already has an attendance record for that date."; return; }
+  const emp = allActiveEmployees().find(e => e.technician === tech);
+  const record = { id: uid(), uid:"", branchId: branchIdForName(emp?.branch || DEFAULT_BRANCH), tech, date, checkIn:"", checkOut:"", status:"leave" };
+  state.attendance.push(record);
+  try{
+    await withTimeout(db.collection("attendance").doc(record.id).set(record), 10000);
+    await syncAppMeta();
+  }catch(e){ console.error("Could not save leave record:", e); }
+  writeLocal();
+  closeOverlay();
+  renderAttendance();
+  showToast("Leave recorded");
+}
+
+function viewEmployeeAttendanceHistory(tech){
+  const emp = allActiveEmployees().find(e => e.technician === tech);
+  const records = (state.attendance || []).filter(r => r.tech === tech).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const rows = records.slice(0,60).map(r => `
+    <tr><td>${escapeHTML(formatSiteDate(r.date))}</td><td>${formatAttendanceTime(r.checkIn)}</td><td>${formatAttendanceTime(r.checkOut)}</td><td>${attendanceStatusBadge(r)}</td></tr>
+  `).join("");
+  openOverlay(`
+    <h3>${escapeHTML(emp?.name || tech)} — Attendance history</h3>
+    <div class="sub">${escapeHTML(emp?.branch || "")} · last 60 records</div>
+    <div class="attendance-table-wrap" style="margin-top:12px;max-height:400px;overflow-y:auto;">
+      <table><thead><tr><th>Date</th><th>Check in</th><th>Check out</th><th>Status</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No records yet.</td></tr>'}</tbody></table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
+  `, "modal-light");
+}
+
+function renderAttendanceReports(){
+  const monthInput = document.getElementById("att-report-month");
+  if(monthInput && !monthInput.value) monthInput.value = monthStr();
+  const month = ui.attReportMonth || monthInput?.value || monthStr();
+  const employees = allActiveEmployees();
+  const records = (state.attendance || []).filter(r => (r.date||"").slice(0,7) === month);
+
+  const byEmployeeBody = document.getElementById("att-report-employee-body");
+  if(byEmployeeBody){
+    byEmployeeBody.innerHTML = employees.map(e => {
+      const empRecords = records.filter(r => r.tech === e.technician);
+      const present = empRecords.filter(r => r.status !== "leave" && r.checkIn).length;
+      const leave = empRecords.filter(r => r.status === "leave").length;
+      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+      const absent = Math.max(0, daysInMonth - present - leave);
+      return `<tr><td>${escapeHTML(e.name)}</td><td>${escapeHTML(e.branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td>
+        <td style="text-align:right"><button class="pill-btn small ghost" onclick="viewEmployeeAttendanceHistory('${escapeHTML(e.technician)}')">View</button></td></tr>`;
+    }).join("") || `<tr class="empty-row"><td colspan="6">No employees found.</td></tr>`;
+  }
+
+  const byBranchBody = document.getElementById("att-report-branch-body");
+  if(byBranchBody){
+    byBranchBody.innerHTML = BRANCHES.map(branch => {
+      const branchEmployees = employees.filter(e => e.branch === branch);
+      const techs = new Set(branchEmployees.map(e => e.technician));
+      const branchRecords = records.filter(r => techs.has(r.tech));
+      const present = branchRecords.filter(r => r.status !== "leave" && r.checkIn).length;
+      const leave = branchRecords.filter(r => r.status === "leave").length;
+      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+      const absent = Math.max(0, (branchEmployees.length * daysInMonth) - present - leave);
+      return `<tr><td>${escapeHTML(branch)}</td><td>${present}</td><td>${absent}</td><td>${leave}</td></tr>`;
+    }).join("");
+  }
+
+  const absenceBody = document.getElementById("att-report-absence-body");
+  if(absenceBody){
+    const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+    const monthDates = Array.from({length:daysInMonth}, (_,i)=> `${month}-${String(i+1).padStart(2,"0")}`)
+      .filter(d => parseSiteDate(d) <= getToday());
+    const absenceRows = [];
+    employees.forEach(e => {
+      monthDates.forEach(d => {
+        const hasRecord = records.some(r => r.tech === e.technician && r.date === d);
+        if(!hasRecord) absenceRows.push({ name:e.name, branch:e.branch, date:d });
+      });
+    });
+    absenceBody.innerHTML = absenceRows.length
+      ? absenceRows.slice(0,200).map(a => `<tr><td>${escapeHTML(a.name)}</td><td>${escapeHTML(a.branch)}</td><td>${escapeHTML(formatSiteDate(a.date))}</td></tr>`).join("")
+      : `<tr class="empty-row"><td colspan="3">No absences recorded for this month.</td></tr>`;
+  }
+
+  const summaryBody = document.getElementById("att-report-summary-body");
+  if(summaryBody){
+    const allRecords = state.attendance || [];
+    const months = [...new Set(allRecords.map(r => (r.date||"").slice(0,7)))].filter(Boolean).sort().reverse().slice(0,6);
+    summaryBody.innerHTML = months.length ? months.map(m => {
+      const monthRecords = allRecords.filter(r => (r.date||"").slice(0,7) === m);
+      const present = monthRecords.filter(r => r.status !== "leave" && r.checkIn).length;
+      const leave = monthRecords.filter(r => r.status === "leave").length;
+      return `<tr><td>${escapeHTML(m)}</td><td>${present}</td><td>—</td><td>${leave}</td></tr>`;
+    }).join("") : `<tr class="empty-row"><td colspan="4">No attendance history yet.</td></tr>`;
+  }
 }
 
 function renderAttendance(){
+  const staffView = document.getElementById("attendance-staff-view");
+  const ownerView = document.getElementById("attendance-owner-view");
+  if(session.isOwner){
+    if(staffView) staffView.style.display = "none";
+    if(ownerView) ownerView.style.display = "block";
+    renderAttendanceDashboard();
+    renderAttendanceManagement();
+    renderAttendanceReports();
+    return;
+  }
+  if(staffView) staffView.style.display = "block";
+  if(ownerView) ownerView.style.display = "none";
+
   const select = document.getElementById("attendance-tech");
   const body = document.getElementById("attendance-body");
   const status = document.getElementById("attendance-status");
@@ -4989,16 +5960,15 @@ function renderAttendance(){
   // check in/out only their own attendance, but the selector must still show
   // the complete current technician list exactly as Admin sees it. The action
   // guards below enforce the self-service permission.
-  const roster = attendanceRoster();
+  const attendanceTechs = Array.isArray(TECHS) ? [...TECHS] : [];
   const staffTech = canonicalStaffTechnicianName(session.staffTechnician);
   if(!session.isAdmin && staffTech && staffTech !== session.staffTechnician){
     session.staffTechnician = staffTech;
   }
-  const visibleRoster = session.isAdmin ? roster : roster.filter(r => r.value === staffTech);
-  select.innerHTML = visibleRoster.length
-    ? visibleRoster.map(r=>`<option value="${escapeHTML(r.value)}">${escapeHTML(r.label)}</option>`).join("")
+  const visibleAttendanceTechs = session.isAdmin ? attendanceTechs : (staffTech ? [staffTech] : []);
+  select.innerHTML = visibleAttendanceTechs.length
+    ? visibleAttendanceTechs.map(tech=>`<option value="${escapeHTML(tech)}">Assigned technician</option>`).join("")
     : `<option value="">No attendance available</option>`;
-  const visibleAttendanceTechs = visibleRoster.map(r=>r.value);
   if(!session.isAdmin && staffTech && visibleAttendanceTechs.includes(staffTech)) select.value = staffTech;
   else if(visibleAttendanceTechs.includes(current)) select.value = current;
   else if(visibleAttendanceTechs.length) select.value = visibleAttendanceTechs[0];
@@ -5012,7 +5982,7 @@ function renderAttendance(){
       : `<span class="dot"></span><span>Not checked in</span>`;
   const rows = attendanceForToday();
   body.innerHTML = rows.length ? rows.map(record=>`<tr>
-    <td>${escapeHTML(attendanceRosterLabel(record.tech))}</td><td>${escapeHTML(formatAttendanceDate(record.date))}</td>
+    <td>Assigned technician</td><td>${escapeHTML(formatAttendanceDate(record.date))}</td>
     <td>${formatAttendanceTime(record.checkIn)}</td><td>${formatAttendanceTime(record.checkOut)}</td>
     <td><span class="tag ${record.checkOut ? "good" : "low"}">${record.checkOut ? "Completed" : "Present"}</span></td>
     <td style="text-align:right;display:${session.isAdmin ? "table-cell" : "none"}"><div class="row-actions" style="justify-content:flex-end;"><button onclick="openAttendanceEditModal('${record.id}')" title="Edit attendance">${editIconSVG()}</button><button class="del" onclick="deleteAttendance('${record.id}')" title="Delete attendance">${deleteIconSVG()}</button></div></td>
@@ -5023,7 +5993,7 @@ function openAttendanceEditModal(id){
   if(!session.isAdmin) return;
   const record = state.attendance.find(item=>item.id===id);
   if(!record) return;
-  const techOptions = attendanceRoster().map(r=>`<option value="${escapeHTML(r.value)}" ${r.value===record.tech ? "selected" : ""}>${escapeHTML(r.label)}</option>`).join("");
+  const techOptions = TECHS.map(tech=>`<option value="${escapeHTML(tech)}" ${tech===record.tech ? "selected" : ""}>${escapeHTML(tech)}</option>`).join("");
   openOverlay(`
     <h3>Edit attendance</h3>
     <div class="sub">Correct the technician or shift times for this attendance record.</div>
@@ -5363,9 +6333,10 @@ function saveCommissionRate(tech, value){
   showToast(`${tech}'s commission updated`);
 }
 
-async function requestOwnerAction({type, title, details, branch, entityId, entityName, payload}){
+function requestOwnerAction({type, title, details, branch, entityId, entityName, payload}){
   if(!session.isAdmin && !session.isOwner) return null;
   const request = {
+    id: uid(),
     type,
     title,
     details,
@@ -5374,27 +6345,244 @@ async function requestOwnerAction({type, title, details, branch, entityId, entit
     entityName: entityName || "",
     payload: payload || {},
     requestedBy: currentUserName() || "Admin",
-    requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    requestedAt: Date.now(),
     status: "pending"
   };
-  try{
-    const ref = await db.collection("ownerRequests").add(request);
-    const localCopy = { ...request, id: ref.id, requestedAt: Date.now() };
-    state.ownerRequests = [localCopy, ...(state.ownerRequests || [])];
-    writeLocal();
-    return localCopy;
-  }catch(e){
-    console.error("Could not submit owner approval request:", e);
-    showToast("Could not send this request to the owner. Please try again.");
-    return null;
+  state.ownerRequests = [request, ...(state.ownerRequests || [])];
+  writeLocal();
+  renderOwnerRequests();
+  return request;
+}
+
+function renderOwnerRequests(){
+  const body = document.getElementById("owner-requests-body");
+  const techBody = document.getElementById("owner-tech-requests-body");
+  if(!body) return;
+  const requests = (state.ownerRequests || []).filter(Boolean);
+  const general = requests.filter(req => req.type !== "tech-name-request");
+  const techRequests = requests.filter(req => req.type === "tech-name-request");
+
+  const pendingCount = requests.filter(req => req.status === "pending").length;
+  const tabBadge = document.getElementById("owner-requests-badge");
+  const navBadge = document.getElementById("owner-nav-badge");
+  if(tabBadge) tabBadge.style.display = pendingCount ? "inline-block" : "none";
+  if(navBadge) navBadge.style.display = pendingCount ? "inline-block" : "none";
+
+  body.innerHTML = general.length ? general.map(req => `
+    <tr>
+      <td>${escapeHTML(req.type || "Request")}</td>
+      <td>${escapeHTML(req.title || "Permission request")}</td>
+      <td>${escapeHTML(req.entityName || req.entityId || "—")}</td>
+      <td>${escapeHTML(req.branch || "—")}</td>
+      <td>${escapeHTML(req.details || "No details provided")}</td>
+      <td>${req.status === "pending" ? '<span class="tag low">Pending</span>' : req.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>'}</td>
+      <td style="text-align:right; white-space:nowrap;">
+        <button class="pill-btn small ghost" onclick="viewOwnerRequest('${req.id}')">View</button>
+        ${req.status === "pending" ? ` <button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : ''}
+        <button class="pill-btn small ghost" onclick="deleteOwnerRequest('${req.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join("") : `<tr class="empty-row"><td colspan="7">No approval requests yet.</td></tr>`;
+
+  if(techBody){
+    techBody.innerHTML = techRequests.length ? techRequests.map(req => `
+      <tr>
+        <td>${escapeHTML(req.title || "Technician request")}</td>
+        <td>${escapeHTML(req.payload?.technician || "—")}</td>
+        <td>${escapeHTML(req.payload?.email || req.requestedBy || "—")}</td>
+        <td>${escapeHTML(req.branch || "—")}</td>
+        <td>${req.status === "pending" ? '<span class="tag low">Pending</span>' : req.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>'}</td>
+        <td style="text-align:right; white-space:nowrap;">
+          <button class="pill-btn small ghost" onclick="viewOwnerRequest('${req.id}')">View</button>
+          ${req.status === "pending" ? ` <button class="pill-btn small primary" onclick="approveOwnerRequest('${req.id}')">Approve</button> <button class="pill-btn small ghost" onclick="denyOwnerRequest('${req.id}')">Deny</button>` : ''}
+          <button class="pill-btn small ghost" onclick="deleteOwnerRequest('${req.id}')">Delete</button>
+        </td>
+      </tr>
+    `).join("") : `<tr class="empty-row"><td colspan="6">No technician assignment requests.</td></tr>`;
   }
 }
 
+function requestTimestampText(value){
+  if(!value) return "—";
+  const d = value.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(d?.getTime?.()) ? "—" : formatSiteDateTime(d);
+}
 
+function fieldLabel(key){
+  const labels = {
+    tech:"Technician", serviceType:"Service type", customerName:"Customer name",
+    customerPhone:"Customer phone", appointmentAt:"Appointment", jobStatus:"Job status",
+    invoiceStatus:"Invoice status", description:"Description", quantity:"Quantity",
+    amount:"Amount", fee:"Total fee", date:"Date", paymentMode:"Payment mode",
+    cashAmount:"Cash amount", eWalletAmount:"E-Wallet amount", clientTip:"Client tip",
+    branch:"Branch", itemUsed:"Item used", laborName:"Labor name", phoneBrand:"Phone brand",
+    phoneModel:"Phone model", amountPaid:"Amount paid", balance:"Balance",
+    itemName:"Item name", sku:"SKU", supplier:"Supplier", cost:"Cost", price:"Price",
+    used:"Used", reorderLevel:"Reorder level", location:"Location"
+  };
+  return labels[key] || key;
+}
 
+function viewOwnerRequest(id){
+  const request = (state.ownerRequests || []).find(item => item.id === id);
+  if(!request) return;
+  const statusBadge = request.status === "pending" ? '<span class="tag low">Pending</span>' : request.status === "approved" ? '<span class="tag good">Approved</span>' : '<span class="tag">Denied</span>';
+  const changes = request.payload?.changes;
+  let changesHtml = "";
+  if(changes && typeof changes === "object"){
+    const rows = Object.entries(changes)
+      .filter(([,v]) => v !== undefined && v !== "" && !(Array.isArray(v) && !v.length))
+      .map(([k,v]) => `<tr><td style="font-weight:600;">${escapeHTML(fieldLabel(k))}</td><td>${escapeHTML(Array.isArray(v) ? v.map(item=>`${item.serviceType||""} (₱${item.amount||0})`).join(", ") : String(v))}</td></tr>`)
+      .join("");
+    changesHtml = `<div class="sub" style="margin-top:16px;font-weight:600;">Proposed changes</div>
+      <table style="width:100%;margin-top:8px;"><tbody>${rows || '<tr><td colspan="2">No field changes captured.</td></tr>'}</tbody></table>`;
+  } else if(request.type === "tech-name-request"){
+    changesHtml = `<div class="sub" style="margin-top:16px;font-weight:600;">Requested technician</div>
+      <table style="width:100%;margin-top:8px;"><tbody>
+        <tr><td style="font-weight:600;">Name</td><td>${escapeHTML(request.payload?.technician || "—")}</td></tr>
+        <tr><td style="font-weight:600;">Email</td><td>${escapeHTML(request.payload?.email || "—")}</td></tr>
+      </tbody></table>`;
+  }
+  openOverlay(`
+    <h3>${escapeHTML(request.title || "Request details")}</h3>
+    <div class="sub">${escapeHTML(request.details || "No details provided")}</div>
+    <table style="width:100%;margin-top:14px;"><tbody>
+      <tr><td style="font-weight:600;">Type</td><td>${escapeHTML(request.type || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Target</td><td>${escapeHTML(request.entityName || request.entityId || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Branch</td><td>${escapeHTML(request.branch || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Requested by</td><td>${escapeHTML(request.requestedBy || "—")}</td></tr>
+      <tr><td style="font-weight:600;">Requested at</td><td>${requestTimestampText(request.requestedAt)}</td></tr>
+      <tr><td style="font-weight:600;">Status</td><td>${statusBadge}</td></tr>
+      ${request.status !== "pending" ? `<tr><td style="font-weight:600;">Resolved by</td><td>${escapeHTML(request.resolvedBy || "—")}</td></tr><tr><td style="font-weight:600;">Resolved at</td><td>${requestTimestampText(request.resolvedAt)}</td></tr>` : ""}
+    </tbody></table>
+    ${changesHtml}
+    <div class="modal-actions" style="margin-top:16px;">
+      ${request.status === "pending" ? `<button class="pill-btn primary" onclick="approveOwnerRequest('${request.id}'); closeOverlay();">Approve</button> <button class="pill-btn ghost" onclick="denyOwnerRequest('${request.id}'); closeOverlay();">Deny</button>` : ""}
+      <button class="pill-btn ghost" onclick="closeOverlay()">Close</button>
+    </div>
+  `, "modal-light");
+}
 
+async function approveOwnerRequest(id){
+  const request = (state.ownerRequests || []).find(item => item.id === id);
+  if(!request || request.status !== "pending") return;
+  const branch = request.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH;
+  const branchIdFromRequest = branchIdForName(branch) || currentBranchId();
+  try{
+    if(request.type === "job-delete"){
+      // Act on Firestore directly by entityId — do not depend on the job
+      // already being present in Owner's local cache (a branch that was
+      // added more recently, or a sync timing gap, could otherwise cause
+      // this to silently do nothing while still marking "Approved").
+      const target = state.transactions.find(entry => entry.id === request.entityId);
+      let affectedItem = null;
+      if(target && target.itemUsed){
+        adjustInventoryUsage(target.itemUsed, null, Number(target.quantity||1), 0);
+        affectedItem = state.inventory.find(i=>i.id===target.itemUsed);
+      }
+      state.transactions = state.transactions.filter(entry => entry.id !== request.entityId);
+      markDeleted("transactions", request.entityId);
+      const batch = db.batch();
+      batch.delete(db.collection("jobs").doc(request.entityId));
+      batch.delete(db.collection("salesPrivate").doc(request.entityId));
+      const statusToken = target?.statusToken ? String(target.statusToken) : "";
+      if(statusToken) batch.delete(db.collection("repairStatusPublic").doc(statusToken));
+      await withTimeout(batch.commit(), 10000);
+      await syncAppMeta();
+      if(affectedItem) await syncInventoryChange(affectedItem, false);
+    } else if(request.type === "job-revision"){
+      const target = state.transactions.find(entry => entry.id === request.entityId);
+      const changes = request.payload?.changes;
+      if(changes){
+        const jobToSync = target ? Object.assign(target, changes) : {id: request.entityId, branch, branchId: branchIdFromRequest, ...changes};
+        if(!target) state.transactions.push(jobToSync);
+        await syncAdminJobTransaction(jobToSync, [changes.itemUsed].filter(Boolean));
+      }
+    } else if(request.type === "inventory-delete"){
+      const target = state.inventory.find(entry => entry.id === request.entityId);
+      state.inventory = state.inventory.filter(entry => entry.id !== request.entityId);
+      markDeleted("inventory", request.entityId);
+      await syncInventoryChange(target || {id: request.entityId, branchId: branchIdFromRequest}, true);
+    } else if(request.type === "inventory-revision"){
+      const target = state.inventory.find(entry => entry.id === request.entityId);
+      const changes = request.payload?.changes;
+      if(changes){
+        const itemToSync = target ? Object.assign(target, changes) : {id: request.entityId, branchId: branchIdFromRequest, ...changes};
+        if(!target) state.inventory.push(itemToSync);
+        await syncInventoryChange(itemToSync, false);
+      }
+    } else if(request.type === "inventory-create"){
+      const changes = request.payload?.changes;
+      if(changes && changes.itemName){
+        const newItem = {id: uid(), branchId: branchIdFromRequest, ...changes};
+        state.inventory.push(newItem);
+        if(newItem.quantity) addStockMovement(newItem, Number(newItem.quantity), "Purchase", "Opening stock");
+        await syncInventoryChange(newItem, false);
+      }
+    } else if(request.type === "tech-name-request"){
+      const technicianName = String(request.payload?.technician || "").trim();
+      const email = String(request.payload?.email || "").trim().toLowerCase();
+      if(technicianName && email){
+        const existing = (state.staffAccounts || []).find(account => (account.email || "").trim().toLowerCase() === email);
+        if(existing){
+          existing.technician = technicianName;
+          existing.branchId = existing.branchId || branch;
+          await db.collection("staffAccounts").doc(existing.id).set({technician:technicianName, branchId:existing.branchId}, {merge:true});
+        } else {
+          const newAccount = {id: uid(), email, technician: technicianName, status: "active", firebaseUid: "", branchId: branch};
+          state.staffAccounts = [...(state.staffAccounts || []), newAccount];
+          await db.collection("staffAccounts").doc(newAccount.id).set(newAccount, {merge:true});
+        }
+        if(!TECHS.includes(technicianName)) TECHS.push(technicianName);
+        state.technicians = [...TECHS];
+        await syncTechnicianDirectory().catch(e=>console.error("Could not sync technician directory:", e));
+      }
+    }
 
+    request.status = "approved";
+    request.resolvedAt = Date.now();
+    request.resolvedBy = currentUserName() || "Owner";
+    await db.collection("ownerRequests").doc(id).set({status:"approved", resolvedAt: firebase.firestore.FieldValue.serverTimestamp(), resolvedBy: request.resolvedBy}, {merge:true});
+    writeLocal();
+    renderAll();
+    renderOwnerRequests();
+    showToast(`${request.title || "Request"} approved for ${branch}`);
+  }catch(e){
+    console.error("Could not approve request:", e);
+    showToast("Could not complete this approval. Please try again.");
+  }
+}
 
+async function denyOwnerRequest(id){
+  const request = (state.ownerRequests || []).find(item => item.id === id);
+  if(!request || request.status !== "pending") return;
+  request.status = "denied";
+  request.resolvedAt = Date.now();
+  request.resolvedBy = currentUserName() || "Owner";
+  try{
+    await db.collection("ownerRequests").doc(id).set({status:"denied", resolvedAt: firebase.firestore.FieldValue.serverTimestamp(), resolvedBy: request.resolvedBy}, {merge:true});
+  }catch(e){
+    console.error("Could not update denied request in the cloud:", e);
+  }
+  writeLocal();
+  renderOwnerRequests();
+  showToast(`${request.title || "Request"} denied`);
+}
+
+async function deleteOwnerRequest(id){
+  const request = (state.ownerRequests || []).find(item => item.id === id);
+  if(!request) return;
+  if(!confirm(`Remove "${request.title || "this request"}" from the list?`)) return;
+  state.ownerRequests = (state.ownerRequests || []).filter(item => item.id !== id);
+  try{
+    await db.collection("ownerRequests").doc(id).delete();
+  }catch(e){
+    console.error("Could not delete request in the cloud:", e);
+  }
+  writeLocal();
+  renderOwnerRequests();
+  showToast("Request removed");
+}
 
 function renderEmployeeDashboard(){
   const today = todayStr();
@@ -5425,36 +6613,52 @@ function renderEmployeeDashboard(){
 }
 
 function renderPublicInventory(){
-  const body = document.getElementById("public-inv-body");
-  if(!body) return;
-  const head = document.getElementById("public-inv-head");
-  const canEdit = session.isAdmin; // Staff stays read-only; Admin's Edit/Delete
-                                    // route through owner-approval (see saveInv/deleteInv).
-  if(head){
-    head.innerHTML = canEdit
-      ? '<th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th><th style="text-align:right">Actions</th>'
-      : '<th>Item name</th><th>Quantity</th><th>No. used</th><th>SRP</th><th>Available qty</th>';
-  }
-  const selectedBranch = session.isOwner ? (ui.adminBranch || DEFAULT_BRANCH) : (ui.branch || DEFAULT_BRANCH);
-  if(session.isOwner && !isBranchActive(selectedBranch)){
-    body.innerHTML = `<tr><td colspan="6"><div style="padding:18px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">Not Yet Active. Contact your Site Administrator</div></td></tr>`;
+  const addBtn = document.getElementById("pub-inv-add-btn");
+  if(addBtn) addBtn.style.display = session.isOwner ? "inline-flex" : "none";
+  const recalcBtn = document.getElementById("pub-inv-recalc-btn");
+  if(recalcBtn) recalcBtn.style.display = session.isOwner ? "inline-flex" : "none";
+  const singlePanel = document.getElementById("pub-inv-single-panel");
+  const branchPanels = document.getElementById("pub-inv-branch-panels");
+
+  if(session.isOwner){
+    if(singlePanel) singlePanel.style.display = "none";
+    if(branchPanels) branchPanels.style.display = "block";
+    const rowsFor = (branchId) => {
+      const items = state.inventory.filter(i => i.branchId === branchId);
+      return items.length ? items.map(i=>{
+        const avail = Number(i.quantity) - Number(i.used||0);
+        return `<tr><td>${escapeHTML(i.itemName)}</td><td>${i.quantity}</td><td>${Number(i.used||0)}</td><td>${peso(Number(i.price||0))}</td><td>${avail}</td>
+          <td style="text-align:right">
+            <div class="row-actions" style="justify-content:flex-end;">
+              <button onclick="openInvModal('${i.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+              <button class="del" onclick="deleteInv('${i.id}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("") : `<tr class="empty-row"><td colspan="6">No inventory items yet.</td></tr>`;
+    };
+    const b1 = document.getElementById("public-inv-body-branch1");
+    const b2 = document.getElementById("public-inv-body-branch2");
+    if(b1) b1.innerHTML = rowsFor("branch1");
+    if(b2) b2.innerHTML = rowsFor("branch2");
     return;
   }
+
+  if(singlePanel) singlePanel.style.display = "block";
+  if(branchPanels) branchPanels.style.display = "none";
+  const body = document.getElementById("public-inv-body");
+  if(!body) return;
+  const selectedBranch = ui.branch || DEFAULT_BRANCH;
   body.innerHTML = state.inventory.length ? state.inventory.map(i=>{
     const avail = Number(i.quantity) - Number(i.used||0);
-    const actionsCell = canEdit ? `<td style="text-align:right;white-space:nowrap;">
-        <button class="pill-btn small ghost" onclick="openInvModal('${i.id}')">Edit</button>
-        <button class="pill-btn small ghost" onclick="deleteInv('${i.id}')">Delete</button>
-      </td>` : "";
     return `<tr>
       <td>${escapeHTML(i.itemName)}</td>
       <td>${i.quantity}</td>
       <td>${Number(i.used||0)}</td>
       <td>${peso(Number(i.price || 0))}</td>
       <td>${avail}</td>
-      ${actionsCell}
     </tr>`;
-  }).join("") : `<tr class="empty-row"><td colspan="${canEdit?6:5}">No inventory items yet.</td></tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="5">No inventory items yet.</td></tr>`;
 }
 
 function availTag(avail, threshold=LOW_STOCK_THRESHOLD){
@@ -5471,7 +6675,362 @@ function cogsForTransactions(txns){
   }, 0);
 }
 
+function renderFinanceDashboard(){
+  if(!session.isOwner) return;
+  const all = state.transactions || [];
+  const month = monthStr();
+  const monthly = all.filter(t => (t.date||"").slice(0,7) === month);
 
+  const totalRevenue = all.reduce((s,t)=>s+collectedAmount(t), 0);
+  const monthSales = monthly.reduce((s,t)=>s+collectedAmount(t), 0);
+  const cogs = cogsForTransactions(all);
+  const grossProfit = totalRevenue - cogs;
+  const unpaid = all.filter(t => balanceAmount(t) > 0);
+  const receivable = unpaid.reduce((s,t)=>s+balanceAmount(t), 0);
+
+  const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+  set("fin-total-revenue", peso(totalRevenue));
+  set("fin-month-sales", peso(monthSales));
+  set("fin-gross-profit", peso(grossProfit));
+  set("fin-receivable", peso(receivable));
+  set("fin-pending-payments", `${unpaid.length} job${unpaid.length===1?"":"s"}`);
+
+  const branchTotals = BRANCHES.map(name => ({
+    name,
+    total: all.filter(t=>t.branch===name).reduce((s,t)=>s+collectedAmount(t), 0)
+  }));
+  const maxBranch = Math.max(...branchTotals.map(b=>b.total), 1);
+  const branchChart = document.getElementById("fin-sales-by-branch");
+  if(branchChart){
+    branchChart.innerHTML = branchTotals.map(b => `
+      <div class="bar-row"><span>${escapeHTML(b.name)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(b.total/maxBranch*100)}%"></div></div>
+      <b style="text-align:right">${peso(b.total)}</b></div>`).join("");
+  }
+}
+
+/* ======================= PAYROLL ======================= */
+function currentPayrollCutoff(){
+  const today = getToday();
+  const y = today.getFullYear(), m = today.getMonth(), day = today.getDate();
+  const mm = String(m+1).padStart(2,"0");
+  const lastDay = new Date(y, m+1, 0).getDate();
+  if(day <= 15){
+    return { id:`${y}-${mm}-first`, startDate:`${y}-${mm}-01`, endDate:`${y}-${mm}-15`, payDate:`${y}-${mm}-15`, label:`${y}-${mm} (1–15)` };
+  }
+  return { id:`${y}-${mm}-second`, startDate:`${y}-${mm}-16`, endDate:`${y}-${mm}-${String(lastDay).padStart(2,"0")}`, payDate:`${y}-${mm}-${String(lastDay).padStart(2,"0")}`, label:`${y}-${mm} (16–${lastDay})` };
+}
+function nextPayrollDateText(){
+  const today = getToday();
+  const y = today.getFullYear(), m = today.getMonth(), day = today.getDate();
+  const lastDay = new Date(y, m+1, 0).getDate();
+  let next;
+  if(day < 15) next = new Date(y,m,15);
+  else if(day < lastDay) next = new Date(y,m,lastDay);
+  else next = new Date(y,m+1,15);
+  return formatSiteDate(todayStr(next));
+}
+
+let payrollLoaded = false;
+async function ensurePayrollLoaded(){
+  if(payrollLoaded) return;
+  try{
+    const [periodsSnap, recordsSnap] = await Promise.all([
+      db.collection("payrollPeriods").get(),
+      db.collection("payrollRecords").get()
+    ]);
+    state.payrollPeriods = periodsSnap.docs.map(d=>({id:d.id,...d.data()}));
+    state.payrollRecords = recordsSnap.docs.map(d=>({id:d.id,...d.data()}));
+    payrollLoaded = true;
+    writeLocal();
+  }catch(e){ console.error("Could not load payroll data:", e); }
+}
+
+async function createPayrollPeriod(){
+  const cutoff = currentPayrollCutoff();
+  if((state.payrollPeriods||[]).some(p=>p.id===cutoff.id)){
+    showToast("A payroll period already exists for this cutoff.");
+    return;
+  }
+  const period = { id:cutoff.id, startDate:cutoff.startDate, endDate:cutoff.endDate, payDate:cutoff.payDate, status:"draft", createdAt: Date.now() };
+  state.payrollPeriods.push(period);
+  try{
+    await db.collection("payrollPeriods").doc(period.id).set(period);
+  }catch(e){ console.error("Could not save payroll period:", e); }
+  writeLocal();
+  showToast("Payroll period created for " + cutoff.label);
+  renderPayrollDashboard();
+}
+
+function commissionForEmployee(emp, startDate, endDate){
+  if(!emp.commissionRate) return 0;
+  const sales = (state.transactions||[])
+    .filter(t => t.tech === emp.technician && t.date >= startDate && t.date <= endDate)
+    .reduce((s,t)=>s+collectedAmount(t), 0);
+  return sales * (emp.commissionRate/100);
+}
+
+async function calculatePayroll(){
+  const cutoff = currentPayrollCutoff();
+  let period = (state.payrollPeriods||[]).find(p=>p.id===cutoff.id);
+  if(!period){
+    await createPayrollPeriod();
+    period = (state.payrollPeriods||[]).find(p=>p.id===cutoff.id);
+  }
+  const employees = allActiveEmployees();
+  const existingRecords = new Map((state.payrollRecords||[]).filter(r=>r.periodId===cutoff.id).map(r=>[r.employeeId, r]));
+
+  for(const emp of employees){
+    const existing = existingRecords.get(emp.id);
+    const commission = commissionForEmployee(emp, cutoff.startDate, cutoff.endDate);
+    const bonus = existing ? Number(existing.bonus||0) : 0;
+    const deductions = existing ? Number(existing.deductions||0) : 0;
+    const basicSalary = Number(emp.basicSalary||0);
+    const grossPay = basicSalary + commission + bonus;
+    const netPay = grossPay - deductions;
+    const record = {
+      id: existing?.id || uid(),
+      periodId: cutoff.id,
+      employeeId: emp.id,
+      employeeName: emp.name,
+      role: emp.role,
+      branch: emp.branch,
+      basicSalary, commission, bonus, deductions, grossPay, netPay,
+      status: existing?.status || "pending"
+    };
+    state.payrollRecords = [...(state.payrollRecords||[]).filter(r=>!(r.periodId===cutoff.id && r.employeeId===emp.id)), record];
+    try{
+      await db.collection("payrollRecords").doc(record.id).set(record, {merge:true});
+    }catch(e){ console.error("Could not save payroll record:", e); }
+  }
+  period.status = "calculated";
+  try{ await db.collection("payrollPeriods").doc(period.id).set({status:"calculated"}, {merge:true}); }catch(e){}
+  writeLocal();
+  renderPayrollDashboard();
+  showToast("Payroll calculated for " + cutoff.label);
+}
+
+async function updatePayrollField(recordId, field, value){
+  const record = (state.payrollRecords||[]).find(r=>r.id===recordId);
+  if(!record) return;
+  record[field] = Number(value)||0;
+  record.grossPay = Number(record.basicSalary) + Number(record.commission) + Number(record.bonus);
+  record.netPay = record.grossPay - Number(record.deductions);
+  try{
+    await db.collection("payrollRecords").doc(recordId).set({[field]:record[field], grossPay:record.grossPay, netPay:record.netPay}, {merge:true});
+  }catch(e){ console.error("Could not update payroll record:", e); }
+  writeLocal();
+  renderPayrollDashboard();
+}
+
+async function markPayrollRecordPaid(recordId){
+  const record = (state.payrollRecords||[]).find(r=>r.id===recordId);
+  if(!record) return;
+  record.status = "paid";
+  try{ await db.collection("payrollRecords").doc(recordId).set({status:"paid"}, {merge:true}); }catch(e){}
+  writeLocal();
+  renderPayrollDashboard();
+  showToast(`${record.employeeName} marked as paid`);
+}
+
+function viewPayslip(recordId){
+  const record = (state.payrollRecords||[]).find(r=>r.id===recordId);
+  if(!record) return;
+  const period = (state.payrollPeriods||[]).find(p=>p.id===record.periodId);
+  openOverlay(`
+    <h3>Payslip — ${escapeHTML(record.employeeName)}</h3>
+    <div class="sub">${escapeHTML(period?.label || record.periodId)} · Pay date: ${escapeHTML(formatSiteDate(period?.payDate))}</div>
+    <table style="width:100%;margin-top:14px;"><tbody>
+      <tr><td style="font-weight:600;">Branch</td><td>${escapeHTML(record.branch)}</td></tr>
+      <tr><td style="font-weight:600;">Basic Salary</td><td>${peso(record.basicSalary)}</td></tr>
+      <tr><td style="font-weight:600;">Commission</td><td>${peso(record.commission)}</td></tr>
+      <tr><td style="font-weight:600;">Bonus</td><td>${peso(record.bonus)}</td></tr>
+      <tr><td style="font-weight:600;">Gross Pay</td><td>${peso(record.grossPay)}</td></tr>
+      <tr><td style="font-weight:600;">Deductions</td><td>${peso(record.deductions)}</td></tr>
+      <tr><td style="font-weight:600;">Net Pay</td><td><b>${peso(record.netPay)}</b></td></tr>
+      <tr><td style="font-weight:600;">Status</td><td>${record.status==="paid" ? '<span class="tag good">Paid</span>' : '<span class="tag low">Pending</span>'}</td></tr>
+    </tbody></table>
+    <div class="modal-actions" style="margin-top:16px;">
+      ${record.status!=="paid" ? `<button class="pill-btn primary" onclick="markPayrollRecordPaid('${record.id}'); closeOverlay();">Mark as Paid</button>` : ""}
+      <button class="pill-btn ghost" onclick="closeOverlay()">Close</button>
+    </div>
+  `, "modal-light");
+}
+
+async function renderPayrollDashboard(){
+  await ensurePayrollLoaded();
+  const cutoff = currentPayrollCutoff();
+  const period = (state.payrollPeriods||[]).find(p=>p.id===cutoff.id);
+  const records = (state.payrollRecords||[]).filter(r=>r.periodId===cutoff.id);
+  const employees = allActiveEmployees();
+
+  const grossTotal = records.reduce((s,r)=>s+Number(r.grossPay||0), 0);
+  const deductionsTotal = records.reduce((s,r)=>s+Number(r.deductions||0), 0);
+  const commissionTotal = records.reduce((s,r)=>s+Number(r.commission||0), 0);
+  const bonusTotal = records.reduce((s,r)=>s+Number(r.bonus||0), 0);
+  const netTotal = records.reduce((s,r)=>s+Number(r.netPay||0), 0);
+  const paidTotal = records.filter(r=>r.status==="paid").reduce((s,r)=>s+Number(r.netPay||0), 0);
+
+  const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+  set("pr-total-employees", employees.length);
+  set("pr-current-period", period ? cutoff.label : `${cutoff.label} (not created)`);
+  set("pr-gross-payroll", peso(grossTotal));
+  set("pr-total-deductions", peso(deductionsTotal));
+  set("pr-total-commissions", peso(commissionTotal));
+  set("pr-total-bonuses", peso(bonusTotal));
+  set("pr-net-payroll", peso(netTotal));
+  set("pr-paid-payroll", peso(paidTotal));
+  set("pr-next-date", nextPayrollDateText());
+
+  const periodDesc = document.getElementById("pr-period-desc");
+  if(periodDesc) periodDesc.textContent = period ? `Period ${cutoff.label} · ${period.status}` : `No payroll period created yet for ${cutoff.label}.`;
+
+  const calcBody = document.getElementById("pr-calc-body");
+  if(calcBody){
+    calcBody.innerHTML = records.length ? records.map(r => `
+      <tr>
+        <td>${escapeHTML(r.employeeName)}</td>
+        <td>${escapeHTML(r.branch)}</td>
+        <td>${peso(r.basicSalary)}</td>
+        <td>${peso(r.commission)}</td>
+        <td><input type="number" min="0" step="0.01" value="${Number(r.bonus||0)}" style="width:90px;" onchange="updatePayrollField('${r.id}','bonus',this.value)"></td>
+        <td><input type="number" min="0" step="0.01" value="${Number(r.deductions||0)}" style="width:90px;" onchange="updatePayrollField('${r.id}','deductions',this.value)"></td>
+        <td>${peso(r.grossPay)}</td>
+        <td><b>${peso(r.netPay)}</b></td>
+        <td>${r.status==="paid" ? '<span class="tag good">Paid</span>' : '<span class="tag low">Pending</span>'}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="pill-btn small ghost" onclick="viewPayslip('${r.id}')">View</button>
+          ${r.status!=="paid" ? `<button class="pill-btn small primary" onclick="markPayrollRecordPaid('${r.id}')">Mark Paid</button>` : ""}
+        </td>
+      </tr>
+    `).join("") : `<tr class="empty-row"><td colspan="10">No payroll calculated yet for this period. Click "Calculate Payroll" to generate it.</td></tr>`;
+  }
+
+  const historyBody = document.getElementById("pr-history-body");
+  if(historyBody){
+    const periods = [...(state.payrollPeriods||[])].sort((a,b)=>(b.id||"").localeCompare(a.id||""));
+    historyBody.innerHTML = periods.length ? periods.map(p => {
+      const periodRecords = (state.payrollRecords||[]).filter(r=>r.periodId===p.id);
+      const gross = periodRecords.reduce((s,r)=>s+Number(r.grossPay||0),0);
+      const net = periodRecords.reduce((s,r)=>s+Number(r.netPay||0),0);
+      return `<tr>
+        <td>${escapeHTML(p.id)}</td>
+        <td>${escapeHTML(formatSiteDate(p.payDate))}</td>
+        <td>${peso(gross)}</td>
+        <td>${peso(net)}</td>
+        <td><span class="tag ${p.status==="calculated"?"good":""}">${escapeHTML(p.status||"draft")}</span></td>
+        <td style="text-align:right"><button class="pill-btn small ghost" onclick="viewPayrollPeriodHistory('${p.id}')">View</button></td>
+      </tr>`;
+    }).join("") : `<tr class="empty-row"><td colspan="6">No payroll periods yet.</td></tr>`;
+  }
+}
+
+function viewPayrollPeriodHistory(periodId){
+  const period = (state.payrollPeriods||[]).find(p=>p.id===periodId);
+  const records = (state.payrollRecords||[]).filter(r=>r.periodId===periodId);
+  const rows = records.map(r => `<tr><td>${escapeHTML(r.employeeName)}</td><td>${peso(r.grossPay)}</td><td>${peso(r.netPay)}</td><td>${r.status==="paid" ? '<span class="tag good">Paid</span>' : '<span class="tag low">Pending</span>'}</td><td style="text-align:right"><button class="pill-btn small ghost" onclick="viewPayslip('${r.id}')">View</button></td></tr>`).join("");
+  openOverlay(`
+    <h3>Payroll Period ${escapeHTML(periodId)}</h3>
+    <div class="sub">Pay date: ${escapeHTML(formatSiteDate(period?.payDate))} · ${escapeHTML(period?.status||"draft")}</div>
+    <div class="attendance-table-wrap" style="margin-top:12px;max-height:400px;overflow-y:auto;">
+      <table><thead><tr><th>Employee</th><th>Gross</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5">No records.</td></tr>'}</tbody></table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
+  `, "modal-light");
+}
+
+function ownerOverviewActiveTemplate(){
+  return `
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Business clients today</div>
+        <div class="stat-value" id="owner-stat-clients">0</div>
+        <div class="stat-sub">Across all active branches</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Business sales today</div>
+        <div class="stat-value blue" id="owner-stat-sales">₱0</div>
+        <div class="stat-sub">Revenue across all active branches</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top branch</div>
+        <div class="stat-value" id="owner-stat-top-branch" style="font-size:20px;">—</div>
+        <div class="stat-sub">All-time, by total sales</div>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Total completed jobs</div>
+        <div class="stat-value" id="owner-stat-completed">0</div>
+        <div class="stat-sub">All-time, all branches</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total in repair</div>
+        <div class="stat-value" id="owner-stat-inrepair">0</div>
+        <div class="stat-sub">Currently in progress, all branches</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>Owner dashboard</h3>
+          <div class="desc">Business-level summary across all active branches</div>
+        </div>
+        <button class="pill-btn primary" onclick="switchView('admin')">Open admin dashboard</button>
+      </div>
+      <div style="padding:20px;">
+        <div class="muted-box" id="owner-dashboard-summary">
+          Review branch operations, financial activity, and access control from the business owner view.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderOwnerDashboard(){
+  const overview = document.getElementById("owner-sub-overview");
+
+  // Branch is active: rebuild the real dashboard template only if it isn't
+  // already in place (e.g. first load, or recovering from the inactive
+  // banner above). Rebuilding on every render — which fires on every
+  // realtime Firestore update — was destroying and recreating this button
+  // constantly, occasionally eating a click that landed mid-rebuild.
+  if(overview && !document.getElementById("owner-stat-clients")){
+    overview.innerHTML = ownerOverviewActiveTemplate();
+  }
+  const clientSummary = document.getElementById("owner-stat-clients");
+  const salesSummary = document.getElementById("owner-stat-sales");
+  const topBranchEl = document.getElementById("owner-stat-top-branch");
+  const completedEl = document.getElementById("owner-stat-completed");
+  const inRepairEl = document.getElementById("owner-stat-inrepair");
+  const summary = document.getElementById("owner-dashboard-summary");
+
+  const activeBranchNames = BRANCHES.filter(name => isBranchActive(name));
+  const allActiveTxns = state.transactions.filter(t => activeBranchNames.includes(t.branch));
+  const today = todayStr();
+  const todaysTxns = allActiveTxns.filter(t => t.date === today);
+
+  const totalClients = todaysTxns.length;
+  const sales = todaysTxns.reduce((s, t) => s + collectedAmount(t), 0);
+  if(clientSummary) clientSummary.textContent = totalClients;
+  if(salesSummary) salesSummary.textContent = peso(sales);
+
+  const branchTotals = activeBranchNames.map(name => ({
+    name,
+    total: allActiveTxns.filter(t => t.branch === name).reduce((s, t) => s + collectedAmount(t), 0)
+  }));
+  const topBranch = branchTotals.reduce((best, b) => (b.total > (best?.total ?? -1) ? b : best), null);
+  if(topBranchEl) topBranchEl.textContent = topBranch && topBranch.total > 0 ? topBranch.name : "—";
+
+  const completedCount = allActiveTxns.filter(t => t.jobStatus === "Claimed").length;
+  const inRepairCount = allActiveTxns.filter(t => t.jobStatus === "In Repair").length;
+  if(completedEl) completedEl.textContent = completedCount;
+  if(inRepairEl) inRepairEl.textContent = inRepairCount;
+  if(summary){
+    summary.textContent = `Owner view: ${totalClients} client${totalClients === 1 ? "" : "s"} logged today with ${peso(sales)} in sales across all active branches.`;
+  }
+}
 
 function renderAdminOverview(){
   document.getElementById("admin-branch-label").textContent = ui.adminBranch;
@@ -5831,7 +7390,7 @@ function renderAdminInventory(){
   const head = document.getElementById("admin-inv-head");
   if(head){
     head.innerHTML = ownerView
-      ? '<tr><th>Item / SKU</th><th>Supplier</th><th>Quantity</th><th>Item cost</th><th>Price (SRP)</th><th>Total price</th><th>Available</th><th style="text-align:right">Actions</th></tr>'
+      ? '<tr><th>Item / SKU</th><th>Supplier</th><th>Quantity</th><th>Item cost</th><th>Capital</th><th>Price (SRP)</th><th>Available</th><th>Used</th><th style="text-align:right">Actions</th></tr>'
       : '<tr><th>Item / SKU</th><th>Quantity</th><th>Available</th><th>Price (SRP)</th><th>Total price</th><th style="text-align:right">Actions</th></tr>';
   }
   renderLowStockBanner();
@@ -5846,11 +7405,12 @@ function renderAdminInventory(){
       return `<tr>
         <td><b>${escapeHTML(i.itemName)}</b><div class="stat-sub">${escapeHTML(i.sku || i.barcode || "No SKU")}</div></td>
         <td>${escapeHTML(i.supplier || "—")}</td>
-        <td>${i.quantity} <span class="stat-sub">(${i.used||0} used)</span></td>
+        <td>${i.quantity}</td>
         <td>${peso(i.cost)}</td>
+        <td>${peso(Number(i.cost||0)*Number(i.quantity||0))}</td>
         <td>${peso(i.price)}</td>
-        <td class="fee">${peso(Number(i.quantity||0)*Number(i.price||0))}</td>
         <td>${availTag(avail, Number(i.reorderLevel ?? LOW_STOCK_THRESHOLD))}</td>
+        <td>${Number(i.used||0)} <button class="pill-btn small ghost" onclick="viewInventoryUsage('${i.id}')">View</button></td>
         <td style="text-align:right">
           <div class="row-actions" style="justify-content:flex-end;">
             <button onclick="openInvModal('${i.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
@@ -6209,7 +7769,24 @@ async function saveTxn(id, isAdmin){
   // Never let a shared dashboard button accidentally downgrade an Admin save
   // into the Staff-only cloud path. The authenticated role is authoritative.
   isAdmin = !!(isAdmin || session.isAdmin);
-  const needsOwnerApproval = isAdmin && !session.isOwner && !!id;
+  if(isAdmin && !session.isOwner && id){
+    const existing = state.transactions.find(item => item.id === id);
+    if(existing){
+      const confirmed = confirm("Request owner approval before revising this job?");
+      if(!confirmed) return;
+      requestOwnerAction({
+        type: "job-revision",
+        title: "Job revision request",
+        details: `Revise ${existing.serviceNo || existing.customerName || "job"} for ${existing.customerName || "customer"} in ${existing.branch || ui.adminBranch || DEFAULT_BRANCH}.`,
+        branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH,
+        entityId: id,
+        entityName: existing.customerName || existing.serviceNo || "Job",
+        payload: { branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH }
+      });
+      showToast("Owner approval requested for this job revision");
+      return;
+    }
+  }
   const tech = document.getElementById("f-tech").value.trim();
   const serviceType = document.getElementById("f-service").value.trim();
   const customerName = document.getElementById("f-customer").value.trim();
@@ -6286,27 +7863,6 @@ async function saveTxn(id, isAdmin){
     }
   }
 
-  if(needsOwnerApproval){
-    const existing = state.transactions.find(item => item.id === id);
-    if(existing){
-      const confirmed = confirm("Request owner approval before revising this job?");
-      if(!confirmed) return;
-      const proposedChanges = {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip};
-      await requestOwnerAction({
-        type: "job-revision",
-        title: "Job revision request",
-        details: `Revise ${existing.serviceNo || existing.customerName || "job"} for ${existing.customerName || "customer"} in ${existing.branch || ui.adminBranch || DEFAULT_BRANCH}.`,
-        branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH,
-        entityId: id,
-        entityName: existing.customerName || existing.serviceNo || "Job",
-        payload: { branch: existing.branch || ui.adminBranch || ui.branch || DEFAULT_BRANCH, changes: proposedChanges }
-      });
-      closeOverlay();
-      showToast("Owner approval requested for this job revision");
-      return;
-    }
-  }
-
   if(id){
     const t = state.transactions.find(x=>x.id===id);
     Object.assign(t, {tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, branch, customerName, customerPhone, appointmentAt, jobStatus:normalizeJobStatus(jobStatus), invoiceStatus, amountPaid, balance, description, quantity, amount, date, paymentMode, cashAmount, eWalletAmount, clientTip});
@@ -6335,11 +7891,6 @@ async function saveTxn(id, isAdmin){
     if(!trialJob) state.nextSeq = seq + 1;
     const newJob = {id:newId, ts:Date.now(), date, branch, tech, serviceType, serviceItems, laborName, phoneBrand, phoneModel, itemUsed, fee, customerName, customerPhone, appointmentAt, jobStatus, invoiceStatus, amountPaid, balance, description, quantity, amount, paymentMode, cashAmount, eWalletAmount, clientTip, serviceNo, receiptNo, isTrial:trialJob, statusToken: makeRepairStatusToken()};
     state.transactions.push(newJob);
-    // Must run BEFORE the Firestore write below — otherwise the write
-    // captures the old (pre-increment) used-count, so the cloud copy of
-    // inventory never actually reflects this job's consumption, even
-    // though it looks correct in this browser's own local state.
-    adjustInventoryUsage(previousItem, itemUsed, previousQty, quantity);
     if(staffCreated){
       try{
         await createStaffJobInCollection(newJob);
@@ -6354,6 +7905,7 @@ async function saveTxn(id, isAdmin){
       }
     }
   }
+  adjustInventoryUsage(previousItem, itemUsed, previousQty, quantity);
   try{
     if(isAdmin){
       const savedJob = state.transactions.find(x=>x.id === savedJobId);
@@ -6427,7 +7979,7 @@ async function deleteTxn(id){
   if(session.isAdmin && !session.isOwner){
     const confirmed = confirm("Send this deletion request to the owner for approval?");
     if(!confirmed) return;
-    await requestOwnerAction({
+    requestOwnerAction({
       type: "job-delete",
       title: "Job deletion request",
       details: `Delete job ${t.serviceNo || t.id} for ${t.customerName || "customer"} from ${t.branch || ui.adminBranch}.`,
@@ -6440,7 +7992,11 @@ async function deleteTxn(id){
     return;
   }
   if(!confirm("Delete this job? This can't be undone.")) return;
-  if(t && t.itemUsed) adjustInventoryUsage(t.itemUsed, null, Number(t.quantity||1), 0);
+  let affectedItem = null;
+  if(t && t.itemUsed){
+    adjustInventoryUsage(t.itemUsed, null, Number(t.quantity||1), 0);
+    affectedItem = state.inventory.find(i=>i.id===t.itemUsed);
+  }
   state.transactions = state.transactions.filter(t=>t.id!==id);
   markDeleted("transactions", id);
   renderAll();
@@ -6456,6 +8012,10 @@ async function deleteTxn(id){
       }
       await withTimeout(batch.commit(), 10000);
       await syncAppMeta();
+      // The job deletion above frees up inventory usage locally — this
+      // must also be pushed to the cloud, or Admin/Staff and a page
+      // refresh here would never see the increased available quantity.
+      if(affectedItem) await syncInventoryChange(affectedItem, false);
     }
     writeLocal();
     showToast("Job deleted");
@@ -6629,7 +8189,6 @@ async function submitChangePassword(){
     const credential = firebase.auth.EmailAuthProvider.credential(user.email, current);
     await user.reauthenticateWithCredential(credential);
     await user.updatePassword(next);
-    await markPasswordUpdated(user.email);
     closeOverlay();
     showToast("Password updated");
   }catch(error){
@@ -6644,29 +8203,6 @@ async function submitChangePassword(){
   }finally{
     btn.disabled = false;
     btn.textContent = originalLabel;
-  }
-}
-// Records when an Admin or Staff member changes their own password, so the
-// Owner's Access tab can show whether the Owner-assigned password is still
-// in use or has since been changed by the account holder. Not applied to
-// Owner accounts (Owner isn't tracked in adminAccounts/staffAccounts).
-async function markPasswordUpdated(email){
-  if(!email || session.isOwner) return;
-  const cleanEmail = String(email).trim().toLowerCase();
-  try{
-    if(session.isAdmin){
-      const snap = await db.collection("adminAccounts").where("email","==",cleanEmail).limit(1).get();
-      if(!snap.empty){
-        await snap.docs[0].ref.set({ passwordUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-      }
-    }else if(session.staffUnlocked){
-      const snap = await db.collection("staffAccounts").where("email","==",cleanEmail).limit(1).get();
-      if(!snap.empty){
-        await snap.docs[0].ref.set({ passwordUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-      }
-    }
-  }catch(e){
-    console.error("Could not record passwordUpdatedAt:", e);
   }
 }
 function openCalculatorModal(){
@@ -6941,9 +8477,51 @@ function downloadReceiptPdf(id){
   showToast("Receipt downloaded");
 }
 
+function viewInventoryUsage(itemId){
+  const item = state.inventory.find(i=>i.id===itemId);
+  if(!item) return;
+  const uses = (state.transactions||[]).filter(t=>t.itemUsed===itemId).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const rows = uses.map(t => `<tr><td>${escapeHTML(t.branch||"—")}</td><td>${escapeHTML(t.serviceNo||t.id)} — ${escapeHTML(t.customerName||"")}</td><td>${escapeHTML(t.tech||"—")}</td><td>${escapeHTML(formatSiteDate(t.date))}</td></tr>`).join("");
+  openOverlay(`
+    <h3>${escapeHTML(item.itemName)} — Usage</h3>
+    <div class="sub">${uses.length} job${uses.length===1?"":"s"} used this item</div>
+    <div class="attendance-table-wrap" style="margin-top:12px;max-height:400px;overflow-y:auto;">
+      <table><thead><tr><th>Branch</th><th>Job</th><th>Technician</th><th>Date</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No usage recorded yet.</td></tr>'}</tbody></table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
+  `, "modal-light");
+}
+
+async function recalculateInventoryUsage(){
+  if(!session.isOwner) return;
+  if(!confirm("Recalculate used quantity for every inventory item, based on jobs that currently exist? Use this once to correct any leftover drift from before the delete-sync fix.")) return;
+  let corrected = 0;
+  for(const item of state.inventory){
+    const actualUsed = state.transactions
+      .filter(t => t.itemUsed === item.id)
+      .reduce((sum, t) => sum + Number(t.quantity || 1), 0);
+    if(Number(item.used || 0) !== actualUsed){
+      item.used = actualUsed;
+      try{
+        await syncInventoryChange(item, false);
+        corrected++;
+      }catch(e){
+        console.error("Recalculate sync failed for item", item.id, e);
+      }
+    }
+  }
+  writeLocal();
+  renderAll();
+  showToast(corrected ? `Recalculated ${corrected} item${corrected===1?"":"s"}` : "All inventory usage was already correct");
+}
+
 function openInvModal(editId=null){
   const editing = editId ? state.inventory.find(i=>i.id===editId) : null;
   const ownerView = Boolean(session.isOwner);
+  const currentBranchName = editing ? (branchNameForId(editing.branchId) || DEFAULT_BRANCH) : (ui.adminBranch || DEFAULT_BRANCH);
+  const branchField = ownerView ? `
+      <div class="field"><label>Branch</label><select id="i-branch">${BRANCHES.map(name=>`<option value="${escapeHTML(name)}" ${name===currentBranchName?"selected":""}>${escapeHTML(name)}</option>`).join("")}</select></div>
+    ` : "";
   const supplierField = ownerView ? `
       <div class="field"><label>Supplier</label><input id="i-supplier" list="supplier-options" value="${editing?escapeHTML(editing.supplier || ""):""}"><datalist id="supplier-options">${(state.suppliers||[]).map(s=>`<option value="${escapeHTML(s.name)}">`).join("")}</datalist></div>
     ` : "";
@@ -6958,6 +8536,7 @@ function openInvModal(editId=null){
       <div class="field"><label>SKU / barcode</label><input id="i-sku" placeholder="Scan or type code" value="${editing?escapeHTML(editing.sku || editing.barcode || ""):""}"></div>
       ${supplierField}
     </div>
+    ${branchField}
     <div class="field"><label>Quantity</label><input id="i-qty" type="number" min="0" value="${editing?editing.quantity:""}"></div>
     ${costField}
     <div class="field"><label>Price / SRP (₱) <span style="font-weight:400;color:var(--muted)">used to suggest the service fee</span></label><input id="i-price" type="number" min="0" value="${editing?editing.price:""}"></div>
@@ -6987,9 +8566,10 @@ async function saveInv(id){
   if(!itemName){ showToast("Item name is required"); return; }
   const proposedChanges = {itemName, sku, supplier, quantity, cost, price, used, reorderLevel, location};
   if(session.isAdmin && !session.isOwner){
+    const existing = id ? state.inventory.find(item => item.id === id) : null;
     const confirmed = confirm(id ? "Request owner approval to revise this inventory item?" : "Request owner approval to add this inventory item?");
     if(!confirmed) return;
-    await requestOwnerAction({
+    requestOwnerAction({
       type: id ? "inventory-revision" : "inventory-create",
       title: id ? "Inventory revision request" : "New inventory item request",
       details: `${id ? "Update" : "Add"} ${itemName} in ${ui.adminBranch || DEFAULT_BRANCH}.`,
@@ -7004,15 +8584,19 @@ async function saveInv(id){
   }
   let item;
   const ownerView = Boolean(session.isOwner);
+  const branchSelect = document.getElementById("i-branch");
+  const selectedBranchId = branchSelect ? branchIdForName(branchSelect.value) : null;
   if(id){
     item = state.inventory.find(i=>i.id===id);
     const delta = quantity - Number(item.quantity||0);
     const usedDelta = used - Number(item.used||0);
     Object.assign(item, {itemName, sku, supplier: ownerView ? supplier : (item.supplier || ""), quantity, cost: ownerView ? cost : (item.cost || 0), price, used, reorderLevel, location});
+    if(selectedBranchId) item.branchId = selectedBranchId;
     if(delta) addStockMovement(item, delta, delta>0 ? "Purchase" : "Adjustment", "Inventory edit");
     if(usedDelta) addStockMovement(item, -usedDelta, "Usage adjustment", "Inventory edit");
   } else {
     item = {id:uid(), itemName, sku, barcode:sku, supplier: ownerView ? supplier : "", quantity, cost: ownerView ? cost : 0, price, used, reorderLevel, location};
+    if(selectedBranchId) item.branchId = selectedBranchId;
     state.inventory.push(item);
     if(quantity) addStockMovement(item, quantity, "Purchase", "Opening stock");
   }
@@ -7031,7 +8615,7 @@ async function deleteInv(id){
   if(session.isAdmin && !session.isOwner){
     const confirmed = confirm("Send this inventory deletion request to the owner for approval?");
     if(!confirmed) return;
-    await requestOwnerAction({
+    requestOwnerAction({
       type: "inventory-delete",
       title: "Inventory deletion request",
       details: `Delete ${item.itemName || "inventory item"} from ${ui.adminBranch || DEFAULT_BRANCH}.`,
@@ -7164,24 +8748,6 @@ function reportFileBase(){
   const d = getToday();
   const stamp = todayStr(d);
   return `GIDS-report-${stamp}`;
-}
-
-async function requestDownloadReport(){
-  if(!session.isAdmin || session.isOwner) return;
-  const branch = document.getElementById("rep-branch")?.value || "__all__";
-  const from = document.getElementById("rep-from")?.value || "";
-  const to = document.getElementById("rep-to")?.value || "";
-  const branchLabel = branch === "__all__" ? "All Branches" : branch;
-  const rangeLabel = (from || to) ? `${from || "start"} to ${to || "today"}` : "all jobs on record";
-  await requestOwnerAction({
-    type: "report-download",
-    title: "Report download request",
-    details: `Requested a report for ${branchLabel} (${rangeLabel}).`,
-    branch: ui.adminBranch || ui.branch || DEFAULT_BRANCH,
-    entityName: branchLabel,
-    payload: { branchFilter: branch, from, to }
-  });
-  showToast("Owner approval requested for this report download");
 }
 
 function downloadExcelReport(){
