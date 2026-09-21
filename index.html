@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("sub-manager-theme"); if(t==="light"||t==="dark") document.documentElement.setAttribute("data-theme", t);}catch(e){}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Subscription Manager — Developer Only</title>
 <meta name="theme-color" content="#0b1220">
@@ -15,6 +16,19 @@
   :root{
     --bg:#0b1220; --card:#141d33; --line:#28324a; --text:#eaf0ff; --muted:#8ea0c8;
     --blue:#4c8dff; --blue-dim:#1c2b4a; --green:#2ecc71; --red:#ff5c5c; --amber:#f5a623;
+    --input-bg:#0e1526;
+  }
+  html[data-theme="light"]{
+    --bg:#eef2f9; --card:#ffffff; --line:#dce3f0; --text:#12203c; --muted:#5c6d8c;
+    --blue:#2f6fe0; --blue-dim:#dbe8ff; --green:#1f9d55; --red:#d64545; --amber:#c9820f;
+    --input-bg:#f4f6fb;
+  }
+  body{ transition:background .2s ease, color .2s ease; }
+  .card{ transition:background .2s ease, border-color .2s ease; }
+  .theme-toggle{
+    position:fixed; top:16px; right:16px; padding:8px 14px; border-radius:999px; border:1px solid var(--line);
+    background:var(--card); color:var(--text); font-size:12px; font-weight:700; cursor:pointer;
+    font-family:inherit; display:flex; align-items:center; gap:6px; z-index:10;
   }
   *{box-sizing:border-box;}
   body{
@@ -31,7 +45,7 @@
   .field label{ display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; }
   .field input, .field select{
     width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
-    background:#0e1526; color:var(--text); font-size:16px; font-family:inherit;
+    background:var(--input-bg); color:var(--text); font-size:16px; font-family:inherit;
   }
   .field input:focus, .field select:focus{ outline:none; border-color:var(--blue); }
   .pw-field{ position:relative; }
@@ -65,7 +79,7 @@
   #app-view{ display:none; }
   .loading-note{ font-size:12px; color:var(--muted); text-align:center; padding:20px 0; }
   h2{ font-size:15px; margin:28px 0 12px; letter-spacing:.2px; }
-  .branch-card{ border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:12px; background:#0e1526; }
+  .branch-card{ border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:12px; background:var(--input-bg); }
   .branch-card-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .branch-card-head .name{ font-size:14px; font-weight:700; }
   .branch-card-head .id{ font-size:11px; color:var(--muted); }
@@ -90,6 +104,10 @@
 </style>
 </head>
 <body>
+
+  <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" type="button">
+    <span id="theme-toggle-icon">🌙</span> <span id="theme-toggle-label">Dark</span>
+  </button>
 
   <!-- ===================== LOGIN VIEW ===================== -->
   <div class="card" id="login-view">
@@ -119,6 +137,24 @@
       <button class="logout-link" onclick="doLogout()">Log out</button>
     </div>
     <div class="top-user" id="signed-in-as"></div>
+
+    <div class="branch-card">
+      <div class="branch-card-head">
+        <span class="name">Company Details</span>
+        <button class="btn btn-ghost btn-small" style="margin-top:0;width:auto;" onclick="toggleCompanyForm()" id="company-toggle-btn">Edit</button>
+      </div>
+      <div id="company-summary" style="font-size:13px;color:var(--muted);line-height:1.6;"></div>
+      <div id="company-form" style="display:none;margin-top:10px;">
+        <div class="field"><label>Company name</label><input type="text" id="cd-company-name" placeholder="e.g. GIDS AYPHONE TECH"></div>
+        <div class="field"><label>Contact person</label><input type="text" id="cd-contact-person" placeholder="Full name"></div>
+        <div class="field"><label>Contact email</label><input type="email" id="cd-contact-email" placeholder="name@example.com"></div>
+        <div class="field"><label>Contact phone</label><input type="text" id="cd-contact-phone" placeholder="+63 9XX XXX XXXX"></div>
+        <button class="btn btn-primary btn-small" onclick="saveCompanyDetails()">Save company details</button>
+        <div class="error" id="company-error"></div>
+        <div class="success" id="company-success"></div>
+      </div>
+    </div>
+
     <p class="sub" style="margin-bottom:8px;">Each branch has its own independent activation. Activating sets a start and expiry date; suspending only needs an expiry/effective date — nothing else about that branch (or any other branch) is touched.</p>
 
     <h2>Branches</h2>
@@ -172,6 +208,79 @@
     branch2: { name: "Bataan" },
     branch3: { name: "Angeles" }
   };
+
+  function applyThemeButtonState(){
+    const isLight = document.documentElement.getAttribute("data-theme") === "light";
+    document.getElementById("theme-toggle-icon").textContent = isLight ? "☀️" : "🌙";
+    document.getElementById("theme-toggle-label").textContent = isLight ? "Light" : "Dark";
+  }
+  function toggleTheme(){
+    const isLight = document.documentElement.getAttribute("data-theme") === "light";
+    const next = isLight ? "dark" : "light";
+    if(next === "dark") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", "light");
+    try{ localStorage.setItem("sub-manager-theme", next); }catch(e){}
+    applyThemeButtonState();
+  }
+  applyThemeButtonState();
+
+  let currentCompanyDetails = {};
+
+  function renderCompanySummary(){
+    const d = currentCompanyDetails;
+    const el = document.getElementById("company-summary");
+    if(!d.companyName && !d.contactPerson && !d.contactEmail && !d.contactPhone){
+      el.textContent = "No company details saved yet.";
+      return;
+    }
+    el.innerHTML = `
+      ${d.companyName ? `<b>${escapeHtml(d.companyName)}</b><br>` : ""}
+      ${d.contactPerson ? `Contact: ${escapeHtml(d.contactPerson)}<br>` : ""}
+      ${d.contactEmail ? `${escapeHtml(d.contactEmail)}<br>` : ""}
+      ${d.contactPhone ? `${escapeHtml(d.contactPhone)}` : ""}
+    `;
+  }
+
+  function toggleCompanyForm(){
+    const form = document.getElementById("company-form");
+    const btn = document.getElementById("company-toggle-btn");
+    const showing = form.style.display !== "none";
+    if(showing){
+      form.style.display = "none";
+      btn.textContent = "Edit";
+    }else{
+      document.getElementById("cd-company-name").value = currentCompanyDetails.companyName || "";
+      document.getElementById("cd-contact-person").value = currentCompanyDetails.contactPerson || "";
+      document.getElementById("cd-contact-email").value = currentCompanyDetails.contactEmail || "";
+      document.getElementById("cd-contact-phone").value = currentCompanyDetails.contactPhone || "";
+      form.style.display = "block";
+      btn.textContent = "Close";
+    }
+  }
+
+  async function saveCompanyDetails(){
+    const errEl = document.getElementById("company-error");
+    const successEl = document.getElementById("company-success");
+    errEl.textContent = "";
+    successEl.textContent = "";
+    const details = {
+      companyName: document.getElementById("cd-company-name").value.trim(),
+      contactPerson: document.getElementById("cd-contact-person").value.trim(),
+      contactEmail: document.getElementById("cd-contact-email").value.trim(),
+      contactPhone: document.getElementById("cd-contact-phone").value.trim()
+    };
+    try{
+      // merge:true — only these four fields are touched; branches, history,
+      // and everything else on this document are left completely alone.
+      await subRef.set(details, { merge: true });
+      currentCompanyDetails = details;
+      renderCompanySummary();
+      successEl.textContent = "Saved.";
+    }catch(error){
+      console.error(error);
+      errEl.textContent = describeError(error);
+    }
+  }
 
   function togglePw(){
     const input = document.getElementById("login-password");
@@ -241,6 +350,14 @@
     try{
       const snap = await subRef.get();
       const data = snap.exists ? snap.data() : {};
+
+      currentCompanyDetails = {
+        companyName: data.companyName || "",
+        contactPerson: data.contactPerson || "",
+        contactEmail: data.contactEmail || "",
+        contactPhone: data.contactPhone || ""
+      };
+      renderCompanySummary();
 
       // One-time migration path: older documents only ever had a single
       // top-level status/expiresAt/activeBranchIds for the whole business,
