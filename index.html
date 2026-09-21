@@ -119,6 +119,7 @@
   .topbar-title{ font-family:'Anton'; font-size:24px; letter-spacing:.5px; color:var(--text); }
   .topbar-sub{ color:var(--muted); font-size:12px; margin-top:3px; }
   .topbar-right{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-left:auto; flex-wrap:wrap; }
+  .more-actions-btn{ display:none; font-size:18px; font-weight:800; line-height:1; padding:6px 14px; }
   .topbar-right .pill-btn{ text-align:center; }
   #refresh-app-btn{ margin-left:0; flex:none; }
 
@@ -367,15 +368,18 @@
     table{ font-size:12px; }
     th,td{ padding:10px 12px; }
     /* The sidebar collapses to an icon-only rail at this width — no room for
-       full-text buttons (Change Password, Refresh, Log out) or a branch
-       dropdown. Show the topbar versions instead, which already have their
-       own responsive handling below. */
-    .topbar-right select.branch-select,
+       its full-text Change Password/Log out buttons. The branch dropdown is
+       frequently needed, so it still shows directly in the topbar; the rest
+       (Change Password, Refresh, Calculator, Log out) are consolidated into
+       the single "More actions" (⋮) button instead of crowding the topbar
+       into a confusing horizontally-scrolling row. */
+    .topbar-right select.branch-select{ display:inline-flex !important; }
+    .topbar-right .more-actions-btn{ display:inline-flex !important; }
+    .topbar-right #refresh-app-btn,
+    .topbar-right [data-shared-calculator],
+    .topbar-right [data-shared-logout],
     .topbar-right button[onclick*="openChangePasswordModal"],
-    .topbar-right button[onclick*="switchView('security-access')"],
-    .topbar-right [data-logout-action],
-    .topbar-right button[onclick*="logout()"],
-    .topbar-right #refresh-app-btn{ display:inline-flex !important; }
+    .topbar-right button[onclick*="switchView('security-access')"]{ display:none !important; }
     /* iOS Safari zooms the page in on focus when a field's font-size is under 16px */
     input, select, textarea{ font-size:16px !important; }
   }
@@ -596,6 +600,8 @@
       justify-content:flex-start;
       -webkit-overflow-scrolling:touch;
       scrollbar-width:none;
+      scroll-snap-type:x proximity;
+      scroll-padding-left:8px;
     }
     .rail::-webkit-scrollbar{ display:none; }
     .rail .nav-item{
@@ -607,6 +613,7 @@
       padding:7px 3px;
       border-radius:10px;
       font-size:10px;
+      scroll-snap-align:start;
     }
     .rail .nav-item .label{ overflow:hidden; text-overflow:ellipsis; }
     .rail .nav-item[data-view="employee"]{ order:1; }
@@ -635,7 +642,7 @@
       padding-bottom:10px;
     }
     .topbar > div:first-child{ min-width:0; flex:1 1 150px; }
-    .topbar-right{ min-width:0; flex:0 1 auto; order:2; justify-content:flex-end; overflow-x:auto; flex-wrap:nowrap; padding-bottom:1px; scrollbar-width:none; margin-left:auto; max-width:100%; }
+    .topbar-right{ min-width:0; flex:1 1 auto; order:2; justify-content:flex-end; flex-wrap:wrap; margin-left:auto; max-width:100%; }
     .topbar-right::-webkit-scrollbar{ display:none; }
     #refresh-app-btn{ flex:none; align-self:center; }
     .content{ padding-top:16px; }
@@ -713,6 +720,15 @@
     #admin-inv-body td:nth-child(1) b{ display:block; font-size:13px; }
     #admin-inv-body td:nth-child(8), #admin-txn-body td:nth-child(8), #employee-txn-body td:nth-child(8){ justify-content:flex-end; padding-top:8px; }
     #employee-txn-body td:nth-child(1){ display:block; text-align:left !important; padding-bottom:8px; }
+    /* Public inventory: Item name, Quantity, No. used, SRP, Available qty,
+       [Actions — Admin only, Staff's table stops at 5 columns] */
+    #public-inv-body td:nth-child(1){ grid-column:1/-1; display:block; text-align:left !important; padding-bottom:8px; font-size:13px; font-weight:800; }
+    #public-inv-body td:nth-child(1)::before{ display:none; }
+    #public-inv-body td:nth-child(2)::before{ content:"Quantity"; }
+    #public-inv-body td:nth-child(3)::before{ content:"No. used"; }
+    #public-inv-body td:nth-child(4)::before{ content:"SRP"; }
+    #public-inv-body td:nth-child(5)::before{ content:"Available"; }
+    #public-inv-body td:nth-child(6){ grid-column:1/-1; justify-content:flex-end; padding-top:8px; }
     #employee-txn-body td:nth-child(1)::before{ display:none; }
     #admin-inv-body td:nth-child(2)::before{ content:"Supplier"; }
     #admin-inv-body td:nth-child(3)::before{ content:"Quantity"; }
@@ -3582,6 +3598,24 @@ function ensureSharedTopbarActions(key, rightEl){
   if(!rightEl.querySelector('[data-shared-logout], [data-logout-action], [onclick*="logout"]')){
     rightEl.insertAdjacentHTML("beforeend", `<button class="pill-btn danger" data-shared-logout data-logout-action type="button">Log out</button>`);
   }
+  if(!rightEl.querySelector('.more-actions-btn')){
+    rightEl.insertAdjacentHTML("beforeend", `<button class="pill-btn ghost more-actions-btn" type="button" onclick="openMoreActionsMenu()" title="More actions">⋮</button>`);
+  }
+}
+
+function openMoreActionsMenu(){
+  const canCalculate = session.isAdmin || session.staffUnlocked;
+  closeOverlay();
+  openOverlay(`
+    <h3 style="margin:0 0 4px;">More actions</h3>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+      <button class="pill-btn ghost" style="width:100%;" type="button" onclick="closeOverlay(); openChangePasswordModal();">Change Password</button>
+      ${canCalculate ? `<button class="pill-btn ghost" style="width:100%;" type="button" onclick="closeOverlay(); openCalculatorModal();">Calculator</button>` : ""}
+      <button class="pill-btn ghost" style="width:100%;" type="button" onclick="hardRefreshApp();">Refresh</button>
+      <button class="pill-btn danger" style="width:100%;" data-logout-action type="button">Log out</button>
+    </div>
+    <button class="pill-btn ghost" style="width:100%; margin-top:16px;" type="button" onclick="closeOverlay();">Cancel</button>
+  `);
 }
 
 function switchView(key){
