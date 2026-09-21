@@ -22,7 +22,7 @@
     min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
   }
   .card{
-    width:100%; max-width:460px; background:var(--card); border:1px solid var(--line); border-radius:16px;
+    width:100%; max-width:720px; background:var(--card); border:1px solid var(--line); border-radius:16px;
     padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.4);
   }
   h1{ font-size:20px; margin:0 0 4px; letter-spacing:.3px; }
@@ -64,6 +64,29 @@
   .logout-link{ background:none; border:0; color:var(--muted); font-size:12px; cursor:pointer; text-decoration:underline; padding:0; }
   #app-view{ display:none; }
   .loading-note{ font-size:12px; color:var(--muted); text-align:center; padding:20px 0; }
+  h2{ font-size:15px; margin:28px 0 12px; letter-spacing:.2px; }
+  .branch-card{ border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:12px; background:#0e1526; }
+  .branch-card-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .branch-card-head .name{ font-size:14px; font-weight:700; }
+  .branch-card-head .id{ font-size:11px; color:var(--muted); }
+  .toggle-row{ display:flex; gap:8px; margin-bottom:14px; }
+  .toggle-btn{
+    flex:1; padding:8px; border-radius:8px; border:1px solid var(--line); background:transparent;
+    color:var(--muted); font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .toggle-btn.active-choice{ background:rgba(46,204,113,.15); color:var(--green); border-color:var(--green); }
+  .toggle-btn.suspend-choice{ background:rgba(255,92,92,.15); color:var(--red); border-color:var(--red); }
+  .branch-fields{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .branch-fields .field{ margin-bottom:0; }
+  .branch-meta{ font-size:11px; color:var(--muted); margin-bottom:10px; line-height:1.5; }
+  .btn-small{ width:auto; padding:8px 16px; font-size:12.5px; }
+  .add-branch-row{ display:flex; gap:8px; align-items:flex-end; }
+  .add-branch-row .field{ flex:1; margin-bottom:0; }
+  table.history-table{ width:100%; border-collapse:collapse; font-size:12px; }
+  table.history-table th{ text-align:left; padding:8px 6px; color:var(--muted); font-weight:700; font-size:11px; border-bottom:1px solid var(--line); }
+  table.history-table td{ padding:8px 6px; border-bottom:1px solid var(--line); }
+  .history-wrap{ max-height:280px; overflow-y:auto; }
+  .empty-note{ font-size:12px; color:var(--muted); text-align:center; padding:16px 0; }
 </style>
 </head>
 <body>
@@ -96,44 +119,31 @@
       <button class="logout-link" onclick="doLogout()">Log out</button>
     </div>
     <div class="top-user" id="signed-in-as"></div>
+    <p class="sub" style="margin-bottom:8px;">Each branch has its own independent activation. Activating sets a start and expiry date; suspending only needs an expiry/effective date — nothing else about that branch (or any other branch) is touched.</p>
 
-    <div class="row">
-      <span style="font-size:13px;color:var(--muted);">Current status</span>
-      <span class="status-pill" id="current-status-pill">—</span>
-    </div>
-    <div class="row" style="margin-top:-8px;">
-      <span style="font-size:12px;color:var(--muted);">Last updated</span>
-      <span style="font-size:12px;color:var(--muted);" id="last-updated-text">—</span>
-    </div>
+    <h2>Branches</h2>
+    <div id="branch-cards"></div>
 
-    <div class="divider"></div>
-
-    <div class="field">
-      <label>Status</label>
-      <select id="f-status">
-        <option value="active">active</option>
-        <option value="suspended">suspended</option>
-      </select>
+    <div class="branch-card" style="border-style:dashed;">
+      <div class="branch-card-head"><span class="name">Add a new branch</span></div>
+      <div class="add-branch-row">
+        <div class="field">
+          <label>Branch name</label>
+          <input type="text" id="new-branch-name" placeholder="e.g. Marikina">
+        </div>
+        <button class="btn btn-primary btn-small" onclick="addNewBranch()">Add</button>
+      </div>
+      <div class="error" id="add-branch-error"></div>
     </div>
 
-    <div class="field">
-      <label>Plan</label>
-      <input type="text" id="f-plan" placeholder="e.g. trial, monthly, annual">
+    <h2>Activation &amp; Suspension History</h2>
+    <div class="history-wrap">
+      <table class="history-table">
+        <thead><tr><th>Branch</th><th>Action</th><th>Effective</th><th>Changed</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+      <div class="empty-note" id="history-empty" style="display:none;">No activation history yet.</div>
     </div>
-
-    <div class="field">
-      <label>Expires On</label>
-      <input type="datetime-local" id="f-expires">
-    </div>
-
-    <div class="field">
-      <label>Active Branches</label>
-      <div id="branch-checks"></div>
-    </div>
-
-    <button class="btn btn-primary" id="save-btn" onclick="saveSubscription()">Save changes</button>
-    <div class="error" id="save-error"></div>
-    <div class="success" id="save-success"></div>
   </div>
 
   <div class="loading-note" id="loading-note" style="display:none;">Loading…</div>
@@ -157,11 +167,11 @@
   const db = firebase.firestore();
   const subRef = db.collection("subscriptions").doc("gids-tech");
 
-  const BRANCHES = [
-    { name: "San Antonio", id: "branch1" },
-    { name: "Bataan", id: "branch2" },
-    { name: "Angeles", id: "branch3" }
-  ];
+  const DEFAULT_BRANCHES = {
+    branch1: { name: "San Antonio" },
+    branch2: { name: "Bataan" },
+    branch3: { name: "Angeles" }
+  };
 
   function togglePw(){
     const input = document.getElementById("login-password");
@@ -205,20 +215,6 @@
     return error?.message || "Something went wrong.";
   }
 
-  function renderBranchChecks(activeBranchIds){
-    const container = document.getElementById("branch-checks");
-    container.innerHTML = BRANCHES.map(b => `
-      <label class="branch-check">
-        <input type="checkbox" value="${b.id}" ${activeBranchIds.includes(b.id) ? "checked" : ""}>
-        ${b.name} (${b.id})
-      </label>
-    `).join("");
-  }
-
-  function getCheckedBranchIds(){
-    return Array.from(document.querySelectorAll("#branch-checks input:checked")).map(el => el.value);
-  }
-
   function toDateTimeInputValue(value){
     if(!value) return "";
     const d = value.toDate ? value.toDate() : new Date(value);
@@ -227,8 +223,6 @@
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  let currentStartsAt = null;
-
   function formatDateTime(value){
     if(!value) return "—";
     const d = value.toDate ? value.toDate() : new Date(value);
@@ -236,75 +230,241 @@
     return d.toLocaleString();
   }
 
+  // In-memory only — which toggle (active/suspended) each branch card is
+  // currently showing, before Save is pressed. Does not touch Firestore.
+  let branchUiMode = {};
+  let currentBranches = {}; // last-loaded branches map, from Firestore
+
   async function loadSubscription(){
     const loadingNote = document.getElementById("loading-note");
     loadingNote.style.display = "block";
     try{
       const snap = await subRef.get();
-      const data = snap.exists ? snap.data() : { status:"suspended", plan:"", expiresAt:null, activeBranchIds:[] };
-      currentStartsAt = data.startsAt || null;
+      const data = snap.exists ? snap.data() : {};
 
-      const pill = document.getElementById("current-status-pill");
-      const status = data.status || "unknown";
-      pill.textContent = status;
-      pill.className = "status-pill " + (status === "active" ? "status-active" : status === "suspended" ? "status-suspended" : "status-unknown");
-
-      document.getElementById("last-updated-text").textContent = formatDateTime(data.updatedAt);
-      document.getElementById("f-status").value = status === "active" ? "active" : "suspended";
-      document.getElementById("f-plan").value = data.plan || "";
-      document.getElementById("f-expires").value = toDateTimeInputValue(data.expiresAt);
-      renderBranchChecks(Array.isArray(data.activeBranchIds) ? data.activeBranchIds : []);
+      // One-time migration path: older documents only ever had a single
+      // top-level status/expiresAt/activeBranchIds for the whole business,
+      // no per-branch breakdown yet. Build a reasonable starting point from
+      // that, without ever discarding the original values — the next Save
+      // on any single branch will persist this converted structure.
+      let branches = data.branches;
+      if(!branches || typeof branches !== "object" || !Object.keys(branches).length){
+        const legacyActiveIds = Array.isArray(data.activeBranchIds) ? data.activeBranchIds : [];
+        branches = {};
+        Object.keys(DEFAULT_BRANCHES).forEach(id => {
+          branches[id] = {
+            name: DEFAULT_BRANCHES[id].name,
+            status: legacyActiveIds.includes(id) ? "active" : "suspended",
+            activatedAt: legacyActiveIds.includes(id) ? (data.startsAt || null) : null,
+            expiresAt: legacyActiveIds.includes(id) ? (data.expiresAt || null) : null
+          };
+        });
+      }
+      currentBranches = branches;
+      branchUiMode = {};
+      Object.keys(branches).forEach(id => {
+        branchUiMode[id] = branches[id].status === "active" ? "active" : "suspended";
+      });
+      renderBranchCards();
+      await renderHistory();
     }catch(error){
       console.error(error);
-      document.getElementById("save-error").textContent = describeError(error);
+      document.getElementById("add-branch-error").textContent = describeError(error);
     }finally{
       loadingNote.style.display = "none";
     }
   }
 
-  async function saveSubscription(){
-    const err = document.getElementById("save-error");
-    const success = document.getElementById("save-success");
-    err.textContent = "";
-    success.textContent = "";
+  function renderBranchCards(){
+    const container = document.getElementById("branch-cards");
+    const ids = Object.keys(currentBranches);
+    container.innerHTML = ids.map(id => branchCardHtml(id)).join("");
+  }
 
-    const status = document.getElementById("f-status").value;
-    const plan = document.getElementById("f-plan").value.trim();
-    const expiresStr = document.getElementById("f-expires").value;
-    const activeBranchIds = getCheckedBranchIds();
+  function branchCardHtml(id){
+    const b = currentBranches[id] || {};
+    const mode = branchUiMode[id] || (b.status === "active" ? "active" : "suspended");
+    const statusLabel = b.status === "active" ? "Active" : "Suspended";
+    const statusClass = b.status === "active" ? "status-active" : "status-suspended";
+    const activatedText = formatDateTime(b.activatedAt);
+    const expiresText = formatDateTime(b.expiresAt);
 
+    const fieldsHtml = mode === "active" ? `
+      <div class="branch-fields">
+        <div class="field">
+          <label>Date of activation</label>
+          <input type="datetime-local" id="act-start-${id}" value="${toDateTimeInputValue(b.activatedAt) || toDateTimeInputValue(new Date())}">
+        </div>
+        <div class="field">
+          <label>Date of expiration</label>
+          <input type="datetime-local" id="act-expires-${id}" value="${toDateTimeInputValue(b.expiresAt)}">
+        </div>
+      </div>
+    ` : `
+      <div class="branch-fields" style="grid-template-columns:1fr;">
+        <div class="field">
+          <label>Date of expiration / effective</label>
+          <input type="datetime-local" id="act-expires-${id}" value="${toDateTimeInputValue(b.expiresAt) || toDateTimeInputValue(new Date())}">
+        </div>
+      </div>
+    `;
+
+    return `
+      <div class="branch-card">
+        <div class="branch-card-head">
+          <span><span class="name">${escapeHtml(b.name || id)}</span> <span class="id">(${id})</span></span>
+          <span class="status-pill ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="branch-meta">Currently: ${statusLabel} · Activated ${activatedText} · Expires ${expiresText}</div>
+        <div class="toggle-row">
+          <button type="button" class="toggle-btn ${mode==="active" ? "active-choice" : ""}" onclick="setBranchMode('${id}','active')">Activate</button>
+          <button type="button" class="toggle-btn ${mode==="suspended" ? "suspend-choice" : ""}" onclick="setBranchMode('${id}','suspended')">Suspend</button>
+        </div>
+        ${fieldsHtml}
+        <button class="btn btn-primary btn-small" onclick="saveBranch('${id}')">Save ${escapeHtml(b.name || id)}</button>
+        <div class="error" id="branch-error-${id}"></div>
+        <div class="success" id="branch-success-${id}"></div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str){
+    return String(str ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function setBranchMode(id, mode){
+    branchUiMode[id] = mode;
+    renderBranchCards();
+  }
+
+  async function saveBranch(id){
+    const errEl = document.getElementById(`branch-error-${id}`);
+    const successEl = document.getElementById(`branch-success-${id}`);
+    errEl.textContent = "";
+    successEl.textContent = "";
+
+    const mode = branchUiMode[id] || "suspended";
+    const expiresStr = document.getElementById(`act-expires-${id}`)?.value;
     if(!expiresStr){
-      err.textContent = "Please set an expiry date.";
+      errEl.textContent = "Please set a date.";
       return;
     }
-
     const expiresDate = new Date(expiresStr);
+    const existing = currentBranches[id] || {};
 
-    const btn = document.getElementById("save-btn");
-    btn.disabled = true;
-    btn.textContent = "Saving...";
+    let activatedAt = existing.activatedAt || null;
+    if(mode === "active"){
+      const startStr = document.getElementById(`act-start-${id}`)?.value;
+      if(!startStr){ errEl.textContent = "Please set a date of activation."; return; }
+      activatedAt = firebase.firestore.Timestamp.fromDate(new Date(startStr));
+    }
+
     try{
-      const payload = {
-        status,
-        plan: plan || "unspecified",
-        expiresAt: firebase.firestore.Timestamp.fromDate(expiresDate),
-        maxBranches: activeBranchIds.length,
-        activeBranchIds,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      // {merge:true} on a nested object only touches this one branch's
+      // fields — every other branch already in the document is left
+      // completely untouched, exactly as it was before this save.
+      const branchUpdate = {
+        name: existing.name || (DEFAULT_BRANCHES[id]?.name) || id,
+        status: mode,
+        activatedAt,
+        expiresAt: firebase.firestore.Timestamp.fromDate(expiresDate)
       };
-      if(!currentStartsAt){
-        payload.startsAt = firebase.firestore.FieldValue.serverTimestamp();
-      }
-      await subRef.set(payload, { merge: true });
+      await subRef.set({
+        branches: { [id]: branchUpdate },
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
 
-      success.textContent = "Saved.";
+      // Recompute the overall business-wide status/expiresAt/activeBranchIds
+      // that the main apps read — active if ANY branch is active, expiring
+      // on whichever active branch's expiry is furthest out. This is the
+      // only part of the document that reflects a combination of branches;
+      // every branch's own record above is independent of this.
+      const mergedBranches = { ...currentBranches, [id]: branchUpdate };
+      const activeIds = Object.keys(mergedBranches).filter(bid => mergedBranches[bid].status === "active");
+      const latestExpiry = activeIds
+        .map(bid => mergedBranches[bid].expiresAt)
+        .filter(Boolean)
+        .map(v => v.toDate ? v.toDate() : new Date(v))
+        .sort((a,b) => b - a)[0] || null;
+      await subRef.set({
+        activeBranchIds: activeIds,
+        maxBranches: activeIds.length,
+        status: activeIds.length ? "active" : "suspended",
+        expiresAt: latestExpiry ? firebase.firestore.Timestamp.fromDate(latestExpiry) : null
+      }, { merge: true });
+
+      // Permanent audit trail — never edited or deleted, only appended to.
+      await subRef.collection("history").add({
+        branchId: id,
+        branchName: branchUpdate.name,
+        action: mode === "active" ? "activated" : "suspended",
+        effectiveDate: mode === "active" ? branchUpdate.expiresAt : branchUpdate.expiresAt,
+        changedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        changedBy: auth.currentUser?.email || "unknown"
+      });
+
+      successEl.textContent = "Saved.";
       await loadSubscription();
     }catch(error){
       console.error(error);
-      err.textContent = describeError(error);
-    }finally{
-      btn.disabled = false;
-      btn.textContent = "Save changes";
+      errEl.textContent = describeError(error);
+    }
+  }
+
+  async function addNewBranch(){
+    const nameInput = document.getElementById("new-branch-name");
+    const errEl = document.getElementById("add-branch-error");
+    errEl.textContent = "";
+    const name = nameInput.value.trim();
+    if(!name){ errEl.textContent = "Enter a branch name."; return; }
+
+    // Auto-assign the next free branchN id — never reuses or renumbers
+    // existing branches.
+    let n = 1;
+    while(currentBranches[`branch${n}`]) n++;
+    const id = `branch${n}`;
+
+    try{
+      await subRef.set({
+        branches: { [id]: { name, status: "suspended", activatedAt: null, expiresAt: null } },
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      nameInput.value = "";
+      await loadSubscription();
+    }catch(error){
+      console.error(error);
+      errEl.textContent = describeError(error);
+    }
+  }
+
+  async function renderHistory(){
+    const body = document.getElementById("history-body");
+    const empty = document.getElementById("history-empty");
+    try{
+      const snap = await subRef.collection("history").orderBy("changedAt", "desc").limit(100).get();
+      if(snap.empty){
+        body.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+      empty.style.display = "none";
+      body.innerHTML = snap.docs.map(doc => {
+        const h = doc.data();
+        const actionLabel = h.action === "activated"
+          ? `<span style="color:var(--green);font-weight:700;">Activated</span>`
+          : `<span style="color:var(--red);font-weight:700;">Suspended</span>`;
+        return `<tr>
+          <td>${escapeHtml(h.branchName || h.branchId || "—")}</td>
+          <td>${actionLabel}</td>
+          <td>${formatDateTime(h.effectiveDate)}</td>
+          <td>${formatDateTime(h.changedAt)}<br><span style="color:var(--muted);">${escapeHtml(h.changedBy || "")}</span></td>
+        </tr>`;
+      }).join("");
+    }catch(error){
+      console.error("Could not load history:", error);
+      body.innerHTML = "";
+      empty.style.display = "block";
+      empty.textContent = "Could not load history.";
     }
   }
 
