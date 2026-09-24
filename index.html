@@ -1087,9 +1087,22 @@
         </div>
 
         <div id="pub-sub-parts">
-          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
-            <button id="pub-inv-recalc-btn" class="pill-btn ghost" style="display:none;" onclick="recalculateInventoryUsage()">Recalculate Usage</button>
-            <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1 1 260px;">
+              <input type="text" id="pub-inv-search" placeholder="Search item name…" oninput="onPubInvSearch(this.value)"
+                style="flex:1 1 180px;min-width:140px;border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;font-size:13px;">
+              <select id="pub-inv-filter" onchange="onPubInvFilter(this.value)"
+                style="border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;font-size:13px;">
+                <option value="all">All items</option>
+                <option value="in-stock">In stock</option>
+                <option value="low-stock">Low stock</option>
+                <option value="out-of-stock">Out of stock</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button id="pub-inv-recalc-btn" class="pill-btn ghost" style="display:none;" onclick="recalculateInventoryUsage()">Recalculate Usage</button>
+              <button id="pub-inv-add-btn" class="pill-btn primary" style="display:none;" onclick="openInvModal()">+ Add Item</button>
+            </div>
           </div>
           <div class="stat-row" id="pub-inv-finance-cards" style="display:none;">
             <div class="stat-card">
@@ -6824,6 +6837,25 @@ function renderEmployeeDashboard(){
     </tr>`).join("") : `<tr class="empty-row"><td colspan="8">No jobs logged yet today for ${branch}. Tap "Add job" to log one.</td></tr>`;
 }
 
+let pubInvSearchQuery = "";
+let pubInvFilterStatus = "all";
+function onPubInvSearch(value){
+  pubInvSearchQuery = value.trim().toLowerCase();
+  renderPublicInventory();
+}
+function onPubInvFilter(value){
+  pubInvFilterStatus = value;
+  renderPublicInventory();
+}
+function matchesInvSearchAndFilter(item){
+  if(pubInvSearchQuery && !String(item.itemName||"").toLowerCase().includes(pubInvSearchQuery)) return false;
+  const avail = Number(item.quantity) - Number(item.used||0);
+  if(pubInvFilterStatus === "in-stock" && avail <= LOW_STOCK_THRESHOLD) return false;
+  if(pubInvFilterStatus === "low-stock" && !(avail > 0 && avail <= LOW_STOCK_THRESHOLD)) return false;
+  if(pubInvFilterStatus === "out-of-stock" && avail > 0) return false;
+  return true;
+}
+
 function renderPublicInventory(){
   const addBtn = document.getElementById("pub-inv-add-btn");
   if(addBtn) addBtn.style.display = session.isOwner ? "inline-flex" : "none";
@@ -6846,7 +6878,7 @@ function renderPublicInventory(){
     if(singlePanel) singlePanel.style.display = "none";
     if(branchPanels) branchPanels.style.display = "block";
     const rowsFor = (branchId) => {
-      const items = state.inventory.filter(i => i.branchId === branchId);
+      const items = state.inventory.filter(i => i.branchId === branchId && matchesInvSearchAndFilter(i));
       return items.length ? items.map(i=>{
         const avail = Number(i.quantity) - Number(i.used||0);
         return `<tr><td>${escapeHTML(i.itemName)}</td><td>${i.quantity}</td><td>${Number(i.used||0)}</td><td>${peso(Number(i.price||0))}</td><td>${avail}</td>
@@ -6857,7 +6889,7 @@ function renderPublicInventory(){
             </div>
           </td>
         </tr>`;
-      }).join("") : `<tr class="empty-row"><td colspan="6">No inventory items yet.</td></tr>`;
+      }).join("") : `<tr class="empty-row"><td colspan="6">${pubInvSearchQuery || pubInvFilterStatus !== "all" ? "No items match your search/filter." : "No inventory items yet."}</td></tr>`;
     };
     const b1 = document.getElementById("public-inv-body-branch1");
     const b2 = document.getElementById("public-inv-body-branch2");
@@ -6871,7 +6903,8 @@ function renderPublicInventory(){
   const body = document.getElementById("public-inv-body");
   if(!body) return;
   const selectedBranch = ui.branch || DEFAULT_BRANCH;
-  body.innerHTML = state.inventory.length ? state.inventory.map(i=>{
+  const filteredItems = state.inventory.filter(matchesInvSearchAndFilter);
+  body.innerHTML = filteredItems.length ? filteredItems.map(i=>{
     const avail = Number(i.quantity) - Number(i.used||0);
     return `<tr>
       <td>${escapeHTML(i.itemName)}</td>
@@ -6880,7 +6913,7 @@ function renderPublicInventory(){
       <td>${peso(Number(i.price || 0))}</td>
       <td>${avail}</td>
     </tr>`;
-  }).join("") : `<tr class="empty-row"><td colspan="5">No inventory items yet.</td></tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="5">${pubInvSearchQuery || pubInvFilterStatus !== "all" ? "No items match your search/filter." : "No inventory items yet."}</td></tr>`;
 }
 
 function availTag(avail, threshold=LOW_STOCK_THRESHOLD){
