@@ -1022,6 +1022,17 @@
         </div>
 
         <div id="pub-sub-parts">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <input type="text" id="pub-inv-search" placeholder="Search item name…" oninput="onPubInvSearch(this.value)"
+              style="flex:1 1 180px;min-width:140px;border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;font-size:13px;">
+            <select id="pub-inv-filter" onchange="onPubInvFilter(this.value)"
+              style="border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;font-size:13px;">
+              <option value="all">All items</option>
+              <option value="in-stock">In stock</option>
+              <option value="low-stock">Low stock</option>
+              <option value="out-of-stock">Out of stock</option>
+            </select>
+          </div>
           <div class="panel">
             <div class="panel-head">
               <div>
@@ -5515,6 +5526,25 @@ function renderEmployeeDashboard(){
     </tr>`).join("") : `<tr class="empty-row"><td colspan="8">No jobs logged yet today for ${branch}. Tap "Add job" to log one.</td></tr>`;
 }
 
+let pubInvSearchQuery = "";
+let pubInvFilterStatus = "all";
+function onPubInvSearch(value){
+  pubInvSearchQuery = value.trim().toLowerCase();
+  renderPublicInventory();
+}
+function onPubInvFilter(value){
+  pubInvFilterStatus = value;
+  renderPublicInventory();
+}
+function matchesInvSearchAndFilter(item){
+  if(pubInvSearchQuery && !String(item.itemName||"").toLowerCase().includes(pubInvSearchQuery)) return false;
+  const avail = Number(item.quantity) - Number(item.used||0);
+  if(pubInvFilterStatus === "in-stock" && avail <= LOW_STOCK_THRESHOLD) return false;
+  if(pubInvFilterStatus === "low-stock" && !(avail > 0 && avail <= LOW_STOCK_THRESHOLD)) return false;
+  if(pubInvFilterStatus === "out-of-stock" && avail > 0) return false;
+  return true;
+}
+
 function renderPublicInventory(){
   const body = document.getElementById("public-inv-body");
   if(!body) return;
@@ -5531,7 +5561,8 @@ function renderPublicInventory(){
     body.innerHTML = `<tr><td colspan="6"><div style="padding:18px 20px;border:1px solid rgba(255,179,71,0.5);background:rgba(255,179,71,0.08);border-radius:12px;color:#f4b942;font-weight:700;line-height:1.5;">Not Yet Active. Contact your Site Administrator</div></td></tr>`;
     return;
   }
-  body.innerHTML = state.inventory.length ? state.inventory.map(i=>{
+  const filteredItems = state.inventory.filter(matchesInvSearchAndFilter);
+  body.innerHTML = filteredItems.length ? filteredItems.map(i=>{
     const avail = Number(i.quantity) - Number(i.used||0);
     const actionsCell = canEdit ? `<td style="text-align:right;white-space:nowrap;">
         <button class="pill-btn small ghost" onclick="openInvModal('${i.id}')">Edit</button>
@@ -5545,7 +5576,7 @@ function renderPublicInventory(){
       <td>${avail}</td>
       ${actionsCell}
     </tr>`;
-  }).join("") : `<tr class="empty-row"><td colspan="${canEdit?6:5}">No inventory items yet.</td></tr>`;
+  }).join("") : `<tr class="empty-row"><td colspan="${canEdit?6:5}">${pubInvSearchQuery || pubInvFilterStatus !== "all" ? "No items match your search/filter." : "No inventory items yet."}</td></tr>`;
 }
 
 function availTag(avail, threshold=LOW_STOCK_THRESHOLD){
