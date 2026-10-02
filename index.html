@@ -4309,10 +4309,6 @@ function switchView(key){
   // trapping Owner on the Access tab instead of their real last screen.
   if(!["role-select", "owner-security-shortcut"].includes(key) && (session.isAdmin || session.staffUnlocked)) saveBrowserSession(key);
 
-  if(key === "admin" && session.isOwner && !session.isDeveloper){
-    key = "owner-dashboard";
-  }
-
   if(key==="license-suspended"){
     document.getElementById("view-license-suspended").classList.add("active");
     titleEl.innerHTML = `SUBSCRIPTION <span class="hi">EXPIRED</span>`;
