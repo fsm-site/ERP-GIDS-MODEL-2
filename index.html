@@ -221,7 +221,7 @@
   .stat-sub{ font-size:11.5px; color:var(--muted); margin-top:4px; }
 
   /* ---------- Panels & tables ---------- */
-  .panel{ background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(231,242,253,.44)); border:1px solid var(--line-strong); border-radius:var(--radius); box-shadow:var(--shadow); backdrop-filter:blur(18px) saturate(135%); margin-bottom:22px; overflow:hidden; }
+  .panel{ background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(231,242,253,.44)); border:1px solid var(--line-strong); border-radius:var(--radius); box-shadow:var(--shadow); backdrop-filter:blur(18px) saturate(135%); margin-bottom:22px; overflow-x:auto; overflow-y:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); }
   .panel-head h3{ font-size:15px; color:var(--text); }
   .panel-head .desc{ font-size:12px; color:var(--muted); margin-top:2px; }
@@ -5843,7 +5843,7 @@ function renderAttendanceReport(){
   document.querySelectorAll(".attendance-period").forEach(button=>button.classList.toggle("active", button.dataset.period===period));
   const rows = attendanceReportRows(period);
   body.innerHTML = rows.some(row=>row.present) ? rows.map(row=>`<tr>
-    <td>Assigned technician</td><td>${row.present}</td><td>${row.completed}</td><td>${row.open}</td>
+    <td>${escapeHTML(attendanceRosterLabel(row.tech))}</td><td>${row.present}</td><td>${row.completed}</td><td>${row.open}</td>
     <td>${formatAttendanceTime(row.firstCheckIn)}</td><td>${formatAttendanceTime(row.lastCheckOut)}</td>
   </tr>`).join("") : `<tr class="empty-row"><td colspan="6">No attendance records for this period.</td></tr>`;
 }
@@ -6122,7 +6122,7 @@ function renderAttendance(){
   }
   const visibleAttendanceTechs = session.isAdmin ? attendanceTechs : (staffTech ? [staffTech] : []);
   select.innerHTML = visibleAttendanceTechs.length
-    ? visibleAttendanceTechs.map(tech=>`<option value="${escapeHTML(tech)}">Assigned technician</option>`).join("")
+    ? visibleAttendanceTechs.map(tech=>`<option value="${escapeHTML(tech)}">${escapeHTML(attendanceRosterLabel(tech))}</option>`).join("")
     : `<option value="">No attendance available</option>`;
   if(!session.isAdmin && staffTech && visibleAttendanceTechs.includes(staffTech)) select.value = staffTech;
   else if(visibleAttendanceTechs.includes(current)) select.value = current;
@@ -6137,7 +6137,7 @@ function renderAttendance(){
       : `<span class="dot"></span><span>Not checked in</span>`;
   const rows = attendanceForToday();
   body.innerHTML = rows.length ? rows.map(record=>`<tr>
-    <td>Assigned technician</td><td>${escapeHTML(formatAttendanceDate(record.date))}</td>
+    <td>${escapeHTML(attendanceRosterLabel(record.tech))}</td><td>${escapeHTML(formatAttendanceDate(record.date))}</td>
     <td>${formatAttendanceTime(record.checkIn)}</td><td>${formatAttendanceTime(record.checkOut)}</td>
     <td><span class="tag ${record.checkOut ? "good" : "low"}">${record.checkOut ? "Completed" : "Present"}</span></td>
     <td style="text-align:right;display:${session.isAdmin ? "table-cell" : "none"}"><div class="row-actions" style="justify-content:flex-end;"><button onclick="openAttendanceEditModal('${record.id}')" title="Edit attendance">${editIconSVG()}</button><button class="del" onclick="deleteAttendance('${record.id}')" title="Delete attendance">${deleteIconSVG()}</button></div></td>
@@ -6534,7 +6534,7 @@ function renderTechSales(bodyId, branch){
     if(ownerVisible){
       return `
       <tr>
-        <td>Assigned technician</td>
+        <td>${escapeHTML(attendanceRosterLabel(tech))}</td>
         <td>${v.jobs}</td>
         <td style="text-align:right" class="fee">${peso(v.total)}</td>
         <td style="text-align:right">${rateControl}</td><td style="text-align:right" class="fee">${peso(commission)}</td>
@@ -6542,7 +6542,7 @@ function renderTechSales(bodyId, branch){
     }
     return `
     <tr>
-      <td>Assigned technician</td>
+      <td>${escapeHTML(attendanceRosterLabel(tech))}</td>
       <td>${v.jobs}</td>
       <td style="text-align:right" class="fee">${peso(v.total)}</td>
     </tr>`;
@@ -7821,7 +7821,7 @@ function renderAdminTxnsTable(){
   body.innerHTML = rows.length ? rows.map((t,index)=>`
     <tr>
       <td><b>#${index+1}</b><div class="encoded-stamp">${escapeHTML(encodedStamp(t))}</div></td>
-      <td>Assigned technician</td>
+      <td>${escapeHTML(attendanceRosterLabel(t.tech))}</td>
       <td>${escapeHTML(serviceLabel(t))}</td>
       <td>${escapeHTML(phoneLabel(t))}</td>
       <td>${escapeHTML(itemNameById(t.itemUsed))}</td>
