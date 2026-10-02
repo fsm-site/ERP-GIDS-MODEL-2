@@ -838,8 +838,13 @@
     #invoices-body td:nth-child(3)::before{ content:"Date"; }
     #invoices-body td:nth-child(4)::before{ content:"Status"; }
     #invoices-body td:nth-child(5)::before{ content:"Paid / total"; }
-    .panel > table tbody td .row-actions{ margin-left:auto; }
+    .panel > table tbody td .row-actions{ margin-left:auto; flex-wrap:wrap; justify-content:flex-end; row-gap:6px; }
     .panel > table tbody .empty-row{ display:block; min-width:0; padding:24px 14px; }
+    /* Actions cells can hold several buttons (Receipt, Collect balance, Edit,
+       Delete) — let the cell itself wrap them onto a second line on narrow
+       screens instead of forcing them into one unwrapped row, which pushed
+       the later buttons off-screen with no way to reach them. */
+    .panel > table tbody td:last-child{ flex-wrap:wrap; row-gap:6px; }
   }
 
 /* ======================= SUBSCRIPTION / LICENSE ======================= */
