@@ -197,7 +197,7 @@
   .stat-sub{ font-size:11.5px; color:var(--muted); margin-top:4px; }
 
   /* ---------- Panels & tables ---------- */
-  .panel{ background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(231,242,253,.44)); border:1px solid var(--line-strong); border-radius:var(--radius); box-shadow:var(--shadow); backdrop-filter:blur(18px) saturate(135%); margin-bottom:22px; overflow:hidden; }
+  .panel{ background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(231,242,253,.44)); border:1px solid var(--line-strong); border-radius:var(--radius); box-shadow:var(--shadow); backdrop-filter:blur(18px) saturate(135%); margin-bottom:22px; overflow-x:auto; overflow-y:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); }
   .panel-head h3{ font-size:15px; color:var(--text); }
   .panel-head .desc{ font-size:12px; color:var(--muted); margin-top:2px; }
@@ -5009,7 +5009,7 @@ function renderAttendanceReport(){
   document.querySelectorAll(".attendance-period").forEach(button=>button.classList.toggle("active", button.dataset.period===period));
   const rows = attendanceReportRows(period);
   body.innerHTML = rows.some(row=>row.present) ? rows.map(row=>`<tr>
-    <td>Assigned technician</td><td>${row.present}</td><td>${row.completed}</td><td>${row.open}</td>
+    <td>${escapeHTML(attendanceRosterLabel(row.tech))}</td><td>${row.present}</td><td>${row.completed}</td><td>${row.open}</td>
     <td>${formatAttendanceTime(row.firstCheckIn)}</td><td>${formatAttendanceTime(row.lastCheckOut)}</td>
   </tr>`).join("") : `<tr class="empty-row"><td colspan="6">No attendance records for this period.</td></tr>`;
 }
@@ -5422,7 +5422,7 @@ function renderTechSales(bodyId, branch){
     if(ownerVisible){
       return `
       <tr>
-        <td>Assigned technician</td>
+        <td>${escapeHTML(attendanceRosterLabel(tech))}</td>
         <td>${v.jobs}</td>
         <td style="text-align:right" class="fee">${peso(v.total)}</td>
         <td style="text-align:right">${rateControl}</td><td style="text-align:right" class="fee">${peso(commission)}</td>
@@ -5430,7 +5430,7 @@ function renderTechSales(bodyId, branch){
     }
     return `
     <tr>
-      <td>Assigned technician</td>
+      <td>${escapeHTML(attendanceRosterLabel(tech))}</td>
       <td>${v.jobs}</td>
       <td style="text-align:right" class="fee">${peso(v.total)}</td>
     </tr>`;
@@ -5910,7 +5910,7 @@ function renderAdminTxnsTable(){
   body.innerHTML = rows.length ? rows.map((t,index)=>`
     <tr>
       <td><b>#${index+1}</b><div class="encoded-stamp">${escapeHTML(encodedStamp(t))}</div></td>
-      <td>Assigned technician</td>
+      <td>${escapeHTML(attendanceRosterLabel(t.tech))}</td>
       <td>${escapeHTML(serviceLabel(t))}</td>
       <td>${escapeHTML(phoneLabel(t))}</td>
       <td>${escapeHTML(itemNameById(t.itemUsed))}</td>
@@ -5952,11 +5952,14 @@ function renderLowStockBanner(){
   if(!banner) return;
   const low = state.inventory.filter(i => (Number(i.quantity)-Number(i.used||0)) <= Number(i.reorderLevel ?? LOW_STOCK_THRESHOLD));
   if(!low.length){ banner.innerHTML = ""; return; }
-  const names = low.map(i=>escapeHTML(i.itemName)).join(", ");
+  const PREVIEW_COUNT = 6;
+  const previewNames = low.slice(0, PREVIEW_COUNT).map(i=>escapeHTML(i.itemName)).join(", ");
+  const remaining = low.length - PREVIEW_COUNT;
+  const namesText = previewNames + (remaining > 0 ? `, and ${remaining} more` : "");
   banner.innerHTML = `
-    <div style="margin:0 20px 16px; padding:12px 16px; border-radius:8px; background:rgba(255,101,82,.09); border:1px solid rgba(255,101,82,.3); color:var(--warn); font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:8px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-      <span>${low.length} item${low.length>1?"s":""} running low: ${names}</span>
+    <div style="margin:0 20px 16px; padding:12px 16px; border-radius:8px; background:rgba(255,101,82,.09); border:1px solid rgba(255,101,82,.3); color:var(--warn); font-size:12.5px; font-weight:600; display:flex; align-items:flex-start; gap:8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none; margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <span>${low.length} item${low.length>1?"s":""} running low: ${namesText}. See the table below for the full list.</span>
     </div>`;
 }
 
