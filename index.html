@@ -6084,7 +6084,12 @@ function openTxnModal(isAdmin=!!session.isAdmin, editId=null){
   const editing = editId ? state.transactions.find(t=>t.id===editId) : null;
   const branchForForm = isAdmin ? ui.adminBranch : ui.branch;
   const branchOptions = isAdmin ? BRANCHES.map(b=>`<option value="${b}" ${ (editing?editing.branch:branchForForm)===b?"selected":""}>${b}</option>`).join("") : "";
-  const techOptions = `<option value="">Select tech…</option>` + TECHS.map(t=>`<option value="${t}" ${editing&&editing.tech===t?"selected":""}>${t}</option>`).join("");
+  // Built directly from current Staff/Admin accounts (not the TECHS array,
+  // which is only ever updated piecemeal from scattered call sites and can
+  // miss a newly-added staff member until one of those happens to fire).
+  const currentTechs = attendanceRoster().map(e=>e.value).filter(Boolean);
+  if(editing && editing.tech && !currentTechs.includes(editing.tech)) currentTechs.push(editing.tech);
+  const techOptions = `<option value="">Select tech…</option>` + currentTechs.map(t=>`<option value="${escapeHTML(t)}" ${editing&&editing.tech===t?"selected":""}>${escapeHTML(attendanceRosterLabel(t))}</option>`).join("");
   const serviceOptions = `<option value="">Select service…</option>` + SERVICE_TYPES.map(s=>`<option value="${s}" ${editing&&editing.serviceType===s?"selected":""}>${s}</option>`).join("");
   const brandOptions = `<option value="">Select brand…</option>` + Object.keys(PHONE_MODELS).map(b=>`<option value="${b}" ${editing&&editing.phoneBrand===b?"selected":""}>${b}</option>`).join("");
   const initialModels = editing && editing.phoneBrand ? PHONE_MODELS[editing.phoneBrand] || [] : [];
