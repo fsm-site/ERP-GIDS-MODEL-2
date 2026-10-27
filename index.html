@@ -1768,6 +1768,21 @@
               <div class="stat-label">Gross sales (this month)</div>
               <div class="stat-value blue" id="fin-gross" style="font-size:22px;">₱0</div>
             </div>
+            <div class="finance-card">
+              <div class="stat-label">Daily profit</div>
+              <div class="stat-value" id="admin-profit-daily" style="font-size:22px;">₱0</div>
+              <div class="stat-sub">Today · sales minus inventory cost</div>
+            </div>
+            <div class="finance-card">
+              <div class="stat-label">Month-to-date profit</div>
+              <div class="stat-value" id="admin-profit-mtd" style="font-size:22px;">₱0</div>
+              <div class="stat-sub">This month · sales minus inventory cost</div>
+            </div>
+            <div class="finance-card">
+              <div class="stat-label">Year-to-date profit</div>
+              <div class="stat-value" id="admin-profit-ytd" style="font-size:22px;">₱0</div>
+              <div class="stat-sub">This year · sales minus inventory cost</div>
+            </div>
           </div>
 
           <div class="stat-row">
@@ -7528,12 +7543,36 @@ function renderOwnerDashboard(){
   }
 }
 
+/* Profit for one job = collected sales minus the cost of inventory it used.
+   Labor-only jobs carry no inventory cost, so their collected amount is full profit.
+   Inventory cost is recognized in step with payment: a Partial job carries its cost pro-rata,
+   and an Unpaid job contributes neither sales nor cost. */
+function jobProfit(t){
+  const collected = collectedAmount(t);
+  if(!t.itemUsed) return collected;
+  const item = state.inventory.find(i=>i.id===t.itemUsed);
+  const fullCost = item ? Number(item.cost||0) * Number(t.quantity||1) : 0;
+  const fee = Number(t.fee||0);
+  const paidShare = fee > 0 ? Math.min(1, collected / fee) : 1;
+  return collected - fullCost * paidShare;
+}
+function profitTotal(rows){
+  return rows.reduce((s,t)=> s + jobProfit(t), 0);
+}
+
 function renderAdminOverview(){
   document.getElementById("admin-branch-label").textContent = ui.adminBranch;
   const today = todayStr();
   const month = monthStr();
+  const year = today.slice(0,4);
+  const branchTxns = state.transactions.filter(t=> t.branch===ui.adminBranch);
   const todays = state.transactions.filter(t=> t.branch===ui.adminBranch && t.date===today);
   const monthly = state.transactions.filter(t=> t.branch===ui.adminBranch && t.date.slice(0,7)===month);
+
+  const setPeso = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = peso(value); };
+  setPeso("admin-profit-daily", profitTotal(todays));
+  setPeso("admin-profit-mtd", profitTotal(monthly));
+  setPeso("admin-profit-ytd", profitTotal(branchTxns.filter(t=> t.date.slice(0,4)===year)));
 
   document.getElementById("admin-stat-clients").textContent = todays.length;
   document.getElementById("admin-stat-sales").textContent = peso(todays.reduce((s,t)=>s+collectedAmount(t),0));
