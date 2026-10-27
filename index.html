@@ -8081,7 +8081,7 @@ function deleteIconSVG(){
 function openOverlay(html, modalClass=""){
   const modal = document.getElementById("modal-body");
   modal.className = "modal";
-  if(modalClass) modal.classList.add(modalClass);
+  if(modalClass) modal.classList.add(...String(modalClass).split(/\s+/).filter(Boolean));
   modal.innerHTML = html;
   document.getElementById("overlay").classList.add("active");
   document.documentElement.classList.add("modal-open");
