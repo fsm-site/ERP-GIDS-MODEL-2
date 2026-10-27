@@ -291,6 +291,15 @@
   .overlay{ position:fixed; inset:0; background:rgba(12,30,56,.48); display:none; align-items:center; justify-content:center; z-index:50; padding:16px; box-sizing:border-box; backdrop-filter:blur(12px) saturate(125%); overflow:hidden; overscroll-behavior:contain; }
   .overlay.active{ display:flex; }
   .modal{ background:linear-gradient(145deg,rgba(18,42,67,.98),rgba(6,18,34,.98)); border:1px solid var(--line-strong); border-radius:18px; width:min(420px,100%); max-width:420px; max-height:calc(100dvh - 32px); overflow-y:auto; overscroll-behavior:contain; padding:22px 24px 18px; box-sizing:border-box; box-shadow:0 24px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter:blur(24px) saturate(145%); }
+  .profit-card{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
+  .profit-card:hover, .profit-card:focus-visible{ transform:translateY(-2px); outline:none; border-color:var(--blue-light); }
+  .modal.profit-modal{ width:min(860px,100%); max-width:860px; }
+  .profit-summary{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+  .profit-summary > div{ background:#eef4f9; border:1px solid #c8d9e8; border-radius:10px; padding:10px 12px; }
+  .profit-summary .k{ font-size:11px; color:#5f7690; text-transform:uppercase; letter-spacing:.04em; }
+  .profit-summary .v{ font-size:18px; font-weight:800; color:#14213d; margin-top:4px; }
+  .profit-breakdown{ margin-top:10px; font-size:12.5px; color:#4a5a72; }
+  @media (max-width:640px){ .profit-summary{ grid-template-columns:repeat(2,1fr); } }
   .modal.modal-light{ background:#ffffff; color:#14213d; }
   .modal.modal-light h3{ color:#14213d; }
   .modal.modal-light .sub{ color:#4a5a72; }
@@ -1768,17 +1777,17 @@
               <div class="stat-label">Gross sales (this month)</div>
               <div class="stat-value blue" id="fin-gross" style="font-size:22px;">₱0</div>
             </div>
-            <div class="finance-card">
+            <div class="finance-card profit-card" role="button" tabindex="0" title="View daily profit details" onclick="openProfitDetail('daily')" onkeydown="if(event.key==='Enter')openProfitDetail('daily')">
               <div class="stat-label">Daily profit</div>
               <div class="stat-value" id="admin-profit-daily" style="font-size:22px;">₱0</div>
               <div class="stat-sub">Today · sales minus inventory cost</div>
             </div>
-            <div class="finance-card">
+            <div class="finance-card profit-card" role="button" tabindex="0" title="View month-to-date profit details" onclick="openProfitDetail('mtd')" onkeydown="if(event.key==='Enter')openProfitDetail('mtd')">
               <div class="stat-label">Month-to-date profit</div>
               <div class="stat-value" id="admin-profit-mtd" style="font-size:22px;">₱0</div>
               <div class="stat-sub">This month · sales minus inventory cost</div>
             </div>
-            <div class="finance-card">
+            <div class="finance-card profit-card" role="button" tabindex="0" title="View year-to-date profit details" onclick="openProfitDetail('ytd')" onkeydown="if(event.key==='Enter')openProfitDetail('ytd')">
               <div class="stat-label">Year-to-date profit</div>
               <div class="stat-value" id="admin-profit-ytd" style="font-size:22px;">₱0</div>
               <div class="stat-sub">This year · sales minus inventory cost</div>
@@ -7560,19 +7569,30 @@ function profitTotal(rows){
   return rows.reduce((s,t)=> s + jobProfit(t), 0);
 }
 
-function renderAdminOverview(){
-  document.getElementById("admin-branch-label").textContent = ui.adminBranch;
+const PROFIT_PERIOD_LABELS = {daily:"Daily profit", mtd:"Month-to-date profit", ytd:"Year-to-date profit"};
+
+/* Jobs for the selected branch that fall in a profit period: daily, mtd (month), or ytd (year). */
+function profitPeriodRows(period){
   const today = todayStr();
   const month = monthStr();
   const year = today.slice(0,4);
   const branchTxns = state.transactions.filter(t=> t.branch===ui.adminBranch);
+  if(period==="daily") return {label: formatSiteDate(today), rows: branchTxns.filter(t=> t.date===today)};
+  if(period==="mtd")   return {label: `${formatSiteDate(month+"-01")} – ${formatSiteDate(today)}`, rows: branchTxns.filter(t=> t.date.slice(0,7)===month)};
+  return {label: `${formatSiteDate(year+"-01-01")} – ${formatSiteDate(today)}`, rows: branchTxns.filter(t=> t.date.slice(0,4)===year)};
+}
+
+function renderAdminOverview(){
+  document.getElementById("admin-branch-label").textContent = ui.adminBranch;
+  const today = todayStr();
+  const month = monthStr();
   const todays = state.transactions.filter(t=> t.branch===ui.adminBranch && t.date===today);
   const monthly = state.transactions.filter(t=> t.branch===ui.adminBranch && t.date.slice(0,7)===month);
 
   const setPeso = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = peso(value); };
-  setPeso("admin-profit-daily", profitTotal(todays));
-  setPeso("admin-profit-mtd", profitTotal(monthly));
-  setPeso("admin-profit-ytd", profitTotal(branchTxns.filter(t=> t.date.slice(0,4)===year)));
+  setPeso("admin-profit-daily", profitTotal(profitPeriodRows("daily").rows));
+  setPeso("admin-profit-mtd", profitTotal(profitPeriodRows("mtd").rows));
+  setPeso("admin-profit-ytd", profitTotal(profitPeriodRows("ytd").rows));
 
   document.getElementById("admin-stat-clients").textContent = todays.length;
   document.getElementById("admin-stat-sales").textContent = peso(todays.reduce((s,t)=>s+collectedAmount(t),0));
@@ -7590,6 +7610,67 @@ function renderAdminOverview(){
   renderCollectibles(state.transactions.filter(t=>t.branch===ui.adminBranch));
   renderAdminTxnsTable();
 }
+
+/* Closeable summary popup for a profit card: totals, labor vs parts split, and every job in the period. */
+function openProfitDetail(period){
+  const {label, rows} = profitPeriodRows(period);
+  const sorted = [...rows].sort((a,b)=> String(b.date).localeCompare(String(a.date)) || (Number(b.ts)||0)-(Number(a.ts)||0));
+  const sales = rows.reduce((s,t)=> s + collectedAmount(t), 0);
+  const profit = profitTotal(rows);
+  const cost = sales - profit;
+  const laborRows = rows.filter(t=> !t.itemUsed);
+  const partRows = rows.filter(t=> t.itemUsed);
+  const laborProfit = profitTotal(laborRows);
+  const partProfit = profitTotal(partRows);
+  const margin = sales > 0 ? Math.round(profit / sales * 100) : 0;
+
+  const bodyRows = sorted.length ? sorted.map(t=>{
+    const collected = collectedAmount(t);
+    const p = jobProfit(t);
+    const jobCost = collected - p;
+    const service = t.itemUsed
+      ? `${escapeHTML(itemNameById(t.itemUsed))} × ${Number(t.quantity||1)}`
+      : escapeHTML(t.serviceType==="Labor" ? `Labor — ${t.laborName||"—"}` : (t.serviceType||"—"));
+    return `<tr>
+      <td>${escapeHTML(formatSiteDate(t.date))}</td>
+      <td>${escapeHTML(t.customerName||"—")}</td>
+      <td>${escapeHTML(t.tech||"—")}</td>
+      <td>${service}</td>
+      <td style="text-align:right">${peso(collected)}</td>
+      <td style="text-align:right">${peso(jobCost)}</td>
+      <td style="text-align:right;font-weight:700;color:${p<0?"#c0392b":"#14213d"}">${peso(p)}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="7">No jobs in this period.</td></tr>`;
+
+  openOverlay(`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <h3 style="margin:0;">${escapeHTML(PROFIT_PERIOD_LABELS[period])}</h3>
+      <button class="pill-btn small ghost" onclick="closeOverlay()" aria-label="Close">✕</button>
+    </div>
+    <div class="sub">${escapeHTML(ui.adminBranch)} · ${escapeHTML(label)}</div>
+    <div class="profit-summary">
+      <div><div class="k">Collected sales</div><div class="v">${peso(sales)}</div></div>
+      <div><div class="k">Inventory cost</div><div class="v">${peso(cost)}</div></div>
+      <div><div class="k">Profit</div><div class="v" style="color:${profit<0?"#c0392b":"#1E9E77"};">${peso(profit)}</div></div>
+      <div><div class="k">Margin</div><div class="v">${margin}%</div></div>
+    </div>
+    <div class="profit-breakdown">
+      Labor jobs: <strong>${laborRows.length}</strong> · full profit <strong>${peso(laborProfit)}</strong>
+      &nbsp;·&nbsp; Parts jobs: <strong>${partRows.length}</strong> · profit after cost <strong>${peso(partProfit)}</strong>
+      &nbsp;·&nbsp; Total jobs: <strong>${rows.length}</strong>
+    </div>
+    <div class="attendance-table-wrap" style="margin-top:12px;max-height:360px;overflow-y:auto;">
+      <table><thead><tr><th>Date</th><th>Customer</th><th>Tech</th><th>Service</th><th style="text-align:right">Collected</th><th style="text-align:right">Cost</th><th style="text-align:right">Profit</th></tr></thead>
+      <tbody>${bodyRows}</tbody></table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="pill-btn ghost" onclick="closeOverlay()">Close</button></div>
+  `, "modal-light profit-modal");
+}
+
+/* Escape closes any open popup */
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape" && document.getElementById("overlay")?.classList.contains("active")) closeOverlay();
+});
 
 function renderCollectibles(rows){
   const list = document.getElementById("collectibles-list");
