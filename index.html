@@ -710,16 +710,26 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;justify-items:end;gap:
       <div class="fb-grid">
         <article class="fbpost">
           <div class="fbpost-head"><span class="fbpost-tag">Grand Opening</span><span>Dinalupihan, Bataan</span></div>
-          <div class="fbpost-frame">
-            <iframe src="https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1JwWh8hjhp%2F&show_text=true&width=500" width="500" height="600" style="border:none;overflow:hidden;width:100%;height:100%;min-height:520px" scrolling="no" frameborder="0" allowfullscreen="true" allow="clipboard-write; encrypted-media; picture-in-picture; web-share" title="Facebook post: Opening in Bataan"></iframe>
-          </div>
+          <a class="fbpost-frame fbpost-link" href="https://www.facebook.com/share/p/1JwWh8hjhp/" target="_blank" rel="noopener noreferrer" aria-label="Opening in Bataan - open on Facebook">
+            <span class="fbpost-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="44" height="44" fill="#1877F2"><path d="M24 12a12 12 0 10-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v2.9h-1.5c-1.5 0-2 .9-2 1.9V12h3.3l-.5 3.5h-2.8v8.4A12 12 0 0024 12z"/></svg>
+            </span>
+            <span class="fbpost-title">Opening in Bataan</span>
+            <span class="fbpost-sub">Grand Opening · Dinalupihan, Bataan</span>
+            <span class="fbpost-open">Open post on Facebook →</span>
+          </a>
           <a class="btn btn-line fbpost-btn" href="https://www.facebook.com/share/p/1JwWh8hjhp/" target="_blank" rel="noopener noreferrer">View on Facebook</a>
         </article>
         <article class="fbpost">
           <div class="fbpost-head"><span class="fbpost-tag">Grand Opening</span><span>Floridablanca, Pampanga</span></div>
-          <div class="fbpost-frame">
-            <iframe src="https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1KpoZkqRqu%2F&show_text=true&width=500" width="500" height="600" style="border:none;overflow:hidden;width:100%;height:100%;min-height:520px" scrolling="no" frameborder="0" allowfullscreen="true" allow="clipboard-write; encrypted-media; picture-in-picture; web-share" title="Facebook post: Opening in Floridablanca"></iframe>
-          </div>
+          <a class="fbpost-frame fbpost-link" href="https://www.facebook.com/share/p/1KpoZkqRqu/" target="_blank" rel="noopener noreferrer" aria-label="Opening in Floridablanca - open on Facebook">
+            <span class="fbpost-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="44" height="44" fill="#1877F2"><path d="M24 12a12 12 0 10-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v2.9h-1.5c-1.5 0-2 .9-2 1.9V12h3.3l-.5 3.5h-2.8v8.4A12 12 0 0024 12z"/></svg>
+            </span>
+            <span class="fbpost-title">Opening in Floridablanca</span>
+            <span class="fbpost-sub">Grand Opening · Floridablanca, Pampanga</span>
+            <span class="fbpost-open">Open post on Facebook →</span>
+          </a>
           <a class="btn btn-line fbpost-btn" href="https://www.facebook.com/share/p/1KpoZkqRqu/" target="_blank" rel="noopener noreferrer">View on Facebook</a>
         </article>
       </div>
@@ -733,6 +743,12 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;justify-items:end;gap:
       .fbpost-tag{background:var(--navy);color:#fff;padding:4px 10px;border-radius:999px;font-family:var(--font-body);font-weight:700;font-size:.74rem}
       .fbpost-frame{border-radius:var(--radius-sm);overflow:hidden;background:var(--paper-alt);display:flex;justify-content:center}
       .fbpost-btn{align-self:center;margin-top:auto}
+      .fbpost-link{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;min-height:260px;padding:32px 24px;text-decoration:none;color:var(--text);background:var(--paper-alt);transition:background .2s ease,transform .2s ease}
+      .fbpost-link:hover,.fbpost-link:focus-visible{background:var(--card);transform:translateY(-2px)}
+      .fbpost-icon{display:flex}
+      .fbpost-title{font-family:var(--font-display);font-weight:700;font-size:1.25rem}
+      .fbpost-sub{font-family:var(--font-mono);font-size:.8rem;color:var(--muted)}
+      .fbpost-open{margin-top:6px;color:var(--navy);font-weight:700;font-size:.95rem}
       @media (max-width:760px){.fb-grid{grid-template-columns:1fr}}
     </style>
   </div>
