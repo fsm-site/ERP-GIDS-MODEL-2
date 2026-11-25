@@ -702,6 +702,39 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;justify-items:end;gap:
         <a class="btn btn-line" href="#top">Follow us</a>
       </article>
     </div>
+    <div class="fb-section">
+      <div class="section-head center">
+        <div class="kicker">Latest from Facebook</div>
+        <h3 class="fb-title">Grand Opening announcements</h3>
+      </div>
+      <div class="fb-grid">
+        <article class="fbpost">
+          <div class="fbpost-head"><span class="fbpost-tag">Grand Opening</span><span>Dinalupihan, Bataan</span></div>
+          <div class="fbpost-frame">
+            <iframe src="https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1JwWh8hjhp%2F&show_text=true&width=500" width="500" height="600" style="border:none;overflow:hidden;width:100%;height:100%;min-height:520px" scrolling="no" frameborder="0" allowfullscreen="true" allow="clipboard-write; encrypted-media; picture-in-picture; web-share" title="Facebook post: Opening in Bataan"></iframe>
+          </div>
+          <a class="btn btn-line fbpost-btn" href="https://www.facebook.com/share/p/1JwWh8hjhp/" target="_blank" rel="noopener noreferrer">View on Facebook</a>
+        </article>
+        <article class="fbpost">
+          <div class="fbpost-head"><span class="fbpost-tag">Grand Opening</span><span>Floridablanca, Pampanga</span></div>
+          <div class="fbpost-frame">
+            <iframe src="https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1KpoZkqRqu%2F&show_text=true&width=500" width="500" height="600" style="border:none;overflow:hidden;width:100%;height:100%;min-height:520px" scrolling="no" frameborder="0" allowfullscreen="true" allow="clipboard-write; encrypted-media; picture-in-picture; web-share" title="Facebook post: Opening in Floridablanca"></iframe>
+          </div>
+          <a class="btn btn-line fbpost-btn" href="https://www.facebook.com/share/p/1KpoZkqRqu/" target="_blank" rel="noopener noreferrer">View on Facebook</a>
+        </article>
+      </div>
+    </div>
+    <style>
+      .fb-section{margin-top:56px}
+      .fb-title{font-size:clamp(1.4rem,3vw,1.9rem)}
+      .fb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
+      .fbpost{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;display:flex;flex-direction:column;gap:14px}
+      .fbpost-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:var(--font-mono);font-size:.8rem;color:var(--muted)}
+      .fbpost-tag{background:var(--navy);color:#fff;padding:4px 10px;border-radius:999px;font-family:var(--font-body);font-weight:700;font-size:.74rem}
+      .fbpost-frame{border-radius:var(--radius-sm);overflow:hidden;background:var(--paper-alt);display:flex;justify-content:center}
+      .fbpost-btn{align-self:center;margin-top:auto}
+      @media (max-width:760px){.fb-grid{grid-template-columns:1fr}}
+    </style>
   </div>
 </section>
 
